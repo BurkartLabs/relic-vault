@@ -22,8 +22,10 @@ The next session reads this before it reads the code.
 
 ## Next session should
 
-1. If the Board funded a telemetry host: build with `VITE_TELEMETRY_URL`, deploy preview, confirm events in the store.
-2. Run a 20-human playtest; write the first real numbers into LEARNING-001's addendum (do not rewrite the original).
-3. Fix TODO #5 and the art pass (#4) only after #1–#2; do not add features before real sessions exist.
+1. Depth review #1 (DEPTH.md) scored 1.5/5 → stage is **Deepen**. Cycle 1 = RV-D1 pacing recalibration,
+   RV-D2 Patron Orders, RV-D3 chains & generators, in that order; every story carries its probe target.
+2. Before coding: PM turns the three epics into agent-ready ADO stories (TRACKING.md) and extends
+   `../../ops/probes/relic-vault-runway.ts` so each probe target is measurable.
+3. If the Board funded a telemetry host: build with `VITE_TELEMETRY_URL`, deploy preview, start human sessions in parallel.
 
 Do not write a diary. Write a handoff.
