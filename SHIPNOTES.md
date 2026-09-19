@@ -67,3 +67,14 @@ The Critic's first review (ITERATE) flagged spec items that fail Soul/Charter ho
 
 - The Keeper voice ("Everything here is priced fairly. For me.") is intentional flavour; the Critic asked us to watch its tone next to honest numbers.
 - Before any real store: legal review of value claims, loot-box disclosures per region, and age assurance beyond self-declaration.
+
+## Preview access (Board decision #273, 2026-09-19)
+
+The preview is invite-only. `public/staticwebapp.config.json` gives the game to users with the `playtester` role and
+sends everyone else to sign in (Microsoft account by default; GitHub also works). A signed-in visitor without an
+invite gets `no-invite.html` rather than a blank 403.
+
+To invite a playtester: Azure Portal → Static Web App `relic-vault` → **Role management** → **Invite** → choose the
+provider, enter their address, role `playtester`, and send them the generated link. Revoke from the same screen.
+
+This takes effect on the next preview deploy, which needs the CI build agents (still pending).
