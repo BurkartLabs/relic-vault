@@ -1,0 +1,51 @@
+# relic-vault CI/CD (TRACKING.md "Pipelines"). PRs: validate. main: preview deploy (automatic on green CI).
+# Production is not in this file on purpose: it needs a Board approval on the `production` environment.
+trigger:
+  branches: { include: [main] }
+pr:
+  branches: { include: [main] }
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  PW_CHANNEL: chromium   # hosted agents use Playwright's own Chromium, not Edge
+
+stages:
+  - stage: validate
+    jobs:
+      - job: test
+        timeoutInMinutes: 30
+        steps:
+          - task: NodeTool@0
+            inputs: { versionSpec: '24.x' }
+          - script: npm ci --no-audit --no-fund
+            displayName: install
+          - script: npm run typecheck
+            displayName: typecheck
+          - script: npm test
+            displayName: unit (rules)
+          - script: npx playwright install --with-deps chromium
+            displayName: browsers
+          - script: npm run test:e2e
+            displayName: Playwright smoke (default-FAIL checklist)
+          - task: PublishPipelineArtifact@1
+            condition: always()
+            inputs: { targetPath: screenshots/qa, artifact: qa-screenshots }
+
+  - stage: preview
+    dependsOn: validate
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    jobs:
+      - job: deploy
+        steps:
+          - task: NodeTool@0
+            inputs: { versionSpec: '24.x' }
+          - script: npm ci --no-audit --no-fund && npm run build
+            displayName: build (telemetry → control plane)
+            env: { VITE_TELEMETRY_URL: $(TELEMETRY_URL) }
+          - task: AzureStaticWebApp@0
+            inputs:
+              app_location: dist
+              skip_app_build: true
+              azure_static_web_apps_api_token: $(SWA_TOKEN)
