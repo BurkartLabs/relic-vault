@@ -2,17 +2,16 @@ import { SKUS, SkuId } from '../data/catalog';
 import type { GameState } from './State';
 import type { Rng } from './Rng';
 import { placeOrStash } from './BoardSystem';
-import { chestsAllowed, grantGold, openChest, ChestResult, grantChests } from './Economy';
+import { grantGold, grantChests } from './Economy';
 import { welcomeOpen } from './Offers';
 
 export interface PurchaseGrant {
   ok: boolean;
-  reason?: 'owned' | 'blocked';
+  reason?: 'owned';
   sku: SkuId;
   gems: number;
   gold: number;
   relics: { tier: number; index: number }[];
-  chest?: ChestResult;
   freeChests: number;
 }
 
@@ -22,7 +21,6 @@ export function skuAvailable(s: GameState, sku: SkuId): boolean {
   if (sku === 'pass') return !s.ent.passPremium;
   if (sku === 'noads') return !s.ent.removeAds;
   if (sku === 'vip') return !s.ent.vip;
-  if (sku === 'chest_cash') return chestsAllowed(s);
   if (sku === 'piggy') return s.piggy > 0;
   return true;
 }
@@ -30,7 +28,7 @@ export function skuAvailable(s: GameState, sku: SkuId): boolean {
 /** Pure entitlement grant. Identical in demo and storekit modes. */
 export function applyPurchase(s: GameState, sku: SkuId, rng: Rng, now = Date.now()): PurchaseGrant {
   const g: PurchaseGrant = { ok: true, sku, gems: 0, gold: 0, relics: [], freeChests: 0 };
-  if (!skuAvailable(s, sku)) return { ...g, ok: false, reason: sku === 'chest_cash' ? 'blocked' : 'owned' };
+  if (!skuAvailable(s, sku)) return { ...g, ok: false, reason: 'owned' };
   const def = SKUS[sku];
   switch (sku) {
     case 'welcome':
@@ -41,9 +39,6 @@ export function applyPurchase(s: GameState, sku: SkuId, rng: Rng, now = Date.now
       break;
     case 'gems200': case 'gems500': case 'gems1200':
       s.gems += def.gems!; g.gems = def.gems!;
-      break;
-    case 'chest_cash':
-      g.chest = openChest(s, rng, 'cash');
       break;
     case 'piggy': {
       const gold = s.piggy * 4;

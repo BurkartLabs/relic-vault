@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { Modal, keeperLine } from './Modal';
 import { Button, txt, Scroller, badge, money, fmt, iconAmount } from './kit';
 import { ctx } from '../GameCtx';
-import { SKUS, SkuId, COPY, ECON, CHEST_ODDS, RELICS, skuValuePct, GEMS_PER_DOLLAR_BASELINE } from '../data/catalog';
+import { SKUS, SkuId, COPY, ECON, CHEST_ODDS, CHEST_PITY_TIER, CHEST_TOP_TIER, RELICS, skuValuePct, GEMS_PER_DOLLAR_BASELINE } from '../data/catalog';
 import { skuAvailable } from '../systems/PurchaseService';
 import { computeLuck } from '../systems/LuckSystem';
 import { chestsAllowed, buyExact, buyMarket, openChest } from '../systems/Economy';
@@ -133,10 +133,9 @@ export class ShopModal extends Modal {
         const body = vs.add.image(0, -8, 'chestBody').setDisplaySize(220, 140);
         left.add([vs.add.image(0, -50, 'relicGlow').setDisplaySize(300, 300).setTint(0xf4c45a).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.4), body, lid]);
         vs.tweens.add({ targets: lid, y: -94, duration: 500, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
-        left.add(txt(vs, 0, 84, `Pity: guaranteed Gold Mask+ in ${ECON.pityEvery - s.pity}`, { size: 22, font: 'body', color: '#8CF08A' }));
+        left.add(txt(vs, 0, 84, `Up to a ${RELICS[CHEST_TOP_TIER].name} · ${RELICS[CHEST_PITY_TIER].name}+ in ${ECON.pityEvery - s.pity}`, { size: 22, font: 'body', color: '#8CF08A' }));
         left.add(txt(vs, 0, 112, `Your luck ${(computeLuck(s) * 100).toFixed(0)}% can upgrade a result`, { size: 20, font: 'body', color: '#b9a9c6' }));
-        left.add(new Button(vs, -108, 170, 200, 96, `${ECON.chestGemCost}`, () => this.gemChest(), { color: 'blue', size: 38, icon: 'gem', iconScale: 0.46, guard }));
-        left.add(new Button(vs, 108, 170, 200, 96, money(SKUS.chest_cash.price), () => this.purchase('chest_cash'), { color: 'green', size: 36, guard }));
+        left.add(new Button(vs, 0, 170, 280, 96, `${ECON.chestGemCost}`, () => this.gemChest(), { color: 'blue', size: 40, icon: 'gem', iconScale: 0.5, guard }));
         const info = new Button(vs, 0, 238, 190, 58, 'ODDS', () => vs.openModal(new OddsModal(vs, () => vs.openShop(this.trigger, 'chest'))), { color: 'dark', size: 26, guard });
         left.add(info);
       } else {
@@ -206,7 +205,7 @@ export class ShopModal extends Modal {
     // ---------------------------------------------------------- legal footer
     const odds = CHEST_ODDS.map((o) => `${RELICS[o.tier].name} ${Math.round(o.chance * 100)}%`).join(' · ');
     const legal = txt(vs, 490, y + 70,
-      `Lucky Chest odds: ${odds}. Every ${ECON.pityEvery}th chest without a Gold Mask or better is guaranteed one. ` +
+      `Lucky Chest odds: ${odds}. Every ${ECON.pityEvery}th chest without a ${RELICS[CHEST_PITY_TIER].name} or better is guaranteed one. ` +
       `Luck may upgrade a result by one tier. Exact relics are always available for gems or gold.\n` +
       `Value ribbons compare gems per dollar against the ${money(4.99)} pack (${GEMS_PER_DOLLAR_BASELINE.toFixed(1)} gems/$); the Welcome figure counts its chest at ${ECON.chestGemCost} gems, gold and relics are extra. ` +
       `DEMO MODE: purchases are simulated. No real money is charged. Restore & manage purchases in Settings.`,

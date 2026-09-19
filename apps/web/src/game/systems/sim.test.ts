@@ -194,7 +194,6 @@ describe('purchases', () => {
   it('minors cannot buy random paid chests', () => {
     const s = createState();
     s.age = 'minor';
-    expect(applyPurchase(s, 'chest_cash', rng()).ok).toBe(false);
     s.gems = 999;
     expect(openChest(s, rng(), 'gems').reason).toBe('blocked');
     s.age = 'adult'; s.lootboxesAllowed = false;
@@ -208,27 +207,29 @@ describe('chests & pity', () => {
     const r = mulberry32(7);
     const counts: Record<number, number> = {};
     for (let i = 0; i < 20000; i++) { s.pity = 0; const t = rollChest(s, r).tier; counts[t] = (counts[t] || 0) + 1; }
-    expect(Object.keys(counts).map(Number).every((t) => t >= 2 && t <= 6)).toBe(true);
-    expect(counts[2] / 20000).toBeGreaterThan(0.35);
+    // Board, #332: Gold Mask (T4) is now the floor, not the top prize
+    expect(Object.keys(counts).map(Number).every((t) => t >= 4 && t <= 8)).toBe(true);
+    expect(counts[4] / 20000).toBeGreaterThan(0.3);
+    expect(counts[8]).toBeGreaterThan(0);
   });
-  it('every 15th dry chest guarantees >= T4', () => {
+  it('every 15th dry chest guarantees a Sapphire Heart (T6) or better', () => {
     const s = createState();
-    // Dry streak: rng picks T2 and fails the luck-upgrade roll.
+    // Dry streak: rng picks the lowest row and fails the luck-upgrade roll.
     let n = 0;
     const dry = () => (n++ % 2 === 0 ? 0.0 : 0.99);
     for (let i = 0; i < 14; i++) {
       const r = rollChest(s, dry);
-      expect(r.tier).toBeLessThan(4);
+      expect(r.tier).toBeLessThan(6);
     }
     expect(s.pity).toBe(14);
     const r = rollChest(s, dry);
     expect(r.pityHit).toBe(true);
-    expect(r.tier).toBeGreaterThanOrEqual(4);
+    expect(r.tier).toBeGreaterThanOrEqual(6);
     expect(s.pity).toBe(0);
   });
-  it('gem chest costs 40 gems and places a relic', () => {
+  it('gem chest costs 5 gems and places a relic (Board, #332)', () => {
     const s = createState();
-    s.gems = 40;
+    s.gems = 5;
     const r = openChest(s, rng(), 'gems');
     expect(r.ok).toBe(true);
     expect(s.gems).toBe(0);
@@ -386,7 +387,7 @@ describe('honest offers (Critic ITERATE #2)', () => {
     expect(skuValuePct('gems200')).toBe(100);
     expect(skuValuePct('gems500')).toBe(125);
     expect(skuValuePct('gems1200')).toBe(150);
-    expect(skuValuePct('welcome')).toBe(Math.round(((160 / 1.99) / (200 / 4.99)) * 100));
+    expect(skuValuePct('welcome')).toBe(Math.round((((120 + ECON.chestGemCost) / 1.99) / (200 / 4.99)) * 100));
   });
 });
 

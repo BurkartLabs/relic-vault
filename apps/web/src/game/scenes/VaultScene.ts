@@ -1036,8 +1036,8 @@ export class VaultScene extends Phaser.Scene {
     this.openShop('chest_button', 'chest');
   }
 
-  openChest(source: 'free' | 'gems' | 'cash', trigger: string, preRolled?: import('../systems/Economy').ChestResult) {
-    if (!empties(ctx.state).length && source !== 'cash' && !preRolled) {
+  openChest(source: 'free' | 'gems', trigger: string, preRolled?: import('../systems/Economy').ChestResult) {
+    if (!empties(ctx.state).length && !preRolled) {
       ctx.sfx.play('error');
       this.toast('No free socket. The chest will wait — merge or sell first.');
       return;
@@ -1138,7 +1138,7 @@ export class VaultScene extends Phaser.Scene {
   async buy(sku: SkuId, trigger: string, after?: () => void) {
     const s = ctx.state;
     ctx.analytics.log('iap_click', { sku, trigger, price: SKUS[sku].price });
-    if (!skuAvailable(s, sku)) { ctx.sfx.play('error'); this.toast(sku === 'chest_cash' ? 'Random chests are unavailable on this profile.' : 'Already owned.'); return; }
+    if (!skuAvailable(s, sku)) { ctx.sfx.play('error'); this.toast('Already owned.'); return; }
     if (this.modal) this.modal.converted = true;
     const veil = this.processingVeil();
     const res = await ctx.purchases.purchase(sku);
@@ -1157,7 +1157,6 @@ export class VaultScene extends Phaser.Scene {
       this.time.delayedCall(1300, () => this.cameras.main.zoomTo(1, 400, 'Sine.easeInOut'));
       g.relics.forEach((r, k) => this.dropRelic(r.index, r.tier, 250 + k * 220));
     }
-    if (sku === 'chest_cash' && g.chest?.ok) this.time.delayedCall(600, () => this.openChest('cash', trigger, g.chest));
     if (sku === 'welcome' && s.freeChests > 0) this.time.delayedCall(1700, () => this.openChest('free', 'welcome_pack'));
     if (sku === 'piggy') this.hud.refresh();
     this.hud.refresh();

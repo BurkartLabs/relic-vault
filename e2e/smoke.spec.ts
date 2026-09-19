@@ -142,7 +142,7 @@ test('no cooldown: 60 rapid core actions are never refused', async ({ page }) =>
 
 test('every demo SKU grants its entitlement and is logged', async ({ page }) => {
   await boot(page);
-  const skus = ['gems200', 'gems500', 'gems1200', 'noads', 'vip', 'pass', 'comeback', 'welcome', 'chest_cash', 'piggy'];
+  const skus = ['gems200', 'gems500', 'gems1200', 'noads', 'vip', 'pass', 'comeback', 'welcome', 'piggy'];
   for (const sku of skus) {
     await page.evaluate(() => { const rv = (window as any).__rv; rv.state.piggy = 250; (window as any).__vault.modal?.close(); });
     await page.waitForTimeout(250);
@@ -163,10 +163,12 @@ test('under-16 path: random paid chests are off, exact offers remain', async ({ 
   const errors = await boot(page, 'minor');
   const s = await state(page);
   expect(s.age).toBe('minor');
-  const r = await page.evaluate(() => { (window as any).__rv.state.gems = 500; return (window as any).__vault.buy('chest_cash', 'qa'); });
-  void r;
+  // the gem chest is the only random paid item left (#332): a minor's gems must not buy it
+  await page.evaluate(() => { (window as any).__rv.state.gems = 500; (window as any).__vault.openChest('gems', 'qa'); });
   await page.waitForTimeout(600);
-  expect((await state(page)).purchases.length).toBe(0);
+  const after = await state(page);
+  expect(after.stats.chests).toBe(0);
+  expect(after.gems).toBe(500);
   await page.evaluate(() => (window as any).__vault.openShop('qa', 'chest'));
   await page.waitForTimeout(900);
   await page.screenshot({ path: 'screenshots/qa/minor-shop.png' });
@@ -183,7 +185,7 @@ test('chest odds are visible before spend', async ({ page }) => {
     walk((window as any).__vault.modal);
     return out.join(' | ');
   });
-  expect(texts).toMatch(/45%/);
+  expect(texts).toMatch(/40%/);
   expect(texts).toMatch(/ODDS/);
 });
 
@@ -204,7 +206,7 @@ test('telemetry reaches a real sink: app_open and verb_first arrive at the colle
 
 test('minor buying every SKU receives zero random rolls', async ({ page }) => {
   await boot(page, 'minor');
-  for (const sku of ['welcome', 'pass', 'vip', 'gems500', 'comeback', 'chest_cash', 'noads']) {
+  for (const sku of ['welcome', 'pass', 'vip', 'gems500', 'comeback', 'noads']) {
     await page.evaluate(() => (window as any).__vault.modal?.close());
     await page.waitForTimeout(200);
     await page.evaluate((sku) => (window as any).__vault.buy(sku, 'qa'), sku);
@@ -214,7 +216,6 @@ test('minor buying every SKU receives zero random rolls', async ({ page }) => {
   const s = await state(page);
   expect(s.stats.chests).toBe(0);
   expect(s.freeChests).toBe(0);
-  expect(s.purchases.map((p: any) => p.sku)).not.toContain('chest_cash');
   const auto = await page.evaluate(() => (window as any).__rv.analytics.buf.filter((e: any) => e.type === 'offer_impression' && !String(e.offer).startsWith('shop')).length);
   expect(auto).toBe(0);
 });

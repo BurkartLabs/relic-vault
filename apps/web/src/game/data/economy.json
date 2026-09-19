@@ -72,7 +72,7 @@
   "piggyRate": 0.1,
   "piggyCap": 600,
   "piggyNagAt": 200,
-  "chestGemCost": 40,
+  "chestGemCost": 5,
   "pityEvery": 15,
   "exactT5Gems": 5,
   "fillCardGems": 80,
