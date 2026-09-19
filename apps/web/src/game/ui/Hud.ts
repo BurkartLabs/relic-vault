@@ -64,7 +64,8 @@ export class Hud extends Phaser.GameObjects.Container {
 
     // --- piggy idol
     this.pig = vs.add.image(850, 76, 'pig').setDisplaySize(150, 150);
-    this.piggyText = txt(vs, 850, 148, '', { size: 30, font: 'num', weight: '700', color: '#FFE9A3' });
+    this.piggyText = txt(vs, 866, 148, '', { size: 30, font: 'num', weight: '700', color: '#FFE9A3' });
+    this.add(vs.add.image(826, 148, 'coin').setDisplaySize(34, 34));
     this.add([this.pig, this.piggyText]);
     hotImage(vs, this.pig, () => vs.openPiggy('hud'));
 
@@ -144,7 +145,7 @@ export class Hud extends Phaser.GameObjects.Container {
     // piggy swell
     const fill = Math.min(1, s.piggy / ECON.piggyCap);
     this.pig.setDisplaySize(130 + fill * 40, 130 + fill * 40);
-    this.piggyText.setText('$' + (s.piggy / 100).toFixed(2));
+    this.piggyText.setText(fmt(s.piggy));
     this.piggyText.setColor(s.piggy >= ECON.piggyNagAt ? '#8CF08A' : '#FFE9A3');
     // quests badge
     const claimable = QUESTS.some((q) => questProgress(s, q.id) >= q.goal && !s.quests.claimed.includes(q.id));

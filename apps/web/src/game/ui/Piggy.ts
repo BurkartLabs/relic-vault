@@ -26,8 +26,8 @@ export class PiggySheet extends Modal {
     g.fillStyle(0xf4c45a).fillRoundedRect(-330, top + 740, Math.max(44, 660 * fill), 44, 22);
     g.lineStyle(4, 0xa56a12).strokeRoundedRect(-330, top + 740, 660, 44, 22);
     B.add(g);
-    B.add(txt(vs, 0, top + 762, fill >= 1 ? 'FULL — it can’t hold more' : `$${(s.piggy / 100).toFixed(2)} stored`, { size: 30, font: 'num', weight: '700', color: '#3a1c02', strokeW: 0, shadow: false }));
-    B.add(txt(vs, 0, top + 850, `Stored ${fmt(s.piggy)} gold`, { size: 34, font: 'num', weight: '500', color: '#b9a9c6' }));
+    B.add(txt(vs, 0, top + 816, fill >= 1 ? 'FULL: it can’t hold more gold' : `${Math.round(fill * 100)}% full`, { size: 28, font: 'num', weight: '700', color: '#FFE9A3' }));
+    B.add(txt(vs, 0, top + 866, `Stored: ${fmt(s.piggy)} gold (10% of all gold you earn)`, { size: 30, font: 'num', weight: '500', color: '#b9a9c6' }));
     B.add(txt(vs, 0, top + 920, `SMASH FOR ${fmt(s.piggy * 4)} GOLD + 15 GEMS`, { size: 44, weight: '900', gold: true }));
     const b = new Button(vs, 0, top + 1080, 540, 140, s.piggy > 0 ? `SMASH ${money(SKUS.piggy.price)}` : 'EMPTY', () => this.smash(pig), { color: 'green', size: 52, disabled: s.piggy <= 0 });
     B.add(b);

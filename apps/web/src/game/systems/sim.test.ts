@@ -8,6 +8,9 @@ import { rollChest, openChest, gemClear, adSalvage, claimQuest, spinWheel, claim
 import { computeLuck } from './LuckSystem';
 import { OfferDirector } from './OfferDirector';
 import { mulberry32 } from './Rng';
+import { grantReward, claimVipCrate, enforceChestRules } from './Economy';
+import { welcomeOpen, welcomeDeadline, WELCOME_WINDOW_MS } from './Offers';
+import { skuValuePct } from '../data/catalog';
 import { ECON, SKUS, SkuId, CARDS, MAX_TIER } from '../data/catalog';
 
 const rng = () => mulberry32(1234);
@@ -302,5 +305,64 @@ describe('save', () => {
     const back = migrate(JSON.parse(JSON.stringify(s)));
     expect(back.board).toEqual(s.board);
     expect(back.flags.tutorial).toBe(3);
+  });
+});
+
+describe('no random rewards for minors / loot-box-free regions (Critic ITERATE #1)', () => {
+  for (const setup of [(s: any) => { s.age = 'minor'; }, (s: any) => { s.lootboxesAllowed = false; }]) {
+    it('every path that would give a chest gives an exact Gold Mask instead', () => {
+      const s = createState();
+      setup(s);
+      applyPurchase(s, 'welcome', rng());
+      expect(s.freeChests).toBe(0);
+      expect(s.board.filter((t) => t === 4).length).toBe(3); // 2 masks + the chest stand-in
+      const g = grantReward(s, { kind: 'chest', n: 2 }, rng());
+      expect(g.chests).toBe(0);
+      expect(g.relics.map((r) => r.tier)).toEqual([4, 4]);
+      s.ent.vip = true;
+      const v = claimVipCrate(s, Date.now(), rng());
+      expect(v && v.length).toBe(1);
+      expect(s.freeChests).toBe(0);
+      expect(openChest(s, rng(), 'free').reason).toBe('blocked');
+      s.gems = 100;
+      expect(spinWheel(s, rng(), 'gems').ok).toBe(false);
+      expect(spinWheel(s, rng(), 'ad').ok).toBe(true);
+      expect(s.stats.chests).toBe(0);
+    });
+  }
+  it('pending free chests convert to exact relics when a profile becomes restricted', () => {
+    const s = createState();
+    s.freeChests = 2; s.age = 'minor';
+    enforceChestRules(s, rng());
+    expect(s.freeChests).toBe(0);
+    expect(s.satchel).toEqual([4, 4]);
+  });
+  it('minors are never pushed offers (jammed helper still shows)', () => {
+    const s = createState();
+    s.age = 'minor';
+    const d = new OfferDirector(() => s);
+    s.board[0] = 1; s.board[1] = 1;
+    d.onMerge(merge(s, 0, 1, rng()));
+    d.onBoardFull();
+    expect(d.queue.map((q) => q.id)).toEqual(['jammed']);
+  });
+});
+
+describe('honest offers (Critic ITERATE #2)', () => {
+  it('welcome deadline is real: starts at first sight, never resets, then closes', () => {
+    const s = createState();
+    const t0 = 1_000_000;
+    expect(welcomeOpen(s, t0)).toBe(true);
+    const d = welcomeDeadline(s, t0);
+    expect(d).toBe(t0 + WELCOME_WINDOW_MS);
+    expect(welcomeDeadline(s, t0 + 3_600_000)).toBe(d);
+    expect(welcomeOpen(s, d - 1)).toBe(true);
+    expect(welcomeOpen(s, d + 1)).toBe(false);
+  });
+  it('value ribbons are computed from one baseline', () => {
+    expect(skuValuePct('gems80')).toBe(100);
+    expect(skuValuePct('gems500')).toBe(125);
+    expect(skuValuePct('gems1200')).toBe(150);
+    expect(skuValuePct('welcome')).toBe(Math.round(((160 / 1.99) / (200 / 4.99)) * 100));
   });
 });

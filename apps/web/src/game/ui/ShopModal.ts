@@ -4,6 +4,7 @@ import { Button, txt, Scroller, badge, money, fmt, iconAmount } from './kit';
 import { ctx } from '../GameCtx';
 import { SKUS, SkuId, COPY, ECON, CHEST_ODDS, RELICS, skuValuePct, GEMS_PER_DOLLAR_BASELINE } from '../data/catalog';
 import { skuAvailable } from '../systems/PurchaseService';
+import { computeLuck } from '../systems/LuckSystem';
 import { chestsAllowed, buyExact, buyMarket, openChest } from '../systems/Economy';
 import { empties } from '../systems/BoardSystem';
 import type { VaultScene } from '../scenes/VaultScene';
@@ -53,6 +54,7 @@ export class ShopModal extends Modal {
     y += 140;
 
     // ---------------------------------------------------------- hero
+    const allowedRandom = chestsAllowed(s);
     const heroSku: SkuId | null = skuAvailable(s, 'welcome') ? 'welcome' : skuAvailable(s, 'comeback') ? 'comeback' : skuAvailable(s, 'vip') ? 'vip' : null;
     if (heroSku) {
       const h = 330;
@@ -66,7 +68,7 @@ export class ShopModal extends Modal {
         card.add(vs.add.image(-290, 90, 'gem').setDisplaySize(90, 90));
         card.add(vs.add.image(-190, 100, 'coin').setDisplaySize(80, 80));
         const rib = vs.add.image(160, -112, 'ribbon').setDisplaySize(560, 100);
-        const rt = txt(vs, 160, -122, 'ONE TIME · 1200% VALUE', { size: 34, weight: '900', gold: true });
+        const rt = txt(vs, 160, -122, `ONE TIME · ${skuValuePct('welcome')}% VALUE`, { size: 34, weight: '900', gold: true });
         card.add([rib, rt]);
       } else if (heroSku === 'comeback') {
         card.add(vs.add.image(-290, 0, 'relic256', 'R5').setDisplaySize(220, 220));
@@ -75,7 +77,8 @@ export class ShopModal extends Modal {
       }
       const sku = SKUS[heroSku];
       card.add(txt(vs, 160, -40, sku.title, { size: 50, gold: true, weight: '900' }));
-      card.add(txt(vs, 160, 22, sku.blurb, { size: 26, font: 'body', color: '#e8dcf0', wrap: 520 }));
+      const blurb = heroSku === 'welcome' && !allowedRandom ? sku.blurb.replace('a Lucky Chest on the house', 'a third Gold Mask') : sku.blurb;
+      card.add(txt(vs, 160, 22, blurb, { size: 26, font: 'body', color: '#e8dcf0', wrap: 520 }));
       const b = new Button(vs, 160, 112, 340, 104, money(sku.price), () => this.purchase(heroSku), { color: 'green', size: 44, guard });
       card.add(b);
       if (heroSku === 'welcome') card.add(badge(vs, 420, 90, 'ONE TIME', 'red', 130));
@@ -130,7 +133,8 @@ export class ShopModal extends Modal {
         const body = vs.add.image(0, -8, 'chestBody').setDisplaySize(220, 140);
         left.add([vs.add.image(0, -50, 'relicGlow').setDisplaySize(300, 300).setTint(0xf4c45a).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.4), body, lid]);
         vs.tweens.add({ targets: lid, y: -94, duration: 500, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
-        left.add(txt(vs, 0, 90, `Pity: guaranteed Gold Mask+ in ${ECON.pityEvery - s.pity}`, { size: 22, font: 'body', color: '#8CF08A' }));
+        left.add(txt(vs, 0, 84, `Pity: guaranteed Gold Mask+ in ${ECON.pityEvery - s.pity}`, { size: 22, font: 'body', color: '#8CF08A' }));
+        left.add(txt(vs, 0, 112, `Your luck ${(computeLuck(s) * 100).toFixed(0)}% can upgrade a result`, { size: 20, font: 'body', color: '#b9a9c6' }));
         left.add(new Button(vs, -108, 170, 200, 96, `${ECON.chestGemCost}`, () => this.gemChest(), { color: 'blue', size: 38, icon: 'gem', iconScale: 0.46, guard }));
         left.add(new Button(vs, 108, 170, 200, 96, money(SKUS.chest_cash.price), () => this.purchase('chest_cash'), { color: 'green', size: 36, guard }));
         const info = new Button(vs, 0, 238, 190, 58, 'ODDS', () => vs.openModal(new OddsModal(vs, () => vs.openShop(this.trigger, 'chest'))), { color: 'dark', size: 26, guard });
@@ -204,7 +208,7 @@ export class ShopModal extends Modal {
     const legal = txt(vs, 490, y + 70,
       `Lucky Chest odds: ${odds}. Every ${ECON.pityEvery}th chest without a Gold Mask or better is guaranteed one. ` +
       `Luck may upgrade a result by one tier. Exact relics are always available for gems or gold.\n` +
-      `Value ribbons compare against the ${money(9.99)} pack rate (${GEMS_PER_DOLLAR_BASELINE.toFixed(0)} gems/$). ` +
+      `Value ribbons compare gems per dollar against the ${money(4.99)} pack (${GEMS_PER_DOLLAR_BASELINE.toFixed(1)} gems/$); the Welcome figure counts its chest at ${ECON.chestGemCost} gems, gold and relics are extra. ` +
       `DEMO MODE: purchases are simulated. No real money is charged. Restore & manage purchases in Settings.`,
       { size: 22, font: 'body', color: '#9a8aa8', wrap: 900, strokeW: 0, shadow: false, lineSpacing: 4 });
     C.add(legal);
@@ -272,4 +276,3 @@ export class ShopModal extends Modal {
   }
 }
 
-export { iconAmount };

@@ -20,7 +20,7 @@ export class Dock extends Phaser.GameObjects.Container {
   constructor(private vs: VaultScene, x: number, y: number) {
     super(vs, x, y);
     this.setDepth(40);
-    const bg = panel(vs, 540, 70, 1100, 190, 'panelDark');
+    const bg = panel(vs, 540, 82, 1100, 176, 'panelDark');
     bg.setInteractive();
     this.add(bg);
     TABS.forEach((t, i) => {

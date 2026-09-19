@@ -3,7 +3,7 @@ import { Modal } from './Modal';
 import { Button, txt } from './kit';
 import { ctx } from '../GameCtx';
 import { WHEEL, ECON } from '../data/catalog';
-import { spinWheel } from '../systems/Economy';
+import { spinWheel, wheelGemSpinAllowed } from '../systems/Economy';
 import { WHEEL_SIZE } from '../art/UiArt';
 import type { VaultScene } from '../scenes/VaultScene';
 
@@ -48,7 +48,8 @@ export class WheelModal extends Modal {
 
     B.add(txt(vs, 0, top + 1030, 'Gold every spin. A rare gem jackpot.', { size: 30, font: 'body', color: '#e8dcf0' }));
     const ad = new Button(vs, -210, top + 1180, 380, 130, 'FREE SPIN', () => this.spin('ad'), { color: 'purple', size: 40, icon: 'ic_ad', iconScale: 0.5, sub: ctx.adsSuppressed ? 'no ad for VIP' : 'watch a short ad' });
-    const gem = new Button(vs, 210, top + 1180, 380, 130, `SPIN ${ECON.wheelGemCost}`, () => this.spin('gems'), { color: 'blue', size: 42, icon: 'gem', iconScale: 0.5 });
+    const gemOk = wheelGemSpinAllowed(ctx.state);
+    const gem = new Button(vs, 210, top + 1180, 380, 130, gemOk ? `SPIN ${ECON.wheelGemCost}` : 'FREE SPINS ONLY', () => this.spin('gems'), { color: 'blue', size: gemOk ? 42 : 30, icon: gemOk ? 'gem' : undefined, iconScale: 0.5, disabled: !gemOk });
     this.btns = [ad, gem];
     B.add([ad, gem]);
     B.add(txt(vs, 0, top + 1330, 'Odds: 50g 26% · 80g 18% · 120g 22% · 250g 16% · 500g 7% · 1K 3.5% · 3 gems 6% · 20 gems 1.5%', { size: 20, font: 'body', color: '#8a7a98', wrap: 860, strokeW: 0 }));
@@ -57,6 +58,7 @@ export class WheelModal extends Modal {
   private spin(pay: 'gems' | 'ad') {
     if (this.spinning) return;
     const vs = this.vs, s = ctx.state;
+    if (pay === 'gems' && !wheelGemSpinAllowed(s)) { ctx.sfx.play('error'); vs.toast('Paid spins are off on this profile. Free spins stay on.'); return; }
     if (pay === 'gems' && s.gems < ECON.wheelGemCost) { ctx.sfx.play('error'); vs.toast('Not enough gems.'); return; }
     const go = () => {
       const r = spinWheel(s, ctx.rng, pay);

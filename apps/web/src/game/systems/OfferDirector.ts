@@ -2,6 +2,7 @@
 import type { GameState } from './State';
 import type { MergeResult } from './MergeSystem';
 import { eventMilestoneIndex } from './Economy';
+import { welcomeOpen } from './Offers';
 
 export type OfferId = 'welcome' | 'comeback' | 'jammed' | 'shopBest' | 'doubleIt' | 'piggy' | 'passUpsell' | 'boost' | 'vip';
 
@@ -24,13 +25,16 @@ export class OfferDirector {
 
   private push(r: OfferRequest) {
     if (this.queue.some((q) => q.id === r.id)) return;
+    // Soul: we do not ship to children as a growth hack. Under-16 profiles never get pushed offers;
+    // the shop stays reachable, and the Vault Jammed helper (not an offer) still appears.
+    if (this.s().age === 'minor' && r.id !== 'jammed') return;
     this.queue.push(r);
   }
 
   onMerge(r: MergeResult) {
     const s = this.s();
     if (!r.ok) return;
-    if (s.stats.merges === 1 && !s.ent.welcome && this.once('offer_welcome')) {
+    if (s.stats.merges === 1 && welcomeOpen(s, Date.now()) && this.once('offer_welcome')) {
       this.push({ id: 'welcome', trigger: 'first_merge', delayMs: 1500 });
     }
     if ((s.stats.merges >= 8 || r.tier >= 4) && !s.ent.comeback && s.stats.merges > 1 && this.once('offer_comeback')) {

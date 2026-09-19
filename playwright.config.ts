@@ -17,10 +17,21 @@ export default defineConfig({
     isMobile: true,
     screenshot: 'only-on-failure',
   },
-  webServer: {
-    command: 'npx vite build && npx vite preview --port 4174 --strictPort --host 127.0.0.1',
-    url: 'http://127.0.0.1:4174',
-    reuseExistingServer: false,
-    timeout: 180_000,
-  },
+  // QA builds into dist-qa pointed at a local collector so the smoke suite can prove events arrive
+  // at a real sink (TELEMETRY.md). The shippable `dist/` from `npm run build` has no endpoint baked in.
+  webServer: [
+    {
+      command: 'node apps/web/tools/collector.mjs 8788 test-results/telemetry',
+      url: 'http://127.0.0.1:8788/health',
+      reuseExistingServer: false,
+      timeout: 20_000,
+    },
+    {
+      command: 'npx vite build --outDir dist-qa && npx vite preview --outDir dist-qa --port 4174 --strictPort --host 127.0.0.1',
+      url: 'http://127.0.0.1:4174',
+      env: { VITE_TELEMETRY_URL: 'http://127.0.0.1:8788/e' },
+      reuseExistingServer: false,
+      timeout: 240_000,
+    },
+  ],
 });

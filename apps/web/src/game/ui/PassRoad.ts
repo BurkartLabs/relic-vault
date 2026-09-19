@@ -3,7 +3,7 @@ import { Modal, keeperLine } from './Modal';
 import { Button, txt, money, dur, fmt, badge } from './kit';
 import { ctx } from '../GameCtx';
 import { PASS_FREE, PASS_PREMIUM, ECON, SKUS, COPY, Reward, RELICS } from '../data/catalog';
-import { passTier, claimPass } from '../systems/Economy';
+import { passTier, claimPass, chestsAllowed } from '../systems/Economy';
 import { seasonEndsAt } from '../systems/State';
 import type { VaultScene } from '../scenes/VaultScene';
 
@@ -13,7 +13,10 @@ export function rewardVisual(vs: VaultScene, r: Reward, x: number, y: number, si
   switch (r.kind) {
     case 'gold': key = 'coin'; label = fmt(r.n); break;
     case 'gems': key = 'gem'; label = String(r.n); break;
-    case 'chest': key = 'ic_chest'; label = `x${r.n}`; break;
+    case 'chest':
+      if (chestsAllowed(ctx.state)) { key = 'ic_chest'; label = `x${r.n}`; }
+      else { key = 'relic256'; frame = 'R4'; label = `MASK x${r.n}`; }
+      break;
     case 'card': key = 'ic_card'; label = 'WILD'; break;
     case 'relic': key = 'relic256'; frame = `R${r.tier}`; label = RELICS[r.tier].name.split(' ')[1] ?? ''; break;
     case 'skin': key = 'crown'; label = 'GILDED'; break;

@@ -186,3 +186,35 @@ test('chest odds are visible before spend', async ({ page }) => {
   expect(texts).toMatch(/45%/);
   expect(texts).toMatch(/ODDS/);
 });
+
+test('telemetry reaches a real sink: app_open and verb_first arrive at the collector', async ({ page, request }) => {
+  await boot(page);
+  await page.evaluate(() => { (window as any).__rv.state.flags.tut = 3; });
+  const sid = await page.evaluate(() => (window as any).__rv.telemetry.sessionId);
+  await tapForge(page);
+  const pair = await page.evaluate(() => (window as any).__vault.pair);
+  await dragCells(page, pair[0], pair[1]);
+  await page.waitForTimeout(1200);
+  const lines = await (await request.get('http://127.0.0.1:8788/stats')).json();
+  expect(lines.counts.app_open).toBeGreaterThan(0);
+  expect(lines.counts.verb_first).toBeGreaterThan(0);
+  expect(lines.sessions).toBeGreaterThan(0);
+  void sid;
+});
+
+test('minor buying every SKU receives zero random rolls', async ({ page }) => {
+  await boot(page, 'minor');
+  for (const sku of ['welcome', 'pass', 'vip', 'gems500', 'comeback', 'chest_cash', 'noads']) {
+    await page.evaluate(() => (window as any).__vault.modal?.close());
+    await page.waitForTimeout(200);
+    await page.evaluate((sku) => (window as any).__vault.buy(sku, 'qa'), sku);
+    await page.waitForTimeout(650);
+  }
+  await page.evaluate(() => { const rv = (window as any).__rv; rv.state.pass.xp = 30 * 20; });
+  const s = await state(page);
+  expect(s.stats.chests).toBe(0);
+  expect(s.freeChests).toBe(0);
+  expect(s.purchases.map((p: any) => p.sku)).not.toContain('chest_cash');
+  const auto = await page.evaluate(() => (window as any).__rv.analytics.buf.filter((e: any) => e.type === 'offer_impression' && !String(e.offer).startsWith('shop')).length);
+  expect(auto).toBe(0);
+});

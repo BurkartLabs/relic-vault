@@ -66,6 +66,10 @@ if (scenario === 'basic' || scenario === 'full') {
   await closeModal(); await wait(500);
 }
 
+if (scenario === 'discovery') {
+  await vs(() => { window.__rv.state.stats.maxTier = 6; window.__vault.showDiscovery(6); }); await wait(1400); await shot('discovery-card');
+}
+
 if (scenario === 'full') {
   // play ~40 actions: forge + merge any pair
   for (let k = 0; k < 40; k++) {
@@ -100,6 +104,10 @@ if (scenario === 'full') {
   // T4+ merge VFX layers
   await vs(() => { const s = window.__rv.state; s.board[20] = 7; s.board[21] = 7; window.__vault.syncBoard(); });
   await drag(await cell(20), await cell(21)); await wait(160); await shot('t8-merge-vfx'); await wait(1500);
+  await vs(() => window.__vault.modal?.close()); await wait(500);
+  await vs(() => { const v = window.__vault; const s = window.__rv.state; delete s.flags.disc_6; s.board[3] = 5; s.board[4] = 5; v.syncBoard(); }); await wait(300);
+  await drag(await cell(3), await cell(4)); await wait(2600); await shot('discovery');
+  await vs(() => window.__vault.modal?.close()); await wait(500);
   await vs(() => window.__vault.openSettings()); await wait(800); await shot('settings');
   await closeModal(); await wait(400);
 }

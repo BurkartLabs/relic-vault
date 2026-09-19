@@ -57,7 +57,7 @@ export interface Sku {
 export const SKUS: Record<SkuId, Sku> = {
   welcome: { id: 'welcome', title: 'Keeper’s Welcome', price: 1.99, gems: 120, gold: 800, badge: 'ONE TIME', oneTime: true,
     blurb: '120 gems, 800 gold, two Gold Masks, a Silver Urn and a Lucky Chest on the house.' },
-  gems80: { id: 'gems80', title: 'Pouch of Gems', price: 4.99, gems: 80, blurb: 'A modest tithe.' },
+  gems80: { id: 'gems80', title: 'Pouch of Gems', price: 4.99, gems: 200, blurb: 'A modest tithe.' },
   gems500: { id: 'gems500', title: 'Chest of Gems', price: 9.99, gems: 500, badge: 'POPULAR', blurb: 'The vault’s preferred offering.' },
   gems1200: { id: 'gems1200', title: 'Hoard of Gems', price: 19.99, gems: 1200, badge: 'BEST VALUE', blurb: 'For keepers who intend to stay.' },
   chest_cash: { id: 'chest_cash', title: 'Lucky Chest', price: 2.99, random: true, blurb: 'Skip the gems. Open one now.' },
@@ -69,15 +69,15 @@ export const SKUS: Record<SkuId, Sku> = {
     blurb: 'An Emerald Scarab, 60 gems and 1,500 gold. The next tier is right there.' },
 };
 
-/** Baseline gem rate for "value" ribbons: the $9.99 pack. Intentional per spec. */
-export const GEMS_PER_DOLLAR_BASELINE = 500 / 9.99;
+/** Baseline gem rate for every "value" ribbon: the entry $4.99 pack (see systems/Offers.ts). */
+export const GEMS_PER_DOLLAR_BASELINE = 200 / 4.99;
 
+/** Computed, never hardcoded: gem-equivalent per dollar vs the baseline. Welcome counts its chest at 40 gems. */
 export function skuValuePct(id: SkuId): number {
   const s = SKUS[id];
-  if (id === 'welcome') return 1200;
   if (!s.gems) return 0;
-  const rate = s.gems / s.price;
-  return Math.round((rate / (80 / 4.99)) * 100);
+  const gemEq = s.gems + (id === 'welcome' ? econ.chestGemCost : 0);
+  return Math.round(((gemEq / s.price) / GEMS_PER_DOLLAR_BASELINE) * 100);
 }
 
 // ---- Album ----
@@ -87,24 +87,18 @@ export const ALBUM_PAGES = [
   { name: 'The Drowned Crypt', color: 0x3fb8c8, reward: 'Crypt Chandelier', luck: 0.01 },
   { name: 'The Star Choir', color: 0xb58cff, reward: 'Star Orrery', luck: 0.01 },
 ];
-const CARD_NAMES = [
-  // page 1
-  'Ember Tongs', 'Soot Saint', 'Bellows Heart', 'Slag Crown', 'Anvil Oath', 'Copper Choir',
-  'Rivet Queen', 'Hammer Relic', 'Quench Pool', 'Coal Eye', 'Tin Prophet', 'The First Spark',
-  // page 2
-  'Brine Idol', 'Kelp Censer', 'Pearl Tooth', 'Drowned Bell', 'Silt Mask', 'Tide Key',
-  'Barnacle King', 'Salt Urn', 'Moon Anchor', 'Coral Hand', 'Wreck Lamp', 'The Sunk Choir',
-  // page 3
-  'Comet Nail', 'Orbit Ring', 'Void Scarab', 'Halo Shard', 'Starling Harp', 'Nebula Ark',
-  'Zenith Crown', 'Meteor Heart', 'Night Lens', 'Astral Key', 'Choir Seraph', 'The Last Star',
+// Card names are "<page theme> <relic noun>" so every name matches the relic painted on its card.
+const CARD_PREFIX = [
+  ['Ember', 'Soot', 'Bellows', 'Slag', 'Anvil', 'Rivet', 'Hammer', 'Quench', 'Coal', 'Tin', 'Smelter’s', 'First-Spark'],
+  ['Brine', 'Kelp', 'Pearl', 'Drowned', 'Silt', 'Tide', 'Barnacle', 'Salt', 'Moon', 'Coral', 'Wreck', 'Sunken'],
+  ['Comet', 'Orbit', 'Void', 'Halo', 'Starling', 'Nebula', 'Zenith', 'Meteor', 'Night', 'Astral', 'Choir', 'Last-Star'],
 ];
-export const CARDS: CardDef[] = CARD_NAMES.map((name, i) => ({
-  id: i,
-  page: Math.floor(i / 12),
-  name,
-  tier: 1 + ((i * 5 + Math.floor(i / 12)) % 9),
-  hue: (i * 37) % 360,
-}));
+const RELIC_NOUN = ['', 'Shard', 'Idol', 'Urn', 'Mask', 'Scarab', 'Heart', 'Crown', 'Ark', 'Eye'];
+export const CARDS: CardDef[] = Array.from({ length: 36 }, (_, i) => {
+  const page = Math.floor(i / 12);
+  const tier = 1 + ((i * 5 + page) % 9);
+  return { id: i, page, tier, hue: (i * 37) % 360, name: `${CARD_PREFIX[page][i % 12]} ${RELIC_NOUN[tier]}` };
+});
 export const CARDS_PER_PAGE = 12;
 
 // ---- Season pass ----

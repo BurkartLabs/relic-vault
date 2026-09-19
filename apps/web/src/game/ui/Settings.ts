@@ -56,7 +56,7 @@ export class SettingsModal extends Modal {
     });
     row('PRIVACY', 'dark', () => vs.openModal(new InfoSheet(vs, 'PRIVACY',
       'Relic Vault stores your progress on this device only (IndexedDB, with localStorage as a fallback).\n\n' +
-      'A local analytics log records offers shown and purchase buttons pressed (item, trigger, session time, rank, gems, gold) to tune the game. It never leaves your device in this build.\n\n' +
+      'A local analytics log records offers shown and purchase buttons pressed (item, trigger, session time, rank, gems, gold) to tune the game. In this build it stays on your device unless the operator configures a telemetry endpoint; if one is configured, anonymous gameplay events (a random device id, no name or contact details) are sent to it.\n\n' +
       'No account. No tracking pixels. Ads in this build are simulated veils.\n\nYou can erase everything with Reset Progress below.', () => vs.openSettings())));
     row('ODDS & DISCLOSURES', 'dark', () => vs.openModal(new InfoSheet(vs, 'ODDS',
       'Lucky Chest (40 gems or $2.99):\n' + CHEST_ODDS.map((o) => `  ${RELICS[o.tier].name} — ${Math.round(o.chance * 100)}%`).join('\n') +

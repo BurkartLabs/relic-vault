@@ -88,6 +88,26 @@ export function cardDropChance(tier: number) {
 // ---------------- chests ----------------
 export function chestsAllowed(s: GameState) { return s.lootboxesAllowed && s.age !== 'minor'; }
 
+/** Exact-item stand-in for a chest when random contents are not allowed (minors, loot-box-free regions). */
+export const CHEST_EXACT_TIER = 4;
+
+/** Grant n chests, or n exact Gold Masks when random rewards are off. Returns placed relics. */
+export function grantChests(s: GameState, n: number, rng: Rng): { tier: number; index: number }[] {
+  if (chestsAllowed(s)) { s.freeChests += n; return []; }
+  const out: { tier: number; index: number }[] = [];
+  for (let i = 0; i < n; i++) out.push({ tier: CHEST_EXACT_TIER, index: placeOrStash(s, CHEST_EXACT_TIER, rng) });
+  return out;
+}
+
+/** Enforce the no-random-rewards rule on an existing profile (e.g. age set after chests were earned). */
+export function enforceChestRules(s: GameState, rng: Rng) {
+  if (chestsAllowed(s) || s.freeChests <= 0) return;
+  const n = s.freeChests;
+  s.freeChests = 0;
+  for (let i = 0; i < n; i++) s.satchel.push(CHEST_EXACT_TIER);
+  void rng;
+}
+
 /** Roll a chest tier: disclosed odds, pity every N dry chests, luck upgrade. Pure. */
 export function rollChest(s: GameState, rng: Rng): { tier: number; pityHit: boolean; upgraded: boolean } {
   let pityHit = false;
@@ -113,6 +133,9 @@ export function openChest(s: GameState, rng: Rng, source: 'free' | 'gems' | 'cas
   if (source === 'gems') {
     if (!chestsAllowed(s)) return { ok: false, reason: 'blocked', tier: 0, index: -1 };
     if (!spendGems(s, ECON.chestGemCost)) return { ok: false, reason: 'gems', tier: 0, index: -1 };
+  }
+  if (source === 'free' || source === 'cash') {
+    if (!chestsAllowed(s)) return { ok: false, reason: 'blocked', tier: 0, index: -1 };
   }
   if (source === 'free') {
     if (s.freeChests <= 0) return { ok: false, reason: 'gems', tier: 0, index: -1 };
@@ -179,7 +202,7 @@ export function grantReward(s: GameState, r: Reward, rng: Rng, g: Granted = empt
   switch (r.kind) {
     case 'gold': grantGold(s, r.n); g.gold += r.n; break;
     case 'gems': s.gems += r.n; g.gems += r.n; break;
-    case 'chest': s.freeChests += r.n; g.chests += r.n; break;
+    case 'chest': { const exact = grantChests(s, r.n, rng); if (exact.length) g.relics.push(...exact); else g.chests += r.n; break; }
     case 'card': for (let i = 0; i < r.n; i++) g.cards.push(grantCard(s, rng, true)); break;
     case 'relic': g.relics.push({ tier: r.tier, index: placeOrStash(s, r.tier, rng) }); break;
     case 'skin': s.ent.skin = true; s.ent.skinOn = true; g.skin = true; break;
@@ -213,9 +236,6 @@ export function claimEvent(s: GameState, i: number, rng: Rng): Granted | null {
   s.event.claimed.push(i);
   return grantReward(s, EVENT_MILESTONES[i].reward, rng);
 }
-export function fakeGlobalRank(points: number) {
-  return Math.max(1, Math.round(48213 / (1 + points / 35)));
-}
 export function buyBoost(s: GameState, now: number): boolean {
   if (!spendGems(s, ECON.boostGemCost)) return false;
   s.event.boostUntil = Math.max(now, s.event.boostUntil) + ECON.boostMinutes * 60000;
@@ -242,7 +262,11 @@ export function claimQuest(s: GameState, q: number, now: number): boolean {
 }
 
 // ---------------- wheel ----------------
+/** Paying gems for a weighted random prize is a paid random mechanic: off for minors / loot-box-free regions. */
+export function wheelGemSpinAllowed(s: GameState) { return chestsAllowed(s); }
+
 export function spinWheel(s: GameState, rng: Rng, pay: 'gems' | 'ad'): { ok: boolean; slot: number; grant?: Granted } {
+  if (pay === 'gems' && !wheelGemSpinAllowed(s)) return { ok: false, slot: -1 };
   if (pay === 'gems' && !spendGems(s, ECON.wheelGemCost)) return { ok: false, slot: -1 };
   const slot = pickWeighted(WHEEL, rng);
   const grant = grantReward(s, WHEEL[slot].reward, rng);
@@ -250,14 +274,13 @@ export function spinWheel(s: GameState, rng: Rng, pay: 'gems' | 'ad'): { ok: boo
 }
 
 // ---------------- VIP ----------------
-export function claimVipCrate(s: GameState, now: number): boolean {
+export function claimVipCrate(s: GameState, now: number, rng: Rng = Math.random): { tier: number; index: number }[] | false {
   if (!s.ent.vip) return false;
   const d = utcDay(now);
   if (s.daily.vipCrateDay === d) return false;
   s.daily.vipCrateDay = d;
-  s.freeChests += 1;
   s.gems += 5;
-  return true;
+  return grantChests(s, 1, rng);
 }
 
 export { MAX_TIER, ALBUM_PAGES };

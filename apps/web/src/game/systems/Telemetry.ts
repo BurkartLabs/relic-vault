@@ -46,7 +46,11 @@ export class Telemetry {
     };
     this.buf.push(e);
     if (this.buf.length > this.cap) this.buf.splice(0, this.buf.length - this.cap);
-    if (this.endpoint) this.pending.push(e);
+    if (this.endpoint) {
+      this.pending.push(e);
+      // the funnel's key events should not wait for the 10s batch
+      if (event === 'app_open' || event === 'verb_first' || event === 'purchase_demo' || event === 'error') setTimeout(() => this.flush(), 300);
+    }
     return e;
   }
 
@@ -72,7 +76,8 @@ export class Telemetry {
     const body = JSON.stringify(this.pending.splice(0));
     try {
       if (beacon && navigator.sendBeacon) navigator.sendBeacon(this.endpoint, body);
-      else void fetch(this.endpoint, { method: 'POST', body, headers: { 'content-type': 'application/json' }, keepalive: true });
+      // text/plain keeps this a CORS "simple request" (no preflight); the collector parses JSON anyway
+      else void fetch(this.endpoint, { method: 'POST', body, headers: { 'content-type': 'text/plain' }, keepalive: true }).catch(() => {});
     } catch { /* never let telemetry break play */ }
   }
 

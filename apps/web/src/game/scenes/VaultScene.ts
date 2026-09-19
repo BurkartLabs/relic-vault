@@ -27,6 +27,8 @@ import { SettingsModal } from '../ui/Settings';
 import { JammedSheet, InspectCard, QuestsModal, OfferSheet, RankInfo, KeeperDialog } from '../ui/Sheets';
 import { AdVeil } from '../ui/AdVeil';
 import { Tutorial } from '../ui/Tutorial';
+import { DiscoveryCard } from '../ui/Discovery';
+import { grantGold, enforceChestRules } from '../systems/Economy';
 
 interface RelicView {
   tier: number;
@@ -39,7 +41,10 @@ interface RelicView {
   lifted?: boolean;
 }
 
-const RELIC_SIZE = 166;
+const RELIC_SIZE = 160;
+/** vertical layout in design space; fits a strict 9:16 1080x1920 screen above the dock */
+const BOARD_TOP = 574;
+const FORGE_Y = 1628;
 const FLOAT_WORD = (t: number, asc: boolean) => asc ? 'ASCENDED!' : t <= 3 ? 'FUSE' : t <= 6 ? 'RELIC!' : t <= 8 ? 'MYTHIC' : 'LIVING!';
 
 export class VaultScene extends Phaser.Scene {
@@ -75,20 +80,27 @@ export class VaultScene extends Phaser.Scene {
   private offerTimer?: Phaser.Time.TimerEvent;
   private pendingOffer = false;
   private matchPulse: Phaser.Tweens.Tween[] = [];
+  private discoveries: number[] = [];
+  private combo = 0;
+  private lastMergeAt = 0;
+  lastActionAt = Date.now();
+  private idleHinted = false;
+  private parallax = { x: 0, y: 0, tx: 0, ty: 0 };
+  private para: { o: Phaser.GameObjects.Components.Transform; bx: number; by: number; k: number }[] = [];
 
   constructor() { super('Vault'); }
 
   // ------------------------------------------------------------------ layout helpers
   cellPos(i: number) {
     const c = i % BOARD_COLS, r = Math.floor(i / BOARD_COLS);
-    return { x: this.ox + 90 + c * CELL + CELL / 2, y: this.my + 600 + r * CELL + CELL / 2 };
+    return { x: this.ox + 90 + c * CELL + CELL / 2, y: this.my + BOARD_TOP + r * CELL + CELL / 2 };
   }
   cellAt(x: number, y: number) {
-    const lx = x - (this.ox + 90), ly = y - (this.my + 600);
+    const lx = x - (this.ox + 90), ly = y - (this.my + BOARD_TOP);
     if (lx < 0 || ly < 0 || lx >= CELL * 6 || ly >= CELL * 6) return -1;
     return Math.floor(ly / CELL) * BOARD_COLS + Math.floor(lx / CELL);
   }
-  get boardCenter() { return { x: this.ox + 540, y: this.my + 1050 }; }
+  get boardCenter() { return { x: this.ox + 540, y: this.my + BOARD_TOP + CELL * 3 }; }
 
   create() {
     this.W = this.scale.width; this.H = this.scale.height;
@@ -113,7 +125,9 @@ export class VaultScene extends Phaser.Scene {
     this.updateVaultMood(true);
     this.refreshButtons();
 
+    enforceChestRules(ctx.state, ctx.rng);
     this.tut = new Tutorial(this);
+    this.listenTilt();
     this.time.addEvent({ delay: 1000, loop: true, callback: () => this.secondTick() });
     this.secondTick();
     this.scale.on('resize', this.onResize, this);
@@ -132,7 +146,7 @@ export class VaultScene extends Phaser.Scene {
   // ------------------------------------------------------------------ background
   private buildBackground() {
     const { W, H, ox, my } = this;
-    const far = this.add.image(W / 2, my + 960, 'bgFar').setDepth(0);
+    const far = this.add.image(W / 2, my + 960, 'bgFar').setDepth(0).setScale(1.02);
     if (W > 1080) {
       for (const s of [-1, 1]) this.add.image(W / 2 + s * 1080, my + 960, 'bgFar').setFlipX(true).setTint(0x6a6070).setDepth(0);
     }
@@ -146,17 +160,19 @@ export class VaultScene extends Phaser.Scene {
       g.fillRect(0, my + 1920 - 200, W, 202);
       g.fillStyle(0x07060b, 1).fillRect(0, my + 1920, W, H);
     }
-    void far;
+    this.addPara(far, 5);
     // door glow breathing
     this.doorGlow = this.add.image(ox + 540, my + 440, 'relicGlow').setDisplaySize(1100, 1100).setTint(0xf4c45a).setAlpha(0.18).setBlendMode(Phaser.BlendModes.ADD).setDepth(1);
     this.tweens.add({ targets: this.doorGlow, alpha: 0.3, duration: 3200, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
+    this.addPara(this.doorGlow, 8);
     // decorations from completed album pages
     this.refreshDecor();
     // mid: chains (sway)
     this.chains = this.add.image(ox + 540, my + 0, 'bgChains').setOrigin(0.5, 0).setDepth(2);
     this.tweens.add({ targets: this.chains, angle: { from: -0.35, to: 0.35 }, duration: 5200, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
+    this.addPara(this.chains, 18);
     // candles
-    for (const [x, y, s] of [[176, 560, 1], [904, 560, 1], [60, 1590, 1.2], [1020, 1590, 1.2], [250, 1560, 0.8], [830, 1560, 0.8]]) {
+    for (const [x, y, s] of [[176, 548, 1], [904, 548, 1], [60, 1590, 1.2], [1020, 1590, 1.2]]) {
       const cx = ox + x, cy = my + y;
       const glow = this.add.image(cx, cy - 70 * s, 'relicGlow').setDisplaySize(260 * s, 260 * s).setTint(0xffa040).setAlpha(0.45).setBlendMode(Phaser.BlendModes.ADD).setDepth(3);
       this.add.image(cx, cy, 'candle').setScale(s).setOrigin(0.5, 0.87).setDepth(3);
@@ -166,6 +182,7 @@ export class VaultScene extends Phaser.Scene {
     }
     // sarcophagus + living eyes
     this.sarco = this.add.container(ox + 540, my + 430).setDepth(4);
+    this.addPara(this.sarco, 6);
     const sar = this.add.image(0, 0, 'sarcophagus');
     this.sarco.add(sar);
     for (const s of [-1, 1]) {
@@ -173,12 +190,13 @@ export class VaultScene extends Phaser.Scene {
       this.eyes.push(e);
       this.sarco.add(e);
     }
-    this.tweens.add({ targets: this.eyes, alpha: 0.5, duration: 2400, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
+    this.tweens.add({ targets: this.eyes, alpha: this.eyeBase(), duration: 2400, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
     // fog (near)
     for (const [y, a, sp] of [[1450, 0.55, 0.25], [1650, 0.4, -0.4], [320, 0.25, 0.15]] as const) {
       const f = this.add.tileSprite(W / 2, my + y, W, 400, 'fog').setAlpha(a).setDepth(y < 1000 ? 5 : 16).setBlendMode(Phaser.BlendModes.SCREEN);
       (f as any).speed = sp;
       this.fogs.push(f);
+      this.addPara(f, y < 1000 ? 10 : 26);
     }
     // ambient motes + embers
     this.add.particles(0, 0, 'p_mote', {
@@ -191,6 +209,20 @@ export class VaultScene extends Phaser.Scene {
       scale: { start: 0.9, end: 0 }, frequency: 1400, maxAliveParticles: 6, blendMode: 'ADD',
     }).setDepth(17);
     this.redVignette = this.add.image(W / 2, H / 2, 'vignetteRed').setDisplaySize(W * 1.1, H * 1.1).setAlpha(0).setBlendMode(Phaser.BlendModes.ADD).setDepth(35);
+  }
+
+  /** The sarcophagus wakes as the keeper's best relic climbs. */
+  eyeBase() { return Math.min(1, 0.3 + ctx.state.stats.maxTier * 0.08); }
+
+  private addPara(o: Phaser.GameObjects.Components.Transform, k: number) { this.para.push({ o, bx: o.x, by: o.y, k }); }
+  private listenTilt() {
+    const onTilt = (e: DeviceOrientationEvent) => {
+      if (e.gamma == null || e.beta == null) return;
+      this.parallax.tx = Phaser.Math.Clamp(e.gamma / 30, -1, 1);
+      this.parallax.ty = Phaser.Math.Clamp((e.beta - 45) / 30, -1, 1);
+    };
+    window.addEventListener('deviceorientation', onTilt);
+    this.events.once('shutdown', () => window.removeEventListener('deviceorientation', onTilt));
   }
 
   refreshDecor() {
@@ -211,7 +243,7 @@ export class VaultScene extends Phaser.Scene {
   // ------------------------------------------------------------------ board
   private buildBoard() {
     const { ox, my } = this;
-    this.add.image(ox + 90 - DAIS_PAD, my + 600 - DAIS_PAD, 'dais').setOrigin(0, 0).setDepth(10);
+    this.add.image(ox + 90 - DAIS_PAD, my + BOARD_TOP - DAIS_PAD, 'dais').setOrigin(0, 0).setDepth(10);
     this.selRing = this.add.image(0, 0, 'select').setDepth(11).setVisible(false).setBlendMode(Phaser.BlendModes.ADD);
     this.tweens.add({ targets: this.selRing, alpha: { from: 1, to: 0.5 }, duration: 500, yoyo: true, repeat: -1 });
     this.hoverRing = this.add.image(0, 0, 'select').setDepth(11).setVisible(false).setTint(0x7ee0ff).setBlendMode(Phaser.BlendModes.ADD);
@@ -282,17 +314,25 @@ export class VaultScene extends Phaser.Scene {
       }
     }
     for (const f of this.fogs) f.tilePositionX += (f as any).speed;
+    // parallax: tilt on phones, pointer on desktop (never during a drag)
+    if (!this.dragging && ptr.x > 0 && !(window as any).DeviceOrientationEvent?.requestPermission && !this.sys.game.device.input.touch) {
+      this.parallax.tx = (ptr.x / this.W - 0.5) * 2;
+      this.parallax.ty = (ptr.y / this.H - 0.5) * 2;
+    }
+    this.parallax.x += (this.parallax.tx - this.parallax.x) * 0.05;
+    this.parallax.y += (this.parallax.ty - this.parallax.y) * 0.05;
+    for (const p of this.para) { p.o.x = p.bx - this.parallax.x * p.k; p.o.y = p.by - this.parallax.y * p.k * 0.5; }
   }
 
   // ------------------------------------------------------------------ forge row
   private buildForgeRow() {
     const { ox, my } = this;
-    const y = my + 1672;
+    const y = my + FORGE_Y;
     // forge
     this.forgeBtn = this.add.container(ox + 540, y).setDepth(20);
     const aura = this.add.image(0, 0, 'relicGlow').setDisplaySize(380, 380).setTint(0xff8a2a).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.5);
     const f = this.add.image(0, 0, 'forge').setDisplaySize(220, 220);
-    const lbl = txt(this, 0, 118, 'FORGE', { size: 36, gold: true, weight: '900', strokeW: 6 });
+    const lbl = txt(this, 0, 104, 'FORGE', { size: 36, gold: true, weight: '900', strokeW: 6 });
     this.forgeBtn.add([aura, f, lbl]);
     this.tweens.add({ targets: aura, alpha: { from: 0.35, to: 0.7 }, scale: { from: aura.scale * 0.95, to: aura.scale * 1.05 }, duration: 900, yoyo: true, repeat: -1 });
     this.forgeBtn.setSize(240, 240).setInteractive({ useHandCursor: true });
@@ -511,6 +551,7 @@ export class VaultScene extends Phaser.Scene {
   doForge() {
     const s = ctx.state;
     ctx.sfx.unlock();
+    this.lastActionAt = Date.now(); this.idleHinted = false;
     const prefer = this.tut.forgePrefer();
     const r = forge(s, ctx.rng, prefer);
     const fp = { x: this.forgeBtn.x, y: this.forgeBtn.y - 30 };
@@ -562,9 +603,16 @@ export class VaultScene extends Phaser.Scene {
 
   doMerge(a: number, b: number) {
     const s = ctx.state;
+    this.lastActionAt = Date.now(); this.idleHinted = false;
+    const prevMax = s.stats.maxTier;
     const res = merge(s, a, b, ctx.rng);
     if (!res.ok) return;
     ctx.telemetry.verb();
+    const now = Date.now();
+    this.combo = now - this.lastMergeAt < 1800 ? this.combo + 1 : 1;
+    this.lastMergeAt = now;
+    let comboGold = 0;
+    if (this.combo >= 3) { comboGold = this.combo * 2 + Math.min(res.tier, 9) * this.combo; grantGold(s, comboGold); }
     ctx.telemetry.track('merge', { tier: res.tier, ascended: res.ascended, card: !!res.card });
     const va = this.relics[a], vb = this.relics[b];
     this.relics[a] = null; this.relics[b] = null;
@@ -583,7 +631,8 @@ export class VaultScene extends Phaser.Scene {
       this.fx.flash(pb.x, pb.y, 1.2 + tier * 0.12);
       this.time.delayedCall(34, () => {
         this.destroyRelic(va); this.destroyRelic(vb);
-        this.mergeJuice(res, pb, tier, color);
+        this.mergeJuice(res, pb, tier, color, comboGold);
+        if (!res.ascended && res.tier > prevMax && res.tier >= 3 && !s.flags[`disc_${res.tier}`]) { s.flags[`disc_${res.tier}`] = 1; this.discoveries.push(res.tier); this.time.delayedCall(1100, () => this.pumpOffers()); }
         this.busy--;
       });
     });
@@ -593,7 +642,7 @@ export class VaultScene extends Phaser.Scene {
     this.updateVaultMood();
   }
 
-  private mergeJuice(res: MergeResult, pb: { x: number; y: number }, tier: number, color: number) {
+  private mergeJuice(res: MergeResult, pb: { x: number; y: number }, tier: number, color: number, comboGold = 0) {
     const base = RELIC_SIZE / BOARD_FRAME;
     if (!res.ascended) {
       const v = this.makeRelic(res.to, res.tier);
@@ -621,7 +670,11 @@ export class VaultScene extends Phaser.Scene {
     }
     this.cameras.main.shake(80 + tier * 24, 0.0012 * tier + 0.0015);
     ctx.haptic(tier >= 6 ? [18, 40, 28] : 10 + tier * 4);
-    ctx.sfx.chime(res.ascended ? 10 : tier);
+    ctx.sfx.chime(res.ascended ? 10 : Math.min(10, tier + Math.max(0, this.combo - 2)));
+    if (comboGold > 0) {
+      this.fx.floatText(pb.x, pb.y - 130, `COMBO x${this.combo}`, { size: 44 + Math.min(30, this.combo * 4), color: '#7EE0FF', rise: 110, delay: 80 });
+      this.fx.floatText(pb.x - 70, pb.y + 20, `+${comboGold}`, { size: 36, color: '#8CF08A', rise: 70, delay: 160 });
+    }
     this.fx.floatText(pb.x, pb.y - 50, FLOAT_WORD(tier, res.ascended), { size: 52 + tier * 5, gold: true, rise: 140 });
     // gold fountain into the pill
     const goldTo = this.hud.anchor('gold');
@@ -654,9 +707,9 @@ export class VaultScene extends Phaser.Scene {
     for (const e of this.eyes) {
       this.tweens.killTweensOf(e);
       e.setAlpha(1).setDisplaySize(64 + tier * 10, 40 + tier * 6);
-      this.tweens.add({ targets: e, alpha: 0.3, displayWidth: 64, displayHeight: 40, duration: 1400, ease: 'Cubic.Out', onComplete: () => this.tweens.add({ targets: this.eyes, alpha: 0.5, duration: 2400, yoyo: true, repeat: -1 }) });
+      this.tweens.add({ targets: e, alpha: 0.3, displayWidth: 64, displayHeight: 40, duration: 1400, ease: 'Cubic.Out', onComplete: () => this.tweens.add({ targets: this.eyes, alpha: this.eyeBase(), duration: 2400, yoyo: true, repeat: -1 }) });
     }
-    this.tweens.add({ targets: this.sarco, x: this.sarco.x + 6, duration: 45, yoyo: true, repeat: 3 + Math.floor(tier / 2) });
+    this.tweens.add({ targets: this.sarco.list[0], x: 6, duration: 45, yoyo: true, repeat: 3 + Math.floor(tier / 2) });
     this.tweens.add({ targets: this.doorGlow, alpha: 0.6, duration: 120, yoyo: true });
   }
 
@@ -784,10 +837,12 @@ export class VaultScene extends Phaser.Scene {
     ctx.persist();
   }
   claimVip() {
-    if (!claimVipCrate(ctx.state, Date.now())) return;
+    const got = claimVipCrate(ctx.state, Date.now(), ctx.rng);
+    if (got === false) return;
     ctx.sfx.play('purchase');
+    got.forEach((r, k) => this.dropRelic(r.index, r.tier, 300 + k * 200, { x: this.vipBtn.x, y: this.vipBtn.y }));
     this.fx.flyTo('gem', this.vipBtn.x, this.vipBtn.y, this.hud.anchor('gems'), 5, (k) => { if (k === 4) this.hud.tickGems(); });
-    this.toast('VIP crate: +5 gems and a free Lucky Chest.');
+    this.toast(got.length ? 'VIP crate: +5 gems and a Gold Mask.' : 'VIP crate: +5 gems and a free Lucky Chest.');
     this.refreshButtons();
     ctx.persist();
   }
@@ -812,6 +867,9 @@ export class VaultScene extends Phaser.Scene {
 
   // ------------------------------------------------------------------ modals & tabs
   openModal(m: Modal) {
+    // UI lives in the world camera: snap any onboarding punch-in back so panels are never offset
+    const cam = this.cameras.main;
+    if (cam.zoom !== 1 || cam.scrollX !== 0 || cam.scrollY !== 0) { cam.panEffect.reset(); cam.zoomEffect.reset(); cam.setZoom(1); cam.setScroll(0, 0); }
     if (this.modal && this.modal !== m) { const old = this.modal; old.onClosed = undefined; old.destroy(); }
     this.modal = m;
     this.deselect();
@@ -850,12 +908,14 @@ export class VaultScene extends Phaser.Scene {
   // ------------------------------------------------------------------ offers
   pumpOffers(now = false) {
     if (this.pendingOffer || this.modal || this.tut.blocking || this.dragging) return;
+    if (this.discoveries.length && this.busy === 0 && this.tut.step >= 3) { this.openModal(new DiscoveryCard(this, this.discoveries.shift()!)); return; }
     const req = ctx.director.queue[0];
     if (!req) return;
     this.pendingOffer = true;
     this.offerTimer = this.time.delayedCall(now ? 0 : req.delayMs, () => {
       this.pendingOffer = false;
       if (this.modal || this.dragging || this.busy > 0 || this.tut.blocking) { this.time.delayedCall(400, () => this.pumpOffers()); return; }
+      if (this.tut.step < 3 && ctx.director.queue[0]?.id !== 'jammed' && ctx.director.queue[0]?.id !== 'welcome') { this.time.delayedCall(800, () => this.pumpOffers()); return; }
       const r = ctx.director.next();
       if (r) this.showOffer(r);
     });
@@ -887,6 +947,11 @@ export class VaultScene extends Phaser.Scene {
     // auto-drop satchel items when space frees
     if (s.satchel.length && canForge(s) && !this.modal && !this.dragging && Math.random() < 0.25) this.dropSatchel();
     if (s.stats.playSeconds % 10 === 0) this.hud.refresh();
+    // idle for 8s with a merge available: the ghost finger shows it once
+    if (!this.idleHinted && !this.modal && !this.dragging && this.tut.step >= 3 && now - this.lastActionAt > 8000) {
+      const pair = findPair(s);
+      if (pair) { this.idleHinted = true; this.tut.hintPair(pair); ctx.telemetry.track('funnel_step', { step: 'idle_hint' }); }
+    }
   }
 
   // ------------------------------------------------------------------ purchases
@@ -1019,6 +1084,7 @@ export class VaultScene extends Phaser.Scene {
   }
 
   /** debug helpers */
+  showDiscovery(t: number) { this.openModal(new DiscoveryCard(this, t)); }
   debugFill() { const s = ctx.state; for (let i = 0; i < BOARD_SIZE; i++) if (!s.board[i]) s.board[i] = 1 + (i % 7); this.syncBoard(); this.updateVaultMood(); }
   get pair() { return findPair(ctx.state); }
 }

@@ -18,8 +18,8 @@ export class Tutorial {
   private pulse?: Phaser.Tweens.Tween;
 
   constructor(private vs: VaultScene) {
-    this.finger = vs.add.image(0, 0, 'ic_hand').setDisplaySize(150, 150).setOrigin(0.45, 0.05).setDepth(150).setVisible(false);
-    this.label = txt(vs, 0, 0, '', { size: 46, gold: true, weight: '900', strokeW: 7 }).setDepth(150).setVisible(false);
+    this.finger = vs.add.image(0, 0, 'ic_hand').setDisplaySize(150, 150).setOrigin(0.45, 0.05).setDepth(90).setVisible(false);
+    this.label = txt(vs, 0, 0, '', { size: 46, gold: true, weight: '900', strokeW: 7 }).setDepth(90).setVisible(false);
     vs.tweens.add({ targets: this.label, scale: { from: 1, to: 1.06 }, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
   }
 
@@ -101,7 +101,7 @@ export class Tutorial {
 
   private dragLoop(pa: { x: number; y: number }, pb: { x: number; y: number }, tier: number, loops = -1) {
     const vs = this.vs;
-    this.ghost = vs.add.image(pa.x, pa.y, 'relics', `r${tier}_0`).setDisplaySize(150, 150).setAlpha(0).setDepth(149);
+    this.ghost = vs.add.image(pa.x, pa.y, 'relics', `r${tier}_0`).setDisplaySize(150, 150).setAlpha(0).setDepth(89);
     this.finger.setVisible(true).setPosition(pa.x + 20, pa.y + 10).setAlpha(0).setScale(this.finger.scaleX);
     this.loop = vs.tweens.chain({
       targets: [this.finger, this.ghost], loop: loops,

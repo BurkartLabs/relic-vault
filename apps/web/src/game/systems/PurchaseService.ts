@@ -2,7 +2,8 @@ import { SKUS, SkuId } from '../data/catalog';
 import type { GameState } from './State';
 import type { Rng } from './Rng';
 import { placeOrStash } from './BoardSystem';
-import { chestsAllowed, grantGold, openChest, ChestResult } from './Economy';
+import { chestsAllowed, grantGold, openChest, ChestResult, grantChests } from './Economy';
+import { welcomeOpen } from './Offers';
 
 export interface PurchaseGrant {
   ok: boolean;
@@ -16,7 +17,7 @@ export interface PurchaseGrant {
 }
 
 export function skuAvailable(s: GameState, sku: SkuId): boolean {
-  if (sku === 'welcome') return !s.ent.welcome;
+  if (sku === 'welcome') return !s.ent.welcome && welcomeOpen(s, Date.now());
   if (sku === 'comeback') return !s.ent.comeback;
   if (sku === 'pass') return !s.ent.passPremium;
   if (sku === 'noads') return !s.ent.removeAds;
@@ -36,7 +37,7 @@ export function applyPurchase(s: GameState, sku: SkuId, rng: Rng, now = Date.now
       s.ent.welcome = true;
       s.gems += 120; s.gold += 800; g.gems = 120; g.gold = 800;
       for (const t of [4, 4, 3]) g.relics.push({ tier: t, index: placeOrStash(s, t, rng) });
-      s.freeChests += 1; g.freeChests = 1;
+      { const exact = grantChests(s, 1, rng); if (exact.length) g.relics.push(...exact); else g.freeChests = 1; }
       break;
     case 'gems80': case 'gems500': case 'gems1200':
       s.gems += def.gems!; g.gems = def.gems!;
