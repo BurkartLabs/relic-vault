@@ -9,7 +9,7 @@ import { computeLuck } from './LuckSystem';
 import { OfferDirector } from './OfferDirector';
 import { mulberry32 } from './Rng';
 import { generateOrder, refillOrders, deliver, dismissOrder, tickOrders, matchOrder } from './OrderSystem';
-import { upgradeGenerator, unlockGenerators } from './Economy';
+import { upgradeGenerator, unlockGenerators, genUpgradeCost } from './Economy';
 import { BINDINGS, CHAINS, itemWork } from '../data/items';
 import { grantReward, claimVipCrate, enforceChestRules } from './Economy';
 import { welcomeOpen, welcomeDeadline, WELCOME_WINDOW_MS } from './Offers';
@@ -420,6 +420,17 @@ describe('deepen cycle 1: chains, bindings, generators (RV-D3)', () => {
     s.gold = 100000;
     expect(upgradeGenerator(s, 0)).toBe(true);
     expect(s.gens[0]).toBe(2);
+  });
+  it('every generator upgrades to level 10, and no further (Board, #329)', () => {
+    const s = createState();
+    s.gens = [1, 1, 1];
+    s.gold = 1e7;
+    for (const ch of [0, 1, 2]) {
+      while (upgradeGenerator(s, ch));
+      expect(s.gens[ch]).toBe(10);
+    }
+    expect(genUpgradeCost(s, 1)).toBeNull();
+    expect(1e7 - s.gold).toBe(3 * (300 + 900 + 2500 + 6000 + 12000 + 20000 + 32000 + 50000 + 80000));
   });
 });
 
