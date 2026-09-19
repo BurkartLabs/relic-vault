@@ -1,8 +1,8 @@
 import Phaser from 'phaser';
-import { Modal, keeperLine } from './Modal';
+import { Modal } from './Modal';
 import { Button, txt, dur, fmt, Scroller } from './kit';
 import { ctx } from '../GameCtx';
-import { EVENT_MILESTONES, ECON, COPY } from '../data/catalog';
+import { EVENT_MILESTONES, ECON } from '../data/catalog';
 import { claimEvent, buyBoost, eventMilestoneIndex } from '../systems/Economy';
 import { eventEndsAt } from '../systems/State';
 import { rewardVisual } from './PassRoad';
@@ -11,8 +11,8 @@ import type { VaultScene } from '../scenes/VaultScene';
 export class EventPanel extends Modal {
   private timerT!: Phaser.GameObjects.Text;
   private ev?: Phaser.Time.TimerEvent;
-  constructor(vs: VaultScene, private trigger: string, private boostFocus = false) {
-    super(vs, { w: 1020, h: 1680, title: 'GOLD RUSH', offer: boostFocus ? `boost:${trigger}` : undefined });
+  constructor(vs: VaultScene, private trigger: string) {
+    super(vs, { w: 1020, h: 1680, title: 'GOLD RUSH' });
     this.kind = 'EventPanel';
     this.build();
     this.ev = vs.time.addEvent({ delay: 1000, loop: true, callback: () => this.tick() });
@@ -27,7 +27,6 @@ export class EventPanel extends Modal {
   private build() {
     const vs = this.vs, s = ctx.state, B = this.box, top = this.top;
     const now = Date.now();
-    const left = eventEndsAt(now) - now;
     // banner art
     const hero = vs.add.container(0, top + 170);
     hero.add(vs.add.image(0, 0, 'relicGlow').setDisplaySize(700, 360).setTint(0xf4c45a).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.45));
@@ -42,10 +41,11 @@ export class EventPanel extends Modal {
     this.tick();
     B.add(txt(vs, 0, top + 320, 'Every merge scores. Bigger relics score more. It never stops.', { size: 26, font: 'body', color: '#e8dcf0' }));
 
-    // boost (last 48h)
+    // boost: a plain convenience, on sale for the whole Rush. Never timed to the deadline and never
+    // pushed (RV-D6, Depth review #2: a last-48h "finish faster" sale is FOMO, which RUBRIC scores as coercion).
     const boosted = s.event.boostUntil > now;
     const boostY = top + 420;
-    if (left < 48 * 3600000 || boosted) {
+    {
       const plate = vs.add.nineslice(0, boostY, 'panelBlue', undefined, 920, 150, 70, 70, 70, 70);
       const ic = vs.add.image(-380, boostY, 'ic_boost').setDisplaySize(110, 110);
       B.add([plate, ic]);
@@ -57,13 +57,11 @@ export class EventPanel extends Modal {
         B.add(txt(vs, -320, boostY + 24, `${ECON.boostMinutes} min of double points`, { size: 24, font: 'body', color: '#b9a9c6', origin: [0, 0.5] }));
         const b = new Button(vs, 300, boostY, 240, 100, String(ECON.boostGemCost), () => this.boost(), { color: 'red', size: 40, icon: 'gem', iconScale: 0.46 });
         B.add(b);
-        if (this.boostFocus) vs.tweens.add({ targets: b, scale: 1.1, duration: 300, yoyo: true, repeat: 3 });
       }
-      if (this.boostFocus && !boosted) keeperLine(vs, B, 0, boostY + 150, 900, COPY.boostLine, 100);
     }
 
     // milestone ladder
-    const ly = top + (this.boostFocus ? 640 : 540);
+    const ly = top + 540;
     const sc = new Scroller(vs, this.box, -470, ly, 940, this.ph / 2 - ly - 40);
     const C = sc.content;
     let reached = 0;
@@ -109,7 +107,6 @@ export class EventPanel extends Modal {
     ctx.sfx.play('purchase');
     vs.hud.tickGems();
     ctx.persist();
-    this.boostFocus = false;
     this.box.removeAll(true);
     this.build();
   }

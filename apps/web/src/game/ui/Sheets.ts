@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { Modal, keeperLine } from './Modal';
 import { Button, txt, money, fmt, dur, badge, Scroller } from './kit';
 import { ctx } from '../GameCtx';
-import { RELICS, ECON, COPY, SKUS, CHEST_ODDS, MAX_TIER } from '../data/catalog';
+import { RELICS, ECON, COPY, SKUS, CHEST_ODDS, CHEST_PITY_TIER, MAX_TIER } from '../data/catalog';
 import { lowest, sell, sellValue, findPair } from '../systems/BoardSystem';
 import { gemClear, adSalvage, QUESTS, questProgress, claimQuest, xpToNext, grantGold } from '../systems/Economy';
 import { computeLuck } from '../systems/LuckSystem';
@@ -227,7 +227,13 @@ export class KeeperDialog extends Modal {
     this.onClosed = onDone;
     // never block input for more than 1.2s: dismiss on any tap, auto-arm immediately
     const dismiss = () => this.close();
-    vs.time.delayedCall(250, () => { this.dimmer.on('pointerup', dismiss); (this.frame.list[0] as Phaser.GameObjects.NineSlice).on('pointerup', dismiss); });
+    // closed within the 250 ms (another modal, a programmatic close): the dimmer is gone, and a throw here
+    // would stop Phaser's game loop for good
+    vs.time.delayedCall(250, () => {
+      if (!this.dimmer?.active) return;
+      this.dimmer.on('pointerup', dismiss);
+      (this.frame.list[0] as Phaser.GameObjects.NineSlice | undefined)?.on('pointerup', dismiss);
+    });
   }
 }
 
@@ -258,11 +264,11 @@ export class OddsModal extends Modal {
       B.add(txt(vs, -240, y, RELICS[o.tier].name, { size: 36, weight: '900', gold: true, origin: [0, 0.5] }));
       const g = vs.add.graphics();
       g.fillStyle(0x07050a).fillRoundedRect(110, y - 14, 200, 28, 14);
-      g.fillStyle(RELICS[o.tier].color).fillRoundedRect(110, y - 14, Math.max(20, 200 * o.chance / 0.45), 28, 14);
+      g.fillStyle(RELICS[o.tier].color).fillRoundedRect(110, y - 14, Math.max(20, 200 * o.chance / Math.max(...CHEST_ODDS.map((x) => x.chance))), 28, 14);
       B.add(g);
       B.add(txt(vs, 370, y, `${Math.round(o.chance * 100)}%`, { size: 44, font: 'num', weight: '700' }));
     });
-    B.add(txt(vs, 0, top + 1000, `Pity: every ${ECON.pityEvery}th chest without a Gold Mask or better guarantees one.\nYour counter: ${ctx.state.pity}/${ECON.pityEvery - 1}. Luck may upgrade any result by one tier.`, { size: 26, font: 'body', color: '#8CF08A', wrap: 820 }));
+    B.add(txt(vs, 0, top + 1000, `Pity: every ${ECON.pityEvery}th chest without a ${RELICS[CHEST_PITY_TIER].name} or better guarantees one.\nYour counter: ${ctx.state.pity}/${ECON.pityEvery - 1}. Luck may upgrade any result by one tier.`, { size: 26, font: 'body', color: '#8CF08A', wrap: 820 }));
     if (back) B.add(new Button(vs, 0, this.bottom - 100, 360, 110, 'BACK', () => { this.close(); vs.time.delayedCall(220, back); }, { color: 'dark', size: 40 }));
   }
 }

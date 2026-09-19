@@ -1,6 +1,6 @@
 ﻿import { BOARD_SIZE, ECON, CARDS, ALBUM_PAGES } from '../data/catalog';
 
-export const SAVE_VERSION = 4;
+export const SAVE_VERSION = 5;
 
 export type AgeBand = 'unknown' | 'adult' | 'minor';
 
@@ -152,6 +152,12 @@ const MIGRATIONS: Record<number, (r: Raw, now: number) => Raw> = {
     r.v = 4;
     return r;
   },
+  // v4 -> v5 (Board, #328): the pig stores gems now; the old store was gold (up to 600) and is not carried over
+  4: (r) => {
+    r.piggy = 0;
+    r.v = 5;
+    return r;
+  },
 };
 
 function fill<T>(def: T, raw: any): T {
@@ -190,6 +196,8 @@ export function migrate(raw: Raw, now = Date.now()): GameState {
     s.album.forEach((x, i) => { if (i < a.length) a[i] = x; });
     s.album = a;
   }
+  // the $4.99 pack was called gems80 while it granted 200 gems; keep old purchase history readable
+  for (const p of s.purchases) if (p.sku === 'gems80') p.sku = 'gems200';
   rollover(s, now);
   return s;
 }

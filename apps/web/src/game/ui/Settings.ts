@@ -1,7 +1,7 @@
 import { Modal } from './Modal';
 import { Button, txt, Scroller } from './kit';
 import { ctx } from '../GameCtx';
-import { CHEST_ODDS, RELICS, ECON, SKUS, SkuId } from '../data/catalog';
+import { CHEST_ODDS, CHEST_PITY_TIER, RELICS, ECON, SKUS, SkuId } from '../data/catalog';
 import { InfoSheet } from './Sheets';
 import type { VaultScene } from '../scenes/VaultScene';
 
@@ -60,7 +60,7 @@ export class SettingsModal extends Modal {
       'No account. No tracking pixels. Ads in this build are simulated veils.\n\nYou can erase everything with Reset Progress below.', () => vs.openSettings())));
     row('ODDS & DISCLOSURES', 'dark', () => vs.openModal(new InfoSheet(vs, 'ODDS',
       'Lucky Chest (40 gems or $2.99):\n' + CHEST_ODDS.map((o) => `  ${RELICS[o.tier].name} — ${Math.round(o.chance * 100)}%`).join('\n') +
-      `\n\nPity: every ${ECON.pityEvery}th chest without a Gold Mask or better is guaranteed one.\nLuck (${(ECON.luckBase * 100).toFixed(0)}%–${ECON.luckCap * 100}%) can upgrade a chest result by one tier.\n\n` +
+      `\n\nPity: every ${ECON.pityEvery}th chest without a ${RELICS[CHEST_PITY_TIER].name} or better is guaranteed one.\nLuck (${(ECON.luckBase * 100).toFixed(0)}%–${ECON.luckCap * 100}%) can upgrade a chest result by one tier.\n\n` +
       `Exact relics are always for sale: Emerald Scarab for ${ECON.exactT5Gems} gems, lower relics for gold.\n\n` +
       `Players under 16 and regions without loot boxes see only exact-item offers.`, () => vs.openSettings())));
     C.add(txt(vs, 470, y + 40, `Age: ${s.age === 'minor' ? 'under 16 (random paid chests off)' : s.age === 'adult' ? '16+' : 'unknown'}`, { size: 28, font: 'body', color: '#b9a9c6' }));

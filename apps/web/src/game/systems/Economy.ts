@@ -1,5 +1,5 @@
 import {
-  ECON, CARDS, CARDS_PER_PAGE, ALBUM_PAGES, CHEST_ODDS, EVENT_MILESTONES, PASS_FREE, PASS_PREMIUM,
+  ECON, CARDS, CARDS_PER_PAGE, ALBUM_PAGES, CHEST_ODDS, CHEST_PITY_TIER, CHEST_TOP_TIER, EVENT_MILESTONES, PASS_FREE, PASS_PREMIUM,
   WHEEL, Reward, MAX_TIER,
 } from '../data/catalog';
 import type { GameState } from './State';
@@ -13,8 +13,16 @@ import { CHAINS, GEN_UPGRADE_GOLD, GEN_MAX_LEVEL } from '../data/items';
 export function grantGold(s: GameState, n: number) {
   if (n <= 0) return;
   s.gold += n;
-  s.piggy = Math.min(ECON.piggyCap, s.piggy + Math.max(1, Math.round(n * ECON.piggyRate)));
 }
+
+/**
+ * The pig stores gems, a quarter gem per merge by default (Board, #328: 2,400 gold for $2.99 was worthless).
+ * `s.piggy` is fractional; only whole gems are shown or paid out.
+ */
+export function feedPiggy(s: GameState) {
+  s.piggy = Math.min(ECON.piggyCap, s.piggy + 1 / ECON.piggyMergesPerGem);
+}
+export const piggyGems = (s: GameState) => Math.floor(s.piggy);
 
 export function spendGems(s: GameState, n: number): boolean {
   if (s.gems < n) return false;
@@ -28,8 +36,6 @@ export function spendGold(s: GameState, n: number): boolean {
   return true;
 }
 
-/** Piggy "stored value" in cents for display. 1 stored gold == 1 cent. */
-export function piggyCents(s: GameState) { return s.piggy; }
 
 // ---------------- rank ----------------
 export function xpToNext(rank: number) { return ECON.rankXpBase + (rank - 1) * ECON.rankXpStep + (rank - 1) * (rank - 1) * (ECON.rankXpQuad ?? 0); }
@@ -140,14 +146,14 @@ export function rollChest(s: GameState, rng: Rng): { tier: number; pityHit: bool
   let pityHit = false;
   let pool = CHEST_ODDS;
   if (s.pity >= ECON.pityEvery - 1) {
-    pool = CHEST_ODDS.filter((o) => o.tier >= 4);
+    pool = CHEST_ODDS.filter((o) => o.tier >= CHEST_PITY_TIER);
     pityHit = true;
   }
   const idx = pickWeighted(pool.map((o) => ({ weight: o.chance })), rng);
   let tier = pool[idx].tier;
   let upgraded = false;
-  if (rng() < computeLuck(s) && tier < 6) { tier++; upgraded = true; }
-  s.pity = tier >= 4 ? 0 : s.pity + 1;
+  if (rng() < computeLuck(s) && tier < CHEST_TOP_TIER) { tier++; upgraded = true; }
+  s.pity = tier >= CHEST_PITY_TIER ? 0 : s.pity + 1;
   return { tier, pityHit, upgraded };
 }
 
@@ -156,14 +162,9 @@ export interface ChestResult {
 }
 
 /** Open a chest. `source` free = welcome/pass/event/vip grant, gems = paid with gems. */
-export function openChest(s: GameState, rng: Rng, source: 'free' | 'gems' | 'cash'): ChestResult {
-  if (source === 'gems') {
-    if (!chestsAllowed(s)) return { ok: false, reason: 'blocked', tier: 0, index: -1 };
-    if (!spendGems(s, ECON.chestGemCost)) return { ok: false, reason: 'gems', tier: 0, index: -1 };
-  }
-  if (source === 'free' || source === 'cash') {
-    if (!chestsAllowed(s)) return { ok: false, reason: 'blocked', tier: 0, index: -1 };
-  }
+export function openChest(s: GameState, rng: Rng, source: 'free' | 'gems'): ChestResult {
+  if (!chestsAllowed(s)) return { ok: false, reason: 'blocked', tier: 0, index: -1 };
+  if (source === 'gems' && !spendGems(s, ECON.chestGemCost)) return { ok: false, reason: 'gems', tier: 0, index: -1 };
   if (source === 'free') {
     if (s.freeChests <= 0) return { ok: false, reason: 'gems', tier: 0, index: -1 };
     s.freeChests--;

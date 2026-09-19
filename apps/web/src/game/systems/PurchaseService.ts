@@ -2,17 +2,16 @@ import { SKUS, SkuId } from '../data/catalog';
 import type { GameState } from './State';
 import type { Rng } from './Rng';
 import { placeOrStash } from './BoardSystem';
-import { chestsAllowed, grantGold, openChest, ChestResult, grantChests } from './Economy';
+import { grantGold, grantChests, piggyGems } from './Economy';
 import { welcomeOpen } from './Offers';
 
 export interface PurchaseGrant {
   ok: boolean;
-  reason?: 'owned' | 'blocked';
+  reason?: 'owned';
   sku: SkuId;
   gems: number;
   gold: number;
   relics: { tier: number; index: number }[];
-  chest?: ChestResult;
   freeChests: number;
 }
 
@@ -22,33 +21,28 @@ export function skuAvailable(s: GameState, sku: SkuId): boolean {
   if (sku === 'pass') return !s.ent.passPremium;
   if (sku === 'noads') return !s.ent.removeAds;
   if (sku === 'vip') return !s.ent.vip;
-  if (sku === 'chest_cash') return chestsAllowed(s);
-  if (sku === 'piggy') return s.piggy > 0;
+  if (sku === 'piggy') return piggyGems(s) > 0;
   return true;
 }
 
 /** Pure entitlement grant. Identical in demo and storekit modes. */
 export function applyPurchase(s: GameState, sku: SkuId, rng: Rng, now = Date.now()): PurchaseGrant {
   const g: PurchaseGrant = { ok: true, sku, gems: 0, gold: 0, relics: [], freeChests: 0 };
-  if (!skuAvailable(s, sku)) return { ...g, ok: false, reason: sku === 'chest_cash' ? 'blocked' : 'owned' };
+  if (!skuAvailable(s, sku)) return { ...g, ok: false, reason: 'owned' };
   const def = SKUS[sku];
   switch (sku) {
     case 'welcome':
       s.ent.welcome = true;
-      s.gems += 120; s.gold += 800; g.gems = 120; g.gold = 800;
+      s.gems += def.gems!; s.gold += def.gold!; g.gems = def.gems!; g.gold = def.gold!;
       for (const t of [4, 4, 3]) g.relics.push({ tier: t, index: placeOrStash(s, t, rng) });
       { const exact = grantChests(s, 1, rng); if (exact.length) g.relics.push(...exact); else g.freeChests = 1; }
       break;
-    case 'gems80': case 'gems500': case 'gems1200':
+    case 'gems200': case 'gems500': case 'gems1200':
       s.gems += def.gems!; g.gems = def.gems!;
       break;
-    case 'chest_cash':
-      g.chest = openChest(s, rng, 'cash');
-      break;
     case 'piggy': {
-      const gold = s.piggy * 4;
-      s.gold += gold; s.gems += 15; s.piggy = 0;
-      g.gold = gold; g.gems = 15;
+      const gems = piggyGems(s);
+      s.gems += gems; s.piggy = 0; g.gems = gems;
       break;
     }
     case 'pass': s.ent.passPremium = true; break;

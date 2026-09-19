@@ -9,7 +9,7 @@ import { computeLuck } from './LuckSystem';
 import { OfferDirector } from './OfferDirector';
 import { mulberry32 } from './Rng';
 import { generateOrder, refillOrders, deliver, dismissOrder, tickOrders, matchOrder } from './OrderSystem';
-import { upgradeGenerator, unlockGenerators } from './Economy';
+import { upgradeGenerator, unlockGenerators, genUpgradeCost, buyExact } from './Economy';
 import { BINDINGS, CHAINS, itemWork } from '../data/items';
 import { grantReward, claimVipCrate, enforceChestRules } from './Economy';
 import { welcomeOpen, welcomeDeadline, WELCOME_WINDOW_MS } from './Offers';
@@ -167,20 +167,29 @@ describe('purchases', () => {
     const s = createState();
     const g = applyPurchase(s, 'welcome', rng());
     expect(g.gems).toBe(120);
-    expect(g.gold).toBe(800);
+    expect(g.gold).toBe(10000); // Board, #330: 800 was ~100 early actions
     expect(s.board.filter((t) => t === 4).length).toBe(2);
     expect(s.board.filter((t) => t === 3).length).toBe(1);
     expect(s.freeChests).toBe(1);
     expect(applyPurchase(s, 'welcome', rng()).ok).toBe(false);
   });
-  it('piggy smash pays stored x4 + 15 gems and empties the pig', () => {
+  it('the pig fills with gems as you merge and the smash pays every whole gem (Board, #328)', () => {
     const s = createState();
-    s.piggy = 250;
+    for (let i = 0; i < ECON.piggyMergesPerGem * 10; i++) { s.board[0] = 2; s.board[1] = 2; merge(s, 0, 1, rng()); }
+    expect(Math.floor(s.piggy)).toBe(10);
     const g0 = s.gold, gem0 = s.gems;
     applyPurchase(s, 'piggy', rng());
-    expect(s.gold - g0).toBe(1000);
-    expect(s.gems - gem0).toBe(15);
+    expect(s.gems - gem0).toBe(10);
+    expect(s.gold).toBe(g0);
     expect(s.piggy).toBe(0);
+    s.piggy = 10_000;
+    for (let i = 0; i < 4; i++) { s.board[0] = 2; s.board[1] = 2; merge(s, 0, 1, rng()); }
+    expect(s.piggy).toBe(ECON.piggyCap);
+  });
+  it('a v4 save drops its old gold pig instead of reading it as gems', () => {
+    const s = createState() as any;
+    s.v = 4; s.piggy = 600;
+    expect(migrate(JSON.parse(JSON.stringify(s))).piggy).toBe(0);
   });
   it('flags: pass, vip, noads raise luck / remove ads', () => {
     const s = createState();
@@ -194,7 +203,6 @@ describe('purchases', () => {
   it('minors cannot buy random paid chests', () => {
     const s = createState();
     s.age = 'minor';
-    expect(applyPurchase(s, 'chest_cash', rng()).ok).toBe(false);
     s.gems = 999;
     expect(openChest(s, rng(), 'gems').reason).toBe('blocked');
     s.age = 'adult'; s.lootboxesAllowed = false;
@@ -208,32 +216,46 @@ describe('chests & pity', () => {
     const r = mulberry32(7);
     const counts: Record<number, number> = {};
     for (let i = 0; i < 20000; i++) { s.pity = 0; const t = rollChest(s, r).tier; counts[t] = (counts[t] || 0) + 1; }
-    expect(Object.keys(counts).map(Number).every((t) => t >= 2 && t <= 6)).toBe(true);
-    expect(counts[2] / 20000).toBeGreaterThan(0.35);
+    // Board, #332: Gold Mask (T4) is now the floor, not the top prize
+    expect(Object.keys(counts).map(Number).every((t) => t >= 4 && t <= 8)).toBe(true);
+    expect(counts[4] / 20000).toBeGreaterThan(0.3);
+    expect(counts[8]).toBeGreaterThan(0);
   });
-  it('every 15th dry chest guarantees >= T4', () => {
+  it('every 15th dry chest guarantees a Sapphire Heart (T6) or better', () => {
     const s = createState();
-    // Dry streak: rng picks T2 and fails the luck-upgrade roll.
+    // Dry streak: rng picks the lowest row and fails the luck-upgrade roll.
     let n = 0;
     const dry = () => (n++ % 2 === 0 ? 0.0 : 0.99);
     for (let i = 0; i < 14; i++) {
       const r = rollChest(s, dry);
-      expect(r.tier).toBeLessThan(4);
+      expect(r.tier).toBeLessThan(6);
     }
     expect(s.pity).toBe(14);
     const r = rollChest(s, dry);
     expect(r.pityHit).toBe(true);
-    expect(r.tier).toBeGreaterThanOrEqual(4);
+    expect(r.tier).toBeGreaterThanOrEqual(6);
     expect(s.pity).toBe(0);
   });
-  it('gem chest costs 40 gems and places a relic', () => {
+  it('gem chest costs 5 gems and places a relic (Board, #332)', () => {
     const s = createState();
-    s.gems = 40;
+    s.gems = 5;
     const r = openChest(s, rng(), 'gems');
     expect(r.ok).toBe(true);
     expect(s.gems).toBe(0);
     expect(s.board[r.index]).toBe(r.tier);
     expect(openChest(s, rng(), 'gems').reason).toBe('gems');
+  });
+});
+
+describe('exact relics', () => {
+  it('an exact Emerald Scarab costs 5 gems and places exactly a T5 (Board, #331)', () => {
+    const s = createState();
+    s.gems = 5;
+    const i = buyExact(s, 5, rng());
+    expect(i).not.toBeNull();
+    expect(s.board[i!]).toBe(5);
+    expect(s.gems).toBe(0);
+    expect(buyExact(s, 5, rng())).toBeNull();
   });
 });
 
@@ -310,6 +332,13 @@ describe('save', () => {
     expect(back.board).toEqual(s.board);
     expect(back.flags.tutorial).toBe(3);
   });
+  it('renames the old gems80 SKU in purchase history (it always granted 200 gems)', () => {
+    const s = createState();
+    s.purchases = [{ sku: 'gems80', t: 1 }, { sku: 'pass', t: 2 }];
+    const back = migrate(JSON.parse(JSON.stringify(s)));
+    expect(back.purchases.map((p) => p.sku)).toEqual(['gems200', 'pass']);
+    expect(SKUS.gems200.gems).toBe(200);
+  });
 });
 
 describe('no random rewards for minors / loot-box-free regions (Critic ITERATE #1)', () => {
@@ -364,10 +393,10 @@ describe('honest offers (Critic ITERATE #2)', () => {
     expect(welcomeOpen(s, d + 1)).toBe(false);
   });
   it('value ribbons are computed from one baseline', () => {
-    expect(skuValuePct('gems80')).toBe(100);
+    expect(skuValuePct('gems200')).toBe(100);
     expect(skuValuePct('gems500')).toBe(125);
     expect(skuValuePct('gems1200')).toBe(150);
-    expect(skuValuePct('welcome')).toBe(Math.round(((160 / 1.99) / (200 / 4.99)) * 100));
+    expect(skuValuePct('welcome')).toBe(Math.round((((120 + ECON.chestGemCost) / 1.99) / (200 / 4.99)) * 100));
   });
 });
 
@@ -414,6 +443,17 @@ describe('deepen cycle 1: chains, bindings, generators (RV-D3)', () => {
     expect(upgradeGenerator(s, 0)).toBe(true);
     expect(s.gens[0]).toBe(2);
   });
+  it('every generator upgrades to level 10, and no further (Board, #329)', () => {
+    const s = createState();
+    s.gens = [1, 1, 1];
+    s.gold = 1e7;
+    for (const ch of [0, 1, 2]) {
+      while (upgradeGenerator(s, ch));
+      expect(s.gens[ch]).toBe(10);
+    }
+    expect(genUpgradeCost(s, 1)).toBeNull();
+    expect(1e7 - s.gold).toBe(3 * (300 + 900 + 2500 + 6000 + 12000 + 20000 + 32000 + 50000 + 80000));
+  });
 });
 
 describe('deepen cycle 1: patron orders (RV-D2)', () => {
@@ -425,6 +465,20 @@ describe('deepen cycle 1: patron orders (RV-D2)', () => {
       for (const id of o.want) { expect(Math.floor(id / 10)).toBe(0); expect(id % 10).toBeGreaterThanOrEqual(2); }
       expect(o.gold).toBeGreaterThanOrEqual(Math.round(o.want.reduce((a, id) => a + itemWork(id), 0) * ECON.orders.goldPerWork));
     }
+  });
+  it('an order for a top relic pays more gold than keeping it for half an ascension (Bug #333)', () => {
+    const s = createState();
+    s.gens = [1, 1, 1]; s.best = [9, 7, 7]; s.rank = 20;
+    const seen = new Set<number>();
+    for (let k = 0; k < 3000 && seen.size < 3; k++) {
+      const o = generateOrder(s, mulberry32(k));
+      const tops = o.want.filter((id) => [9, 17, 27].includes(id));
+      if (!tops.length) continue;
+      tops.forEach((id) => seen.add(id));
+      const halfAscensions = tops.reduce((a, id) => a + (ECON.ascendGold * CHAINS[Math.floor(id / 10)].value) / 2, 0);
+      expect(o.gold, `order ${o.want}`).toBeGreaterThan(halfAscensions);
+    }
+    expect([...seen].sort()).toEqual([17, 27, 9]);
   });
   it('delivering consumes exactly the wanted relics, pays, and refills the slot', () => {
     const s = createState();

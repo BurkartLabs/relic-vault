@@ -4,7 +4,7 @@ import type { MergeResult } from './MergeSystem';
 import { eventMilestoneIndex } from './Economy';
 import { welcomeOpen } from './Offers';
 
-export type OfferId = 'welcome' | 'comeback' | 'jammed' | 'shopBest' | 'doubleIt' | 'piggy' | 'passUpsell' | 'boost' | 'vip';
+export type OfferId = 'welcome' | 'comeback' | 'jammed' | 'shopBest' | 'doubleIt' | 'piggy' | 'passUpsell' | 'vip';
 
 export interface OfferRequest { id: OfferId; trigger: string; delayMs: number }
 

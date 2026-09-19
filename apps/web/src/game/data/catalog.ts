@@ -29,17 +29,21 @@ export const BOARD_ROWS = econ.boardRows;
 export const BOARD_SIZE = BOARD_COLS * BOARD_ROWS;
 
 // ---- Chest odds (disclosed) ----
+// Board, #332: a 5-gem chest whose best prize is worth having (a Gold Mask is 14 actions of play).
 export const CHEST_ODDS: { tier: number; chance: number }[] = [
-  { tier: 2, chance: 0.45 },
-  { tier: 3, chance: 0.33 },
-  { tier: 4, chance: 0.14 },
-  { tier: 5, chance: 0.06 },
-  { tier: 6, chance: 0.02 },
+  { tier: 4, chance: 0.40 },
+  { tier: 5, chance: 0.30 },
+  { tier: 6, chance: 0.18 },
+  { tier: 7, chance: 0.09 },
+  { tier: 8, chance: 0.03 },
 ];
+/** Pity: a dry streak of chests below this tier ends in one at or above it. */
+export const CHEST_PITY_TIER = 6;
+export const CHEST_TOP_TIER = CHEST_ODDS[CHEST_ODDS.length - 1].tier;
 
 // ---- SKUs ----
 export type SkuId =
-  | 'welcome' | 'gems80' | 'gems500' | 'gems1200' | 'chest_cash' | 'piggy'
+  | 'welcome' | 'gems200' | 'gems500' | 'gems1200' | 'piggy'
   | 'pass' | 'noads' | 'vip' | 'comeback';
 
 export interface Sku {
@@ -55,13 +59,12 @@ export interface Sku {
 }
 
 export const SKUS: Record<SkuId, Sku> = {
-  welcome: { id: 'welcome', title: 'Keeper’s Welcome', price: 1.99, gems: 120, gold: 800, badge: 'ONE TIME', oneTime: true,
-    blurb: '120 gems, 800 gold, two Gold Masks, a Silver Urn and a Lucky Chest on the house.' },
-  gems80: { id: 'gems80', title: 'Pouch of Gems', price: 4.99, gems: 200, blurb: 'A modest tithe.' },
+  welcome: { id: 'welcome', title: 'Keeper’s Welcome', price: 1.99, gems: 120, gold: 10000, badge: 'ONE TIME', oneTime: true,
+    blurb: '120 gems, 10,000 gold, two Gold Masks, a Silver Urn and a Lucky Chest on the house.' },
+  gems200: { id: 'gems200', title: 'Pouch of Gems', price: 4.99, gems: 200, blurb: 'A modest tithe.' },
   gems500: { id: 'gems500', title: 'Chest of Gems', price: 9.99, gems: 500, badge: 'POPULAR', blurb: 'The vault’s preferred offering.' },
   gems1200: { id: 'gems1200', title: 'Hoard of Gems', price: 19.99, gems: 1200, badge: 'BEST VALUE', blurb: 'For keepers who intend to stay.' },
-  chest_cash: { id: 'chest_cash', title: 'Lucky Chest', price: 2.99, random: true, blurb: 'One Lucky Chest, opened now. Odds are on the card.' },
-  piggy: { id: 'piggy', title: 'Smash the Pig', price: 2.99, blurb: 'Everything it swallowed, times four. Plus 15 gems.' },
+  piggy: { id: 'piggy', title: 'Smash the Pig', price: 2.99, blurb: 'Every gem it swallowed while you merged, up to 250.' },
   pass: { id: 'pass', title: 'Keeper’s Pass', price: 9.99, blurb: 'Premium track: gems, a wildcard card, the Gilded skin, +4% luck.' },
   noads: { id: 'noads', title: 'Silence the Criers', price: 7.99, blurb: 'Removes interstitials and the shop banner. Rewarded ads stay optional.' },
   vip: { id: 'vip', title: 'Vault VIP', price: 9.99, blurb: 'Monthly. Daily crate, +2% luck, a crown, no ads.' },
@@ -161,10 +164,11 @@ export const COPY = {
   comebackLine: 'So close to the next tier. It would be a shame to stop now.',
   jammedLine: 'The vault is full. The vault is never full for long.',
   piggyLine: 'The pig has eaten well. Break it, and eat better.',
+  ordersHint: 'A patron up top wants a relic you already hold. Tap their card to trade it for gold, Rush points and Pass XP. Patrons are the only way to fill your Pass.',
+  ordersHintShort: 'A patron wants a relic you hold: tap their card to trade.',
   passLine: 'You earned a milestone. The premium track would have paid double.',
   doubleLine: 'The criers liked you. The shop likes you more.',
   shopLine: 'Everything here is priced fairly. For me.',
   vipLine: 'Some keepers wear crowns.',
-  boostLine: 'The Rush ends soon. Burn gems, climb faster.',
   rankUp: 'The vault remembers your name.',
 };

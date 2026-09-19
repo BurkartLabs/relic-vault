@@ -2,7 +2,7 @@ import { ECON } from '../data/catalog';
 import { BINDINGS, CHAINS, chainOf, tierOf, isTop, tierValue } from '../data/items';
 import type { GameState } from './State';
 import type { Rng } from './Rng';
-import { grantGold, addXp, grantCard, cardDropChance, CardResult } from './Economy';
+import { grantGold, feedPiggy, addXp, grantCard, cardDropChance, CardResult } from './Economy';
 
 export interface MergeResult {
   ok: boolean;
@@ -79,6 +79,7 @@ export function merge(s: GameState, a: number, b: number, rng: Rng, now = Date.n
   s.pass.xp += ascended ? 20 : tierValue(ECON.passXp, next);
 
   s.stats.merges++;
+  feedPiggy(s);
   if (!ascended) {
     if (tier > (s.best[chain] ?? 0)) s.best[chain] = tier;
     if (chain === 0 && tier > s.stats.maxTier) s.stats.maxTier = tier;

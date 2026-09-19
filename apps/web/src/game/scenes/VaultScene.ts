@@ -27,7 +27,7 @@ import { SettingsModal } from '../ui/Settings';
 import { JammedSheet, InspectCard, QuestsModal, OfferSheet, RankInfo, KeeperDialog, GeneratorSheet } from '../ui/Sheets';
 import { OrdersPanel, patronLine } from '../ui/Orders';
 import { ITEMS, CHAINS, tierOf, BINDINGS } from '../data/items';
-import { tickOrders, refillOrders, deliver, dismissOrder } from '../systems/OrderSystem';
+import { tickOrders, refillOrders, deliver, dismissOrder, matchOrder } from '../systems/OrderSystem';
 import { AdVeil } from '../ui/AdVeil';
 import { Tutorial } from '../ui/Tutorial';
 import { DiscoveryCard } from '../ui/Discovery';
@@ -675,7 +675,17 @@ export class VaultScene extends Phaser.Scene {
   afterAction() {
     tickOrders(ctx.state, ctx.rng);
     this.orders?.poll();
+    this.maybeHintOrders();
     ctx.persist();
+  }
+
+  /** Board, #327: orders are easy to miss. The first time one can be filled from the board, the Keeper says so, once. */
+  private maybeHintOrders() {
+    const s = ctx.state;
+    if (s.flags.hint_orders || this.tut.step < 3) return;
+    if (!s.orders.some((o) => o && matchOrder(s, o))) return;
+    s.flags.hint_orders = 1;
+    this.time.delayedCall(500, () => { if (!this.modal) this.keeperSays(COPY.ordersHint); else this.toast(COPY.ordersHintShort); });
   }
 
   // ------------------------------------------------------------------ patron orders (RV-D2)
@@ -1036,8 +1046,8 @@ export class VaultScene extends Phaser.Scene {
     this.openShop('chest_button', 'chest');
   }
 
-  openChest(source: 'free' | 'gems' | 'cash', trigger: string, preRolled?: import('../systems/Economy').ChestResult) {
-    if (!empties(ctx.state).length && source !== 'cash' && !preRolled) {
+  openChest(source: 'free' | 'gems', trigger: string, preRolled?: import('../systems/Economy').ChestResult) {
+    if (!empties(ctx.state).length && !preRolled) {
       ctx.sfx.play('error');
       this.toast('No free socket. The chest will wait — merge or sell first.');
       return;
@@ -1076,9 +1086,9 @@ export class VaultScene extends Phaser.Scene {
   }
   openShop(trigger: string, focus?: 'gems' | 'best' | 'chest' | 'exact' | 'offers') { this.openModal(new ShopModal(this, trigger, focus)); this.dock.selectTab('shop'); }
   openPass(trigger: string, upsell = false) { this.openModal(new PassRoad(this, trigger, upsell)); this.dock.selectTab('pass'); }
-  openEvents(trigger: string, boost = false) {
+  openEvents(trigger: string) {
     if (!this.dock.unlocked('events')) { this.toast(this.dock.lockHint('events')); return; }
-    this.openModal(new EventPanel(this, trigger, boost)); this.dock.selectTab('events');
+    this.openModal(new EventPanel(this, trigger)); this.dock.selectTab('events');
   }
   openPiggy(trigger: string) { this.openModal(new PiggySheet(this, trigger)); }
   openWheel(trigger: string) { this.openModal(new WheelModal(this, trigger)); }
@@ -1112,7 +1122,6 @@ export class VaultScene extends Phaser.Scene {
       case 'doubleIt': this.openModal(new OfferSheet(this, 'doubleIt', r.trigger)); break;
       case 'piggy': this.openPiggy(r.trigger); break;
       case 'passUpsell': if (!s.ent.passPremium) this.openPass(r.trigger, true); break;
-      case 'boost': this.openEvents(r.trigger, true); break;
       case 'vip': if (!s.ent.vip) this.openModal(new OfferSheet(this, 'vip', r.trigger)); break;
     }
   }
@@ -1139,7 +1148,7 @@ export class VaultScene extends Phaser.Scene {
   async buy(sku: SkuId, trigger: string, after?: () => void) {
     const s = ctx.state;
     ctx.analytics.log('iap_click', { sku, trigger, price: SKUS[sku].price });
-    if (!skuAvailable(s, sku)) { ctx.sfx.play('error'); this.toast(sku === 'chest_cash' ? 'Random chests are unavailable on this profile.' : 'Already owned.'); return; }
+    if (!skuAvailable(s, sku)) { ctx.sfx.play('error'); this.toast('Already owned.'); return; }
     if (this.modal) this.modal.converted = true;
     const veil = this.processingVeil();
     const res = await ctx.purchases.purchase(sku);
@@ -1158,7 +1167,6 @@ export class VaultScene extends Phaser.Scene {
       this.time.delayedCall(1300, () => this.cameras.main.zoomTo(1, 400, 'Sine.easeInOut'));
       g.relics.forEach((r, k) => this.dropRelic(r.index, r.tier, 250 + k * 220));
     }
-    if (sku === 'chest_cash' && g.chest?.ok) this.time.delayedCall(600, () => this.openChest('cash', trigger, g.chest));
     if (sku === 'welcome' && s.freeChests > 0) this.time.delayedCall(1700, () => this.openChest('free', 'welcome_pack'));
     if (sku === 'piggy') this.hud.refresh();
     this.hud.refresh();
