@@ -1,0 +1,27 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Relic Vault art sheet</title>
+<style>body{margin:0;background:#140E18;color:#FFE9A3;font-family:sans-serif}canvas{display:block;width:100vw;height:auto}</style></head>
+<body>
+<canvas id="c"></canvas>
+<script type="module">
+  import { paintRelic } from './src/game/art/RelicFactory.ts';
+  const c = document.getElementById('c');
+  c.width = 256 * 5; c.height = 256 * 2 + 140;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#1B1424'; ctx.fillRect(0, 0, c.width, c.height);
+  for (let t = 1; t <= 9; t++) {
+    const x = ((t - 1) % 5) * 256, y = Math.floor((t - 1) / 5) * 256;
+    const off = document.createElement('canvas'); off.width = off.height = 256;
+    paintRelic(off.getContext('2d'), t, true);
+    ctx.drawImage(off, x, y);
+  }
+  // 96px readability row
+  for (let t = 1; t <= 9; t++) {
+    const off = document.createElement('canvas'); off.width = off.height = 256;
+    paintRelic(off.getContext('2d'), t, true);
+    ctx.drawImage(off, 10 + (t - 1) * 104, 512 + 20, 96, 96);
+  }
+</script>
+</body>
+</html>
