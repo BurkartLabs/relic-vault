@@ -190,6 +190,8 @@ export function migrate(raw: Raw, now = Date.now()): GameState {
     s.album.forEach((x, i) => { if (i < a.length) a[i] = x; });
     s.album = a;
   }
+  // the $4.99 pack was called gems80 while it granted 200 gems; keep old purchase history readable
+  for (const p of s.purchases) if (p.sku === 'gems80') p.sku = 'gems200';
   rollover(s, now);
   return s;
 }

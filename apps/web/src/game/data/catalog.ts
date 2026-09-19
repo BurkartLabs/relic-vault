@@ -39,7 +39,7 @@ export const CHEST_ODDS: { tier: number; chance: number }[] = [
 
 // ---- SKUs ----
 export type SkuId =
-  | 'welcome' | 'gems80' | 'gems500' | 'gems1200' | 'chest_cash' | 'piggy'
+  | 'welcome' | 'gems200' | 'gems500' | 'gems1200' | 'chest_cash' | 'piggy'
   | 'pass' | 'noads' | 'vip' | 'comeback';
 
 export interface Sku {
@@ -57,7 +57,7 @@ export interface Sku {
 export const SKUS: Record<SkuId, Sku> = {
   welcome: { id: 'welcome', title: 'Keeper’s Welcome', price: 1.99, gems: 120, gold: 800, badge: 'ONE TIME', oneTime: true,
     blurb: '120 gems, 800 gold, two Gold Masks, a Silver Urn and a Lucky Chest on the house.' },
-  gems80: { id: 'gems80', title: 'Pouch of Gems', price: 4.99, gems: 200, blurb: 'A modest tithe.' },
+  gems200: { id: 'gems200', title: 'Pouch of Gems', price: 4.99, gems: 200, blurb: 'A modest tithe.' },
   gems500: { id: 'gems500', title: 'Chest of Gems', price: 9.99, gems: 500, badge: 'POPULAR', blurb: 'The vault’s preferred offering.' },
   gems1200: { id: 'gems1200', title: 'Hoard of Gems', price: 19.99, gems: 1200, badge: 'BEST VALUE', blurb: 'For keepers who intend to stay.' },
   chest_cash: { id: 'chest_cash', title: 'Lucky Chest', price: 2.99, random: true, blurb: 'One Lucky Chest, opened now. Odds are on the card.' },
@@ -165,6 +165,5 @@ export const COPY = {
   doubleLine: 'The criers liked you. The shop likes you more.',
   shopLine: 'Everything here is priced fairly. For me.',
   vipLine: 'Some keepers wear crowns.',
-  boostLine: 'The Rush ends soon. Burn gems, climb faster.',
   rankUp: 'The vault remembers your name.',
 };

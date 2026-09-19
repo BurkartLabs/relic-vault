@@ -227,7 +227,13 @@ export class KeeperDialog extends Modal {
     this.onClosed = onDone;
     // never block input for more than 1.2s: dismiss on any tap, auto-arm immediately
     const dismiss = () => this.close();
-    vs.time.delayedCall(250, () => { this.dimmer.on('pointerup', dismiss); (this.frame.list[0] as Phaser.GameObjects.NineSlice).on('pointerup', dismiss); });
+    // closed within the 250 ms (another modal, a programmatic close): the dimmer is gone, and a throw here
+    // would stop Phaser's game loop for good
+    vs.time.delayedCall(250, () => {
+      if (!this.dimmer?.active) return;
+      this.dimmer.on('pointerup', dismiss);
+      (this.frame.list[0] as Phaser.GameObjects.NineSlice | undefined)?.on('pointerup', dismiss);
+    });
   }
 }
 

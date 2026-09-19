@@ -310,6 +310,13 @@ describe('save', () => {
     expect(back.board).toEqual(s.board);
     expect(back.flags.tutorial).toBe(3);
   });
+  it('renames the old gems80 SKU in purchase history (it always granted 200 gems)', () => {
+    const s = createState();
+    s.purchases = [{ sku: 'gems80', t: 1 }, { sku: 'pass', t: 2 }];
+    const back = migrate(JSON.parse(JSON.stringify(s)));
+    expect(back.purchases.map((p) => p.sku)).toEqual(['gems200', 'pass']);
+    expect(SKUS.gems200.gems).toBe(200);
+  });
 });
 
 describe('no random rewards for minors / loot-box-free regions (Critic ITERATE #1)', () => {
@@ -364,7 +371,7 @@ describe('honest offers (Critic ITERATE #2)', () => {
     expect(welcomeOpen(s, d + 1)).toBe(false);
   });
   it('value ribbons are computed from one baseline', () => {
-    expect(skuValuePct('gems80')).toBe(100);
+    expect(skuValuePct('gems200')).toBe(100);
     expect(skuValuePct('gems500')).toBe(125);
     expect(skuValuePct('gems1200')).toBe(150);
     expect(skuValuePct('welcome')).toBe(Math.round(((160 / 1.99) / (200 / 4.99)) * 100));

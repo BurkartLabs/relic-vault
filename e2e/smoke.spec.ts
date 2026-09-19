@@ -142,7 +142,7 @@ test('no cooldown: 60 rapid core actions are never refused', async ({ page }) =>
 
 test('every demo SKU grants its entitlement and is logged', async ({ page }) => {
   await boot(page);
-  const skus = ['gems80', 'gems500', 'gems1200', 'noads', 'vip', 'pass', 'comeback', 'welcome', 'chest_cash', 'piggy'];
+  const skus = ['gems200', 'gems500', 'gems1200', 'noads', 'vip', 'pass', 'comeback', 'welcome', 'chest_cash', 'piggy'];
   for (const sku of skus) {
     await page.evaluate(() => { const rv = (window as any).__rv; rv.state.piggy = 250; (window as any).__vault.modal?.close(); });
     await page.waitForTimeout(250);

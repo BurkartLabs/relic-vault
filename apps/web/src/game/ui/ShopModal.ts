@@ -90,7 +90,7 @@ export class ShopModal extends Modal {
 
     // ---------------------------------------------------------- gems
     header('GEMS', 'gems');
-    const packs: SkuId[] = ['gems80', 'gems500', 'gems1200'];
+    const packs: SkuId[] = ['gems200', 'gems500', 'gems1200'];
     packs.forEach((id, k) => {
       const sku = SKUS[id];
       const cw = 300, ch = 440, cx = 170 + k * 320;

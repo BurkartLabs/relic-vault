@@ -1076,9 +1076,9 @@ export class VaultScene extends Phaser.Scene {
   }
   openShop(trigger: string, focus?: 'gems' | 'best' | 'chest' | 'exact' | 'offers') { this.openModal(new ShopModal(this, trigger, focus)); this.dock.selectTab('shop'); }
   openPass(trigger: string, upsell = false) { this.openModal(new PassRoad(this, trigger, upsell)); this.dock.selectTab('pass'); }
-  openEvents(trigger: string, boost = false) {
+  openEvents(trigger: string) {
     if (!this.dock.unlocked('events')) { this.toast(this.dock.lockHint('events')); return; }
-    this.openModal(new EventPanel(this, trigger, boost)); this.dock.selectTab('events');
+    this.openModal(new EventPanel(this, trigger)); this.dock.selectTab('events');
   }
   openPiggy(trigger: string) { this.openModal(new PiggySheet(this, trigger)); }
   openWheel(trigger: string) { this.openModal(new WheelModal(this, trigger)); }
@@ -1112,7 +1112,6 @@ export class VaultScene extends Phaser.Scene {
       case 'doubleIt': this.openModal(new OfferSheet(this, 'doubleIt', r.trigger)); break;
       case 'piggy': this.openPiggy(r.trigger); break;
       case 'passUpsell': if (!s.ent.passPremium) this.openPass(r.trigger, true); break;
-      case 'boost': this.openEvents(r.trigger, true); break;
       case 'vip': if (!s.ent.vip) this.openModal(new OfferSheet(this, 'vip', r.trigger)); break;
     }
   }

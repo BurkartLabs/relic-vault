@@ -10,8 +10,8 @@ npm install
 npm run dev          # http://localhost:5173  (add ?debug=1 for the debug panel)
 npm run build        # dist/ — installable PWA, offline core loop
 npm run preview      # serves dist/ on :4173 and on your LAN IP, so a phone on the same Wi-Fi can play it
-npm test             # 37 unit tests: merge, forge, sell, purchase (every SKU), chest odds + pity, minors, offers, save migration
-npm run test:e2e     # 10 Playwright smoke tests on a fresh production build (uses installed Edge; PW_CHANNEL=chrome to switch)
+npm test             # unit tests (45 after Deepen cycle 1): merge, forge, sell, purchase (every SKU), chest odds + pity, minors, offers, chains, orders, save migration
+npm run test:e2e     # Playwright smoke tests (13 after Deepen cycle 1) on a fresh production build (uses installed Edge; PW_CHANNEL=chrome to switch)
 npm run playtest     # scripted 40-action phone-size session -> screenshots/playtest (needs `npm run dev` running)
 npm run icons        # re-bake PWA icons from the relic painter
 node apps/web/tools/collector.mjs 8787         # tiny self-hosted telemetry endpoint (NDJSON)
