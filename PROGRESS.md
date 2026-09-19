@@ -30,6 +30,9 @@ The next session reads this before it reads the code.
 
 1. RV-P2 (#274): make the probe honest before trusting any depth number. The probe lives in hq: `ops/probes/relic-vault-runway.ts`.
 2. RV-D6 (#275): prove a casual 12 min/day profile finishes Rush milestone ≥ 9 each cycle and pass tier ≥ 15 by day 14 without paying.
-3. RV-D4a (#276): `docs/ROOMS.md` design only, no code.
+3. RV-D4a (#276): `docs/ROOMS.md` design only, no code. Include prestige (leave a completed room for a new one,
+   keep a permanent Keeper's Renown bonus): Board idea, see MONETIZATION.md.
+4. Then the Monetization cycle (MONETIZATION.md review #1, 2.5 / 5, REPRICE): RV-M1 value probe first, then power-ups,
+   packs worth buying, stakes, seasons + leaderboards.
 
 Do not write a diary. Write a handoff.
