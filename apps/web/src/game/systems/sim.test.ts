@@ -9,7 +9,7 @@ import { computeLuck } from './LuckSystem';
 import { OfferDirector } from './OfferDirector';
 import { mulberry32 } from './Rng';
 import { generateOrder, refillOrders, deliver, dismissOrder, tickOrders, matchOrder } from './OrderSystem';
-import { upgradeGenerator, unlockGenerators, genUpgradeCost } from './Economy';
+import { upgradeGenerator, unlockGenerators, genUpgradeCost, buyExact } from './Economy';
 import { BINDINGS, CHAINS, itemWork } from '../data/items';
 import { grantReward, claimVipCrate, enforceChestRules } from './Economy';
 import { welcomeOpen, welcomeDeadline, WELCOME_WINDOW_MS } from './Offers';
@@ -234,6 +234,18 @@ describe('chests & pity', () => {
     expect(s.gems).toBe(0);
     expect(s.board[r.index]).toBe(r.tier);
     expect(openChest(s, rng(), 'gems').reason).toBe('gems');
+  });
+});
+
+describe('exact relics', () => {
+  it('an exact Emerald Scarab costs 5 gems and places exactly a T5 (Board, #331)', () => {
+    const s = createState();
+    s.gems = 5;
+    const i = buyExact(s, 5, rng());
+    expect(i).not.toBeNull();
+    expect(s.board[i!]).toBe(5);
+    expect(s.gems).toBe(0);
+    expect(buyExact(s, 5, rng())).toBeNull();
   });
 });
 
