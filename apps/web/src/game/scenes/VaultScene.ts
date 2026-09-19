@@ -27,7 +27,7 @@ import { SettingsModal } from '../ui/Settings';
 import { JammedSheet, InspectCard, QuestsModal, OfferSheet, RankInfo, KeeperDialog, GeneratorSheet } from '../ui/Sheets';
 import { OrdersPanel, patronLine } from '../ui/Orders';
 import { ITEMS, CHAINS, tierOf, BINDINGS } from '../data/items';
-import { tickOrders, refillOrders, deliver, dismissOrder } from '../systems/OrderSystem';
+import { tickOrders, refillOrders, deliver, dismissOrder, matchOrder } from '../systems/OrderSystem';
 import { AdVeil } from '../ui/AdVeil';
 import { Tutorial } from '../ui/Tutorial';
 import { DiscoveryCard } from '../ui/Discovery';
@@ -675,7 +675,17 @@ export class VaultScene extends Phaser.Scene {
   afterAction() {
     tickOrders(ctx.state, ctx.rng);
     this.orders?.poll();
+    this.maybeHintOrders();
     ctx.persist();
+  }
+
+  /** Board, #327: orders are easy to miss. The first time one can be filled from the board, the Keeper says so, once. */
+  private maybeHintOrders() {
+    const s = ctx.state;
+    if (s.flags.hint_orders || this.tut.step < 3) return;
+    if (!s.orders.some((o) => o && matchOrder(s, o))) return;
+    s.flags.hint_orders = 1;
+    this.time.delayedCall(500, () => { if (!this.modal) this.keeperSays(COPY.ordersHint); else this.toast(COPY.ordersHintShort); });
   }
 
   // ------------------------------------------------------------------ patron orders (RV-D2)

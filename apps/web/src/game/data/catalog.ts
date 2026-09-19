@@ -164,6 +164,8 @@ export const COPY = {
   comebackLine: 'So close to the next tier. It would be a shame to stop now.',
   jammedLine: 'The vault is full. The vault is never full for long.',
   piggyLine: 'The pig has eaten well. Break it, and eat better.',
+  ordersHint: 'A patron up top wants a relic you already hold. Tap their card to trade it for gold, Rush points and Pass XP. Patrons are the only way to fill your Pass.',
+  ordersHintShort: 'A patron wants a relic you hold: tap their card to trade.',
   passLine: 'You earned a milestone. The premium track would have paid double.',
   doubleLine: 'The criers liked you. The shop likes you more.',
   shopLine: 'Everything here is priced fairly. For me.',

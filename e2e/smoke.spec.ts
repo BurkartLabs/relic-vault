@@ -239,6 +239,23 @@ test('patron order: tapping a complete card delivers the relics and pays', async
   expect(errors).toEqual([]);
 });
 
+test('the Keeper points out patron orders once, the first time one can be filled (Board, #327)', async ({ page }) => {
+  const errors = await boot(page);
+  await page.evaluate(() => { const rv = (window as any).__rv; rv.state.flags.tut = 3; const o = rv.state.orders[0]; rv.state.board = rv.state.board.map(() => 0); o.want.forEach((id: number, i: number) => { rv.state.board[i] = id; }); (window as any).__vault.syncBoard(); (window as any).__vault.afterAction(); });
+  await page.waitForFunction(() => (window as any).__vault.modal?.kind === 'KeeperDialog', null, { timeout: 5000 });
+  const said = await page.evaluate(() => { const out: string[] = []; const walk = (o: any) => { if (o.text) out.push(o.text); (o.list || []).forEach(walk); }; walk((window as any).__vault.modal); return out.join(' '); });
+  expect(said).toMatch(/patron/i);
+  expect((await state(page)).flags.hint_orders).toBe(1);
+  await page.evaluate(() => { (window as any).__vault.modal.close(); (window as any).__rv.persistNow(); });
+  await page.waitForTimeout(400);
+  await page.reload();
+  await page.waitForFunction(() => (window as any).__vault?.hud, null, { timeout: 30_000 });
+  await page.evaluate(() => (window as any).__vault.afterAction());
+  await page.waitForTimeout(1200);
+  expect(await modalName(page)).not.toBe('KeeperDialog');
+  expect(errors).toEqual([]);
+});
+
 test('binding: a top-tier merge without its binding is refused and the relic returns', async ({ page }) => {
   const errors = await boot(page);
   await page.evaluate(() => { const s = (window as any).__rv.state; s.flags.tut = 3; s.board = s.board.map(() => 0); s.board[0] = 6; s.board[1] = 6; (window as any).__vault.syncBoard(); });
