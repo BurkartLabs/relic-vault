@@ -145,7 +145,7 @@ export class Hud extends Phaser.GameObjects.Container {
     // piggy swell
     const fill = Math.min(1, s.piggy / ECON.piggyCap);
     this.pig.setDisplaySize(130 + fill * 40, 130 + fill * 40);
-    this.piggyText.setText(fmt(s.piggy));
+    this.piggyText.setText(fmt(Math.floor(s.piggy))); // stored gems (Board, #328)
     this.piggyText.setColor(s.piggy >= ECON.piggyNagAt ? '#8CF08A' : '#FFE9A3');
     // quests badge
     const claimable = QUESTS.some((q) => questProgress(s, q.id) >= q.goal && !s.quests.claimed.includes(q.id));

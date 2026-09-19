@@ -173,14 +173,23 @@ describe('purchases', () => {
     expect(s.freeChests).toBe(1);
     expect(applyPurchase(s, 'welcome', rng()).ok).toBe(false);
   });
-  it('piggy smash pays stored x4 + 15 gems and empties the pig', () => {
+  it('the pig fills with gems as you merge and the smash pays every whole gem (Board, #328)', () => {
     const s = createState();
-    s.piggy = 250;
+    for (let i = 0; i < ECON.piggyMergesPerGem * 10; i++) { s.board[0] = 2; s.board[1] = 2; merge(s, 0, 1, rng()); }
+    expect(Math.floor(s.piggy)).toBe(10);
     const g0 = s.gold, gem0 = s.gems;
     applyPurchase(s, 'piggy', rng());
-    expect(s.gold - g0).toBe(1000);
-    expect(s.gems - gem0).toBe(15);
+    expect(s.gems - gem0).toBe(10);
+    expect(s.gold).toBe(g0);
     expect(s.piggy).toBe(0);
+    s.piggy = 10_000;
+    for (let i = 0; i < 4; i++) { s.board[0] = 2; s.board[1] = 2; merge(s, 0, 1, rng()); }
+    expect(s.piggy).toBe(ECON.piggyCap);
+  });
+  it('a v4 save drops its old gold pig instead of reading it as gems', () => {
+    const s = createState() as any;
+    s.v = 4; s.piggy = 600;
+    expect(migrate(JSON.parse(JSON.stringify(s))).piggy).toBe(0);
   });
   it('flags: pass, vip, noads raise luck / remove ads', () => {
     const s = createState();

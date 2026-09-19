@@ -2,7 +2,7 @@ import { SKUS, SkuId } from '../data/catalog';
 import type { GameState } from './State';
 import type { Rng } from './Rng';
 import { placeOrStash } from './BoardSystem';
-import { grantGold, grantChests } from './Economy';
+import { grantGold, grantChests, piggyGems } from './Economy';
 import { welcomeOpen } from './Offers';
 
 export interface PurchaseGrant {
@@ -21,7 +21,7 @@ export function skuAvailable(s: GameState, sku: SkuId): boolean {
   if (sku === 'pass') return !s.ent.passPremium;
   if (sku === 'noads') return !s.ent.removeAds;
   if (sku === 'vip') return !s.ent.vip;
-  if (sku === 'piggy') return s.piggy > 0;
+  if (sku === 'piggy') return piggyGems(s) > 0;
   return true;
 }
 
@@ -41,9 +41,8 @@ export function applyPurchase(s: GameState, sku: SkuId, rng: Rng, now = Date.now
       s.gems += def.gems!; g.gems = def.gems!;
       break;
     case 'piggy': {
-      const gold = s.piggy * 4;
-      s.gold += gold; s.gems += 15; s.piggy = 0;
-      g.gold = gold; g.gems = 15;
+      const gems = piggyGems(s);
+      s.gems += gems; s.piggy = 0; g.gems = gems;
       break;
     }
     case 'pass': s.ent.passPremium = true; break;

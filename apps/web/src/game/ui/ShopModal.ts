@@ -181,7 +181,7 @@ export class ShopModal extends Modal {
       const title = txt(vs, 0, 10, sku.title, { size: 32, gold: true, weight: '900' });
       if (title.width > 270) title.setScale(270 / title.width);
       card.add(title);
-      card.add(txt(vs, 0, 76, o.id === 'piggy' ? `Holds ${fmt(s.piggy * 4)} gold + 15 gems` : sku.blurb, { size: 21, font: 'body', color: '#d8cce4', wrap: 260, strokeW: 0 }));
+      card.add(txt(vs, 0, 76, o.id === 'piggy' ? `Holds ${fmt(Math.floor(s.piggy))} gems` : sku.blurb, { size: 21, font: 'body', color: '#d8cce4', wrap: 260, strokeW: 0 }));
       if (owned) card.add(txt(vs, 0, 156, o.id === 'piggy' ? 'EMPTY' : 'OWNED', { size: 36, font: 'num', weight: '700', color: '#8CF08A' }));
       else card.add(new Button(vs, 0, 156, 230, 88, money(sku.price), () => this.purchase(o.id), { color: o.color, size: 36, guard }));
       if (sku.badge && !owned) card.add(badge(vs, 110, -170, sku.badge, 'red', 100));

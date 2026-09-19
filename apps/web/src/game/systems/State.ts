@@ -1,6 +1,6 @@
 ﻿import { BOARD_SIZE, ECON, CARDS, ALBUM_PAGES } from '../data/catalog';
 
-export const SAVE_VERSION = 4;
+export const SAVE_VERSION = 5;
 
 export type AgeBand = 'unknown' | 'adult' | 'minor';
 
@@ -150,6 +150,12 @@ const MIGRATIONS: Record<number, (r: Raw, now: number) => Raw> = {
     r.orderWait = [0, 0, 0];
     r.orderSeq = 0;
     r.v = 4;
+    return r;
+  },
+  // v4 -> v5 (Board, #328): the pig stores gems now; the old store was gold (up to 600) and is not carried over
+  4: (r) => {
+    r.piggy = 0;
+    r.v = 5;
     return r;
   },
 };

@@ -13,8 +13,16 @@ import { CHAINS, GEN_UPGRADE_GOLD, GEN_MAX_LEVEL } from '../data/items';
 export function grantGold(s: GameState, n: number) {
   if (n <= 0) return;
   s.gold += n;
-  s.piggy = Math.min(ECON.piggyCap, s.piggy + Math.max(1, Math.round(n * ECON.piggyRate)));
 }
+
+/**
+ * The pig stores gems, a quarter gem per merge by default (Board, #328: 2,400 gold for $2.99 was worthless).
+ * `s.piggy` is fractional; only whole gems are shown or paid out.
+ */
+export function feedPiggy(s: GameState) {
+  s.piggy = Math.min(ECON.piggyCap, s.piggy + 1 / ECON.piggyMergesPerGem);
+}
+export const piggyGems = (s: GameState) => Math.floor(s.piggy);
 
 export function spendGems(s: GameState, n: number): boolean {
   if (s.gems < n) return false;
@@ -28,8 +36,6 @@ export function spendGold(s: GameState, n: number): boolean {
   return true;
 }
 
-/** Piggy "stored value" in cents for display. 1 stored gold == 1 cent. */
-export function piggyCents(s: GameState) { return s.piggy; }
 
 // ---------------- rank ----------------
 export function xpToNext(rank: number) { return ECON.rankXpBase + (rank - 1) * ECON.rankXpStep + (rank - 1) * (rank - 1) * (ECON.rankXpQuad ?? 0); }
