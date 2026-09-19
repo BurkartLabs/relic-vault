@@ -1,7 +1,7 @@
 {
   "name": "relic-vault",
   "version": "1.0.0",
-  "description": "Relic Vault \u00e2\u20ac\u201d merge cursed treasure in a living vault. Mobile-first Phaser PWA.",
+  "description": "Relic Vault: merge cursed treasure in a living vault. Mobile-first Phaser PWA.",
   "private": true,
   "type": "module",
   "scripts": {
