@@ -1,0 +1,27 @@
+# relic-vault runway probe — 2026-09-19T10:30Z — commit 6a92f9b
+
+=== GREEDY (median of 12 seeds, 14 days × 938 actions) ===
+first seen: 1@0 min  2@0 min  3@1 min  4@7 min  5@13 min  6@35 min  7@38 min  8@never  9@never  11@5 min  12@5 min  13@5 min  14@9 min  15@16 min  16@46 min  17@41 min  21@23 min  22@23 min  23@24 min  24@25 min  25@26 min  26@37 min  27@59 min
+distinct relics seen by day 14: 19/23; last new relic: 59 min
+rank 3 (Crypt): 5 min; rank 6 (Star Well): 23 min; rank at day 14: 16
+14-day pass completes: day -1.0 (target 10–12)
+4-day Rush top milestone: day -1.0 of the cycle (target ≥ 3)
+album page I complete: day 9.1 (target ~3); cards at day 14: 11/36
+orders/day: 7.4; gold banked/day: 8889
+decision density (turns with ≥2 distinct options): 83%
+raw: pass xp by day 14 409; Rush pts in first 4-day cycle 3701; cards by day 3 4
+actions (seed 1): deliver 100 merge 4280 forge 6718 sell 2034 dismiss 0
+keep-vs-merge tension (a mergeable pair is wanted by a patron): 2%
+
+=== PLANNER (median of 12 seeds, 14 days × 938 actions) ===
+first seen: 1@0 min  2@0 min  3@4 min  4@13 min  5@41 min  6@74 min  7@day 6.6  8@day 7.2  9@never  11@5 min  12@5 min  13@9 min  14@29 min  15@59 min  16@day 6.1  17@day 12.6  21@24 min  22@24 min  23@27 min  24@41 min  25@91 min  26@day 7.2  27@never
+distinct relics seen by day 14: 19/23; last new relic: day 9.4
+rank 3 (Crypt): 4 min; rank 6 (Star Well): 24 min; rank at day 14: 20
+14-day pass completes: day 11.9 (target 10–12)
+4-day Rush top milestone: day 3.8 of the cycle (target ≥ 3)
+album page I complete: day 5.6 (target ~3); cards at day 14: 27/36
+orders/day: 31.4; gold banked/day: 6554
+decision density (turns with ≥2 distinct options): 99%
+raw: pass xp by day 14 1798; Rush pts in first 4-day cycle 6150; cards by day 3 8
+actions (seed 1): deliver 462 merge 5848 forge 6822 sell 0 dismiss 134
+keep-vs-merge tension (a mergeable pair is wanted by a patron): 43%

@@ -1,0 +1,34 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>icon baker</title></head>
+<body style="margin:0;background:#111">
+<script type="module">
+  import { paintRelic } from '../src/game/art/RelicFactory.ts';
+  import { makeCanvas, rad, glow, chrome, MAT, lin } from '../src/game/art/paint.ts';
+
+  function icon(size, maskable) {
+    const [c, ctx] = makeCanvas(size, size);
+    const s = size / 512;
+    ctx.fillStyle = rad(ctx, 256 * s, 220 * s, 20 * s, 380 * s, [[0, '#4a1838'], [0.55, '#1B1424'], [1, '#07060B']]);
+    ctx.fillRect(0, 0, size, size);
+    glow(ctx, 256 * s, 256 * s, 260 * s, 'rgba(244,196,90,0.45)');
+    const r = (maskable ? 170 : 205) * s;
+    ctx.lineWidth = 16 * s; ctx.strokeStyle = chrome(ctx, MAT.gold, 0, 256 * s - r, 0, 256 * s + r);
+    ctx.beginPath(); ctx.arc(256 * s, 256 * s, r, 0, Math.PI * 2); ctx.stroke();
+    ctx.lineWidth = 3 * s; ctx.strokeStyle = '#2a1402';
+    ctx.beginPath(); ctx.arc(256 * s, 256 * s, r + 9 * s, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(256 * s, 256 * s, r - 9 * s, 0, Math.PI * 2); ctx.stroke();
+    const [rc, rctx] = makeCanvas(256, 256);
+    paintRelic(rctx, 4, true);
+    const d = (maskable ? 300 : 370) * s;
+    ctx.save(); ctx.shadowColor = 'rgba(255,190,80,0.7)'; ctx.shadowBlur = 30 * s;
+    ctx.drawImage(rc, 256 * s - d / 2, 256 * s - d / 2 - 6 * s, d, d); ctx.restore();
+    return c.toDataURL('image/png');
+  }
+  window.__icons = {
+    'icon-192.png': icon(192, false),
+    'icon-512.png': icon(512, false),
+    'icon-maskable-512.png': icon(512, true),
+    'apple-touch-icon.png': icon(180, false),
+  };
+</script>
+</body></html>
