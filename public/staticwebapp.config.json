@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json.schemastore.org/staticwebapp.config.json",
+  "_comment": "Board decision #273 (2026-09-19): the preview is invite-only. Only users the Board invites with the 'playtester' role can reach the game; everyone else is sent to sign in. Invite from the Azure Portal: Static Web App relic-vault -> Role management -> Invite -> role 'playtester'.",
+  "routes": [
+    { "route": "/.auth/login/github", "allowedRoles": ["anonymous", "authenticated"] },
+    { "route": "/.auth/login/aad", "allowedRoles": ["anonymous", "authenticated"] },
+    { "route": "/.auth/*", "allowedRoles": ["anonymous", "authenticated"] },
+    { "route": "/*", "allowedRoles": ["playtester"] }
+  ],
+  "responseOverrides": {
+    "401": { "statusCode": 302, "redirect": "/.auth/login/aad" },
+    "403": { "rewrite": "/no-invite.html", "statusCode": 403 }
+  },
+  "navigationFallback": {
+    "rewrite": "/index.html",
+    "exclude": ["/assets/*", "/icons/*", "*.{png,jpg,svg,webmanifest,js,css}"]
+  },
+  "globalHeaders": {
+    "referrer-policy": "no-referrer",
+    "x-content-type-options": "nosniff"
+  },
+  "mimeTypes": { ".webmanifest": "application/manifest+json" }
+}
