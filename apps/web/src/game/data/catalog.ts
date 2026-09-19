@@ -59,21 +59,21 @@ export interface Sku {
 }
 
 export const SKUS: Record<SkuId, Sku> = {
-  welcome: { id: 'welcome', title: 'Keeper’s Welcome', price: 1.99, gems: 120, gold: 10000, badge: 'ONE TIME', oneTime: true,
-    blurb: '120 gems, 10,000 gold, two Gold Masks, a Silver Urn and a Lucky Chest on the house.' },
-  gems200: { id: 'gems200', title: 'Pouch of Gems', price: 4.99, gems: 200, blurb: 'A modest tithe.' },
-  gems500: { id: 'gems500', title: 'Chest of Gems', price: 9.99, gems: 500, badge: 'POPULAR', blurb: 'The vault’s preferred offering.' },
-  gems1200: { id: 'gems1200', title: 'Hoard of Gems', price: 19.99, gems: 1200, badge: 'BEST VALUE', blurb: 'For keepers who intend to stay.' },
+  welcome: { id: 'welcome', title: 'Keeper’s Welcome', price: 1.99, gems: 120, gold: 100000, badge: 'ONE TIME', oneTime: true,
+    blurb: '120 gems, 100,000 gold, two Gold Masks, a Ruby Crown and a Lucky Chest on the house.' },
+  gems200: { id: 'gems200', title: 'Pouch of Gems', price: 2.99, gems: 200, blurb: 'A modest tithe.' },
+  gems500: { id: 'gems500', title: 'Chest of Gems', price: 4.99, gems: 500, badge: 'POPULAR', blurb: 'The vault’s preferred offering.' },
+  gems1200: { id: 'gems1200', title: 'Hoard of Gems', price: 8.99, gems: 1200, badge: 'BEST VALUE', blurb: 'For keepers who intend to stay.' },
   piggy: { id: 'piggy', title: 'Smash the Pig', price: 2.99, blurb: 'Every gem it swallowed while you merged, up to 250.' },
   pass: { id: 'pass', title: 'Keeper’s Pass', price: 9.99, blurb: 'Premium track: gems, a wildcard card, the Gilded skin, +4% luck.' },
   noads: { id: 'noads', title: 'Silence the Criers', price: 7.99, blurb: 'Removes interstitials and the shop banner. Rewarded ads stay optional.' },
   vip: { id: 'vip', title: 'Vault VIP', price: 9.99, blurb: 'Monthly. Daily crate, +2% luck, a crown, no ads.' },
-  comeback: { id: 'comeback', title: 'So Close Bundle', price: 2.99, gems: 60, gold: 1500, badge: 'SALE', oneTime: true,
-    blurb: 'An Emerald Scarab, 60 gems and 1,500 gold. The next tier is right there.' },
+  comeback: { id: 'comeback', title: 'So Close Bundle', price: 2.99, gems: 120, gold: 15000, badge: 'SALE', oneTime: true,
+    blurb: 'An Emerald Scarab, 120 gems and 15,000 gold. The next tier is right there.' },
 };
 
-/** Baseline gem rate for every "value" ribbon: the entry $4.99 pack (see systems/Offers.ts). */
-export const GEMS_PER_DOLLAR_BASELINE = 200 / 4.99;
+/** Baseline gem rate for every "value" ribbon: the entry pack, whatever it costs today (see systems/Offers.ts). */
+export const GEMS_PER_DOLLAR_BASELINE = SKUS.gems200.gems! / SKUS.gems200.price;
 
 /** Computed, never hardcoded: gem-equivalent per dollar vs the baseline. Welcome counts its chest at 40 gems. */
 export function skuValuePct(id: SkuId): number {
@@ -150,9 +150,9 @@ export const WHEEL: { reward: Reward; weight: number; label: string }[] = [
   { reward: { kind: 'gems', n: 3 }, weight: 6, label: '3' },
   { reward: { kind: 'gold', n: 250 }, weight: 16, label: '250' },
   { reward: { kind: 'gold', n: 80 }, weight: 18, label: '80' },
-  { reward: { kind: 'gold', n: 500 }, weight: 7, label: '500' },
-  { reward: { kind: 'gems', n: 20 }, weight: 1.5, label: '20' },
-  { reward: { kind: 'gold', n: 1000 }, weight: 3.5, label: '1K' },
+  { reward: { kind: 'gold', n: 900 }, weight: 7, label: '900' },
+  { reward: { kind: 'gems', n: 40 }, weight: 1.5, label: '40' },
+  { reward: { kind: 'gold', n: 3000 }, weight: 3.5, label: '3K' },
 ];
 
 // ---- Copy ----

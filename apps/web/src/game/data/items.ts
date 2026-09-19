@@ -91,6 +91,20 @@ export function itemWork(id: number): number {
   return w * CHAINS[chainOf(id)].value;
 }
 
+/**
+ * The gold the merges to build this relic have already paid out, bindings included (Board RV-B9). Patron orders are
+ * priced from this rather than from abstract "work", because merge gold grows faster than work does: a flat rate per
+ * work unit is generous at low tiers and insulting at the top, which is exactly what the Board kept hitting.
+ */
+export function buildGold(id: number, mergeGold: number[]): number {
+  const tier = tierOf(id), v = CHAINS[chainOf(id)].value;
+  let total = 0;
+  for (let t = 2; t <= tier; t++) total += Math.round((mergeGold[t] ?? 0) * v) * Math.pow(2, tier - t);
+  const b = BINDINGS[id];
+  if (b) total += buildGold(b, mergeGold);
+  return Math.round(total);
+}
+
 /** Gold/xp/event tables are per tier; later chains pay a little more. */
 export function tierValue(table: number[], id: number) {
   return Math.round((table[tierOf(id)] ?? 0) * CHAINS[chainOf(id)].value);

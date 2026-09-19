@@ -4,10 +4,10 @@ import {
 } from '../data/catalog';
 import type { GameState } from './State';
 import { utcDay } from './State';
-import { Rng, pickWeighted } from './Rng';
+import { Rng, pickWeighted, mulberry32 } from './Rng';
 import { computeLuck } from './LuckSystem';
 import { placeOrStash, lowest, empties, sellValue } from './BoardSystem';
-import { CHAINS, GEN_UPGRADE_GOLD, GEN_MAX_LEVEL } from '../data/items';
+import { CHAINS, GEN_UPGRADE_GOLD, GEN_MAX_LEVEL, itemWork } from '../data/items';
 
 // ---------------- currencies ----------------
 export function grantGold(s: GameState, n: number) {
@@ -179,10 +179,26 @@ export function openChest(s: GameState, rng: Rng, source: 'free' | 'gems'): Ches
 }
 
 // ---------------- deterministic buys ----------------
+/**
+ * Board, RV-B4: the exact-relic card rotates and is priced by what the relic is actually worth in merges, with the
+ * Emerald Scarab as the anchor the Board named. Work doubles per tier, so the price does too: no hand-written table
+ * to drift from the economy.
+ */
+export function exactRelicCost(tier: number): number {
+  return Math.max(1, Math.round(ECON.exactT5Gems * (itemWork(tier) / itemWork(5))));
+}
+
+/** Which relic the shop offers today: near the player's best Forge tier, so it is always worth having. */
+export function exactRelicOffer(s: GameState, now = Date.now()): number {
+  const best = Math.min(MAX_TIER, Math.max(4, s.best[0] ?? 1));
+  const pool = [best - 1, best, Math.min(MAX_TIER, best + 1)].filter((t) => t >= 3);
+  return pool[Math.floor(mulberry32(utcDay(now) * 31 + s.rank)() * pool.length)] ?? 5;
+}
+
 export function buyExact(s: GameState, tier: number, rng: Rng): number | null {
-  if (tier !== 5) return null;
-  if (!spendGems(s, ECON.exactT5Gems)) return null;
-  return placeOrStash(s, 5, rng);
+  if (!(tier >= 2 && tier <= MAX_TIER)) return null;
+  if (!spendGems(s, exactRelicCost(tier))) return null;
+  return placeOrStash(s, tier, rng);
 }
 
 export function buyMarket(s: GameState, tier: number, rng: Rng): number | null {
