@@ -2,6 +2,11 @@
 
 ## Review #2 — 2026-09-19 (after Deepen cycle 1) · **3.0 / 5 · DEEPEN**
 
+> **Board note (Bug #307), added after the review:** every time-based number below comes from bots at an assumed
+> 1.6 s/action and 25 min/day, never checked against a human. A focused player makes an Emerald Scarab in ~30 actions
+> (~30 s), and the Board plays faster than 1.6 s/action. Content runway and time-box fidelity are therefore
+> **provisional and probably overstated** until RV-P2 (#274) re-runs the probes at a measured human pace.
+
 Reviewer: Depth Critic (fresh context, read-only). Build: commit 6a92f9b on `deepen/cycle-1`.
 Probe: `ops/probes/relic-vault-runway.ts` → `probes/2026-09-19-deepen1.txt` (re-run by the Critic, identical output).
 Cycle 1 shipped: RV-D1 pacing, RV-D2 Patron Orders, RV-D3 Crypt + Star Well chains with bindings and generator levels.
