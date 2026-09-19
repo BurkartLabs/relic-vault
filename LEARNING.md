@@ -58,3 +58,17 @@ Line to split (Product taste, "First dollar is a small pack timed off delight or
 ## Would we start this again?
 
 Yes — and next time the Critic reads the spec before the Builder starts, not after the first preview.
+
+## Later entries (living)
+
+### 2026-09-19 (evening) — first Board playtest of the numbers
+
+- **The probes overstated how long things take.** The monetization review said a Scarab takes 41 minutes; the Board
+  makes one in ~30 seconds (30 actions over 200 seeds). The runway probe's "first seen" times describe a bot busy with
+  orders, at an assumed 1.6 s/action that no human has confirmed. Depth scores for runway and time-box fidelity are
+  provisional until RV-P2 re-runs them at a measured human pace. (hq BUG-307)
+- **Bundles of relics are worth seconds.** Only gems, the pass, VIP and no-ads hold value; MONETIZATION.md review #1
+  is 2.3 / 5, REPRICE, with power-ups, stakes and competition as the fix.
+- **A red test on main was a real freeze.** e2e "first verb by touch" failed on main because KeeperDialog could throw
+  inside Phaser's update and stop the game loop; it was nearly written off as flaky. (hq BUG-317)
+- Lesson: until a human has played it, every time-based number in this pack is a bot's opinion.
