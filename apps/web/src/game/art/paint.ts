@@ -80,7 +80,9 @@ export function star(cx: number, cy: number, spikes: number, r0: number, r1: num
 export function glow(ctx: Ctx, x: number, y: number, r: number, color: string, a = 1) {
   ctx.save();
   ctx.globalAlpha = a;
-  ctx.fillStyle = rad(ctx, x, y, 0, r, [[0, color], [1, 'rgba(0,0,0,0)']]);
+  // fade to the same colour at zero alpha: fading to transparent *black* leaves a grey halo
+  const clear = color.startsWith('rgba(') ? color.replace(/,\s*[\d.]+\)\s*$/, ',0)') : color.startsWith('#') && color.length === 7 ? color + '00' : 'rgba(0,0,0,0)';
+  ctx.fillStyle = rad(ctx, x, y, 0, r, [[0, color], [1, clear]]);
   ctx.fillRect(x - r, y - r, r * 2, r * 2);
   ctx.restore();
 }

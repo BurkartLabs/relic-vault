@@ -218,3 +218,60 @@ test('minor buying every SKU receives zero random rolls', async ({ page }) => {
   const auto = await page.evaluate(() => (window as any).__rv.analytics.buf.filter((e: any) => e.type === 'offer_impression' && !String(e.offer).startsWith('shop')).length);
   expect(auto).toBe(0);
 });
+
+test('patron order: tapping a complete card delivers the relics and pays', async ({ page }) => {
+  const errors = await boot(page);
+  await page.evaluate(() => { const rv = (window as any).__rv; rv.state.flags.tut = 3; const o = rv.state.orders[0]; rv.state.board = rv.state.board.map(() => 0); o.want.forEach((id: number, i: number) => { rv.state.board[i] = id; }); (window as any).__vault.syncBoard(); });
+  await page.waitForTimeout(400);
+  const before = await state(page);
+  const a = await page.evaluate(() => (window as any).__vault.orders.anchor(0));
+  const p = await toCss(page, a.x, a.y);
+  await page.mouse.click(p.x, p.y);
+  await page.waitForTimeout(1500);
+  const after = await state(page);
+  expect(after.stats.orders).toBe(1);
+  expect(after.gold).toBeGreaterThan(before.gold);
+  expect(after.board.filter((t: number) => t > 0).length).toBe(0);
+  expect(after.orders[0].id).not.toBe(before.orders[0].id);
+  expect(await events(page)).toContain('order_filled');
+  await page.screenshot({ path: 'screenshots/qa/order-filled.png' });
+  expect(errors).toEqual([]);
+});
+
+test('binding: a top-tier merge without its binding is refused and the relic returns', async ({ page }) => {
+  const errors = await boot(page);
+  await page.evaluate(() => { const s = (window as any).__rv.state; s.flags.tut = 3; s.board = s.board.map(() => 0); s.board[0] = 6; s.board[1] = 6; (window as any).__vault.syncBoard(); });
+  await page.waitForTimeout(300);
+  await dragCells(page, 0, 1);
+  let s = await state(page);
+  expect(s.board[0]).toBe(6); expect(s.board[1]).toBe(6);
+  expect(await events(page)).toContain('binding_missing');
+  await page.evaluate(() => { const s = (window as any).__rv.state; s.board[10] = 13; (window as any).__vault.syncBoard(); });
+  await page.waitForTimeout(300);
+  await dragCells(page, 0, 1);
+  s = await state(page);
+  expect(s.board[1]).toBe(7);
+  expect(s.board[10]).toBe(0);
+  expect(errors).toEqual([]);
+});
+
+test('the Crypt Brazier wakes at rank 3 and forges crypt relics', async ({ page }) => {
+  const errors = await boot(page);
+  await page.evaluate(() => { const s = (window as any).__rv.state; s.flags.tut = 3; s.xp = 0; s.rank = 2; });
+  // go through the real rank-up path: an order worth enough XP
+  await page.evaluate(() => { const rv = (window as any).__rv; rv.state.xp = 0; rv.state.rank = 2; rv.state.gens = [1, 0, 0]; const o = rv.state.orders[0]; o.xp = 5000; rv.state.board = rv.state.board.map(() => 0); o.want.forEach((id: number, i: number) => { rv.state.board[i] = id; }); (window as any).__vault.syncBoard(); (window as any).__vault.onOrderTap(0); });
+  await page.waitForTimeout(2500);
+  const s = await state(page);
+  expect(s.rank).toBeGreaterThanOrEqual(3);
+  expect(s.gens[1]).toBe(1);
+  await page.evaluate(() => (window as any).__vault.modal?.close());
+  await page.waitForTimeout(400);
+  const forges = s.stats.forges;
+  await page.evaluate(() => (window as any).__vault.doForge(1));
+  const s2 = await state(page);
+  expect(s2.stats.forges).toBe(forges + 1);
+  expect(s2.board.some((t: number) => t >= 11 && t <= 13)).toBe(true);
+  expect(await events(page)).toContain('chain_unlock');
+  await page.screenshot({ path: 'screenshots/qa/crypt-awake.png' });
+  expect(errors).toEqual([]);
+});

@@ -1,6 +1,8 @@
 import type Phaser from 'phaser';
 import { Ctx, makeCanvas, lin, rad, rr, rrPath, glow, speckle, MAT, chrome, metal, shade, star, poly, smooth, sparkle, seeded } from './paint';
 import { paintRelic } from './RelicFactory';
+import { paintCryptBrazier, paintStarWell, paintPatron } from './ChainArt';
+import { PATRONS } from '../data/items';
 
 /** Premium gacha-shop chrome: plaques, buttons, seals, ribbons, currencies, icons, particles. */
 
@@ -637,6 +639,17 @@ export function bakeUi(scene: Phaser.Scene) {
   };
   for (const k of Object.keys(icons)) add(k, 128, 128, (ctx) => icons[k](ctx, 128));
   add('forge', 300, 300, (ctx) => paintForge(ctx, 300));
+  add('gen1', 300, 300, (ctx) => paintCryptBrazier(ctx, 300));
+  add('gen2', 300, 300, (ctx) => paintStarWell(ctx, 300));
+  for (const p of PATRONS) add(`patron${p.id}`, 160, 160, (ctx) => paintPatron(ctx, 160, p.hue));
+  add('ic_link', 96, 96, (ctx) => {
+    for (const [x, y, r] of [[34, 48, -0.6], [62, 48, -0.6]] as const) {
+      ctx.save(); ctx.translate(x, y); ctx.rotate(r);
+      ctx.lineWidth = 12; ctx.strokeStyle = '#120904'; ctx.beginPath(); ctx.ellipse(0, 0, 22, 12, 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.lineWidth = 6; ctx.strokeStyle = chrome(ctx, MAT.gold, -20, -10, 20, 10); ctx.stroke();
+      ctx.restore();
+    }
+  });
   add('chestBody', 300, 190, (ctx) => paintChestBody(ctx, 300, 190));
   add('chestLid', 300, 140, (ctx) => paintChestLid(ctx, 300, 140));
   add('cardBack', 200, 280, (ctx) => paintCardBack(ctx, 200, 280));

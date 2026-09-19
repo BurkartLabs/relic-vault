@@ -75,6 +75,9 @@ if (scenario === 'full') {
   for (let k = 0; k < 40; k++) {
     await vs(() => { const m = window.__vault.modal; if (m) m.close(); });
     await wait(250);
+    // a player fills any complete order first (tap the glowing card)
+    const ready = await vs(() => { const s = window.__rv.state; return s.orders.findIndex((o) => o && o.want.every((id, k) => s.board.filter((t) => t === id).length >= o.want.filter((x) => x === id).length)); });
+    if (ready >= 0) { const a = await vs((i) => window.__vault.orders.anchor(i), ready); await tap(a.x, a.y); await wait(900); continue; }
     const pair = await vs(() => window.__vault.pair);
     if (pair && Math.random() < 0.7) await drag(await cell(pair[0]), await cell(pair[1]));
     else await forge();

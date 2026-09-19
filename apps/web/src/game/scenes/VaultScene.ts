@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { ctx } from '../GameCtx';
-import { RELICS, BOARD_SIZE, BOARD_COLS, ECON, SKUS, SkuId, COPY, CARDS, ALBUM_PAGES } from '../data/catalog';
+import { BOARD_SIZE, BOARD_COLS, ECON, SKUS, SkuId, COPY, CARDS, ALBUM_PAGES } from '../data/catalog';
 import { merge, canMerge, MergeResult } from '../systems/MergeSystem';
 import { forge } from '../systems/ForgeSystem';
 import { sell, move, fillRatio, canForge, findPair, empties } from '../systems/BoardSystem';
@@ -24,13 +24,17 @@ import { EventPanel } from '../ui/EventPanel';
 import { PiggySheet } from '../ui/Piggy';
 import { WheelModal } from '../ui/Wheel';
 import { SettingsModal } from '../ui/Settings';
-import { JammedSheet, InspectCard, QuestsModal, OfferSheet, RankInfo, KeeperDialog } from '../ui/Sheets';
+import { JammedSheet, InspectCard, QuestsModal, OfferSheet, RankInfo, KeeperDialog, GeneratorSheet } from '../ui/Sheets';
+import { OrdersPanel, patronLine } from '../ui/Orders';
+import { ITEMS, CHAINS, tierOf, BINDINGS } from '../data/items';
+import { tickOrders, refillOrders, deliver, dismissOrder } from '../systems/OrderSystem';
 import { AdVeil } from '../ui/AdVeil';
 import { Tutorial } from '../ui/Tutorial';
 import { DiscoveryCard } from '../ui/Discovery';
 import { grantGold, enforceChestRules } from '../systems/Economy';
 
 interface RelicView {
+  /** item id (chain * 10 + tier); Forge ids equal their tier */
   tier: number;
   spr: Phaser.GameObjects.Image;
   shadow: Phaser.GameObjects.Image;
@@ -59,6 +63,9 @@ export class VaultScene extends Phaser.Scene {
   selRing!: Phaser.GameObjects.Image;
   hoverRing!: Phaser.GameObjects.Image;
   forgeBtn!: Phaser.GameObjects.Container;
+  gens: Phaser.GameObjects.Container[] = [];
+  orders!: OrdersPanel;
+  private knownGens: number[] = [];
   chestBtn!: Phaser.GameObjects.Container;
   chestLabel!: Phaser.GameObjects.Text;
   chestIcon!: Phaser.GameObjects.Image;
@@ -120,6 +127,8 @@ export class VaultScene extends Phaser.Scene {
     this.buildBackground();
     this.buildBoard();
     this.buildForgeRow();
+    refillOrders(ctx.state, ctx.rng);
+    this.orders = new OrdersPanel(this, this.ox, this.my + 432);
     this.hud = new Hud(this, this.ox, this.safeTop + 10);
     this.dock = new Dock(this, this.ox, this.H - 150 - this.safeBottom);
     this.buildInput();
@@ -256,8 +265,9 @@ export class VaultScene extends Phaser.Scene {
     const scale = RELIC_SIZE / BOARD_FRAME;
     const shadow = this.add.image(p.x, p.y + 58, 'shadow').setDisplaySize(118, 34).setAlpha(0.7).setDepth(12);
     let glow: Phaser.GameObjects.Image | undefined;
-    if (tier >= 5) {
-      glow = this.add.image(p.x, p.y, 'relicGlow').setDisplaySize(190 + tier * 10, 190 + tier * 10).setTint(RELICS[tier].color).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.45).setDepth(13);
+    const t = tierOf(tier);
+    if (t >= 5) {
+      glow = this.add.image(p.x, p.y, 'relicGlow').setDisplaySize(190 + t * 10, 190 + t * 10).setTint(ITEMS[tier].color).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.45).setDepth(13);
     }
     let gild: Phaser.GameObjects.Image | undefined;
     if (ctx.state.ent.skinOn) gild = this.add.image(p.x, p.y, 'relicGlow').setDisplaySize(170, 170).setTint(0xffd86b).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.35).setDepth(13);
@@ -316,6 +326,7 @@ export class VaultScene extends Phaser.Scene {
       }
     }
     for (const f of this.fogs) f.tilePositionX += (f as any).speed;
+    if ((this.game.loop.frame & 7) === 0) this.orders?.poll();
     // parallax: tilt on phones, pointer on desktop (never during a drag)
     if (!this.dragging && ptr.x > 0 && !(window as any).DeviceOrientationEvent?.requestPermission && !this.sys.game.device.input.touch) {
       this.parallax.tx = (ptr.x / this.W - 0.5) * 2;
@@ -330,60 +341,116 @@ export class VaultScene extends Phaser.Scene {
   private buildForgeRow() {
     const { ox, my } = this;
     const y = my + FORGE_Y;
-    // forge
-    this.forgeBtn = this.add.container(ox + 540, y).setDepth(20);
-    const aura = this.add.image(0, 0, 'relicGlow').setDisplaySize(380, 380).setTint(0xff8a2a).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.5);
-    const f = this.add.image(0, 0, 'forge').setDisplaySize(220, 220);
-    const lbl = txt(this, 0, 104, 'FORGE', { size: 36, gold: true, weight: '900', strokeW: 6 });
-    this.forgeBtn.add([aura, f, lbl]);
-    this.tweens.add({ targets: aura, alpha: { from: 0.35, to: 0.7 }, scale: { from: aura.scale * 0.95, to: aura.scale * 1.05 }, duration: 900, yoyo: true, repeat: -1 });
-    this.forgeBtn.setSize(240, 240).setInteractive({ useHandCursor: true });
-    this.forgeBtn.on('pointerdown', () => { if (this.modal) return; this.tweens.add({ targets: f, displayWidth: 196, displayHeight: 196, duration: 60 }); });
-    this.forgeBtn.on('pointerout', () => this.tweens.add({ targets: f, displayWidth: 220, displayHeight: 220, duration: 90 }));
-    this.forgeBtn.on('pointerup', () => {
-      this.tweens.add({ targets: f, displayWidth: 220, displayHeight: 220, duration: 180, ease: 'Back.Out' });
-      if (this.modal) return;
-      this.doForge();
-    });
+    // three generators (RV-D3): Crypt Brazier · Forge · Star Well
+    const X = [540, 322, 758], SIZE = [220, 168, 168], KEY = ['forge', 'gen1', 'gen2'], LABEL = ['FORGE', 'CRYPT', 'STARS'];
+    const AURA = [0xff8a2a, 0x7dffb0, 0x9ab8ff];
+    for (let c = 0; c < 3; c++) {
+      const g = this.add.container(ox + X[c], y + (c ? 12 : 0)).setDepth(20);
+      const aura = this.add.image(0, 0, 'relicGlow').setDisplaySize(SIZE[c] * 1.7, SIZE[c] * 1.7).setTint(AURA[c]).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.5);
+      const f = this.add.image(0, 0, KEY[c]).setDisplaySize(SIZE[c], SIZE[c]);
+      const lbl = txt(this, 0, SIZE[c] / 2 - 6, LABEL[c], { size: c ? 28 : 36, gold: true, weight: '900', strokeW: 6 });
+      const lvl = this.add.container(SIZE[c] / 2 - 18, -SIZE[c] / 2 + 18);
+      const lvlBg = this.add.image(0, 0, 'seal_gold').setDisplaySize(62, 62);
+      const lvlT = txt(this, 0, 0, '1', { size: 26, font: 'num', weight: '700', color: '#3a1c02', strokeW: 0, shadow: false });
+      lvl.add([lvlBg, lvlT]);
+      lvl.setSize(70, 70).setInteractive({ useHandCursor: true });
+      lvl.on('pointerup', (_p: Phaser.Input.Pointer, _x: number, _y: number, ev: Phaser.Types.Input.EventData) => {
+        ev?.stopPropagation();
+        if (this.modal) return;
+        ctx.sfx.play('tick');
+        this.openModal(new GeneratorSheet(this, c));
+      });
+      const lock = this.add.container(0, 0);
+      lock.add([this.add.image(0, -8, 'ic_lock').setDisplaySize(84, 84), txt(this, 0, 44, `RANK ${CHAINS[c].unlockRank}`, { size: 24, font: 'num', weight: '700', color: '#FFE9A3' })]);
+      g.add([aura, f, lbl, lock, lvl]);
+      (g as any).parts = { aura, f, lvlT, lock, lvl, size: SIZE[c] };
+      this.tweens.add({ targets: aura, alpha: { from: 0.3, to: 0.65 }, duration: 900 + c * 150, yoyo: true, repeat: -1 });
+      g.setSize(SIZE[c] + 20, SIZE[c] + 20).setInteractive({ useHandCursor: true });
+      g.on('pointerdown', () => { if (this.modal) return; this.tweens.add({ targets: f, displayWidth: SIZE[c] * 0.9, displayHeight: SIZE[c] * 0.9, duration: 60 }); });
+      g.on('pointerout', () => this.tweens.add({ targets: f, displayWidth: SIZE[c], displayHeight: SIZE[c], duration: 90 }));
+      g.on('pointerup', () => {
+        this.tweens.add({ targets: f, displayWidth: SIZE[c], displayHeight: SIZE[c], duration: 180, ease: 'Back.Out' });
+        if (this.modal) return;
+        if (!(ctx.state.gens[c] > 0)) {
+          ctx.sfx.play('error');
+          this.toast(`The ${CHAINS[c].gen} wakes at Vault Rank ${CHAINS[c].unlockRank}. Patrons pay rank fastest.`);
+          return;
+        }
+        this.doForge(c);
+      });
+      this.gens.push(g);
+    }
+    this.forgeBtn = this.gens[0];
+    this.knownGens = ctx.state.gens.slice();
     // chest
-    this.chestBtn = this.add.container(ox + 258, y + 6).setDepth(20);
-    this.chestIcon = this.add.image(0, -10, 'ic_chest').setDisplaySize(150, 150);
-    const tag = this.add.nineslice(0, 70, 'pill', undefined, 170, 62, 30, 30, 28, 28);
-    this.chestLabel = txt(this, 0, 70, '40', { size: 32, font: 'num', weight: '700' });
+    this.chestBtn = this.add.container(ox + 128, y + 10).setDepth(20);
+    this.chestIcon = this.add.image(0, -14, 'ic_chest').setDisplaySize(128, 128);
+    const tag = this.add.nineslice(0, 58, 'pill', undefined, 170, 58, 30, 30, 26, 26);
+    this.chestLabel = txt(this, 0, 58, '40', { size: 28, font: 'num', weight: '700' });
     this.chestBtn.add([this.chestIcon, tag, this.chestLabel]);
-    this.chestBtn.setSize(180, 190).setInteractive({ useHandCursor: true });
+    this.chestBtn.setSize(170, 180).setInteractive({ useHandCursor: true });
     this.chestBtn.on('pointerup', () => { if (this.modal) return; ctx.sfx.play('tick'); this.onChestButton(); });
     this.tweens.add({ targets: this.chestIcon, angle: { from: -3, to: 3 }, duration: 1600, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
     // sell scales (drop target)
-    this.sellBin = this.add.container(ox + 822, y + 6).setDepth(20);
+    this.sellBin = this.add.container(ox + 956, y + 10).setDepth(20);
     const sg = this.add.image(0, -8, 'relicGlow').setDisplaySize(220, 220).setTint(0xf4c45a).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0);
-    const si = this.add.image(0, -10, 'ic_sell').setDisplaySize(140, 140);
-    const st = txt(this, 0, 70, 'SELL', { size: 30, gold: true, weight: '900', strokeW: 5 });
+    const si = this.add.image(0, -14, 'ic_sell').setDisplaySize(124, 124);
+    const st = txt(this, 0, 58, 'SELL', { size: 28, gold: true, weight: '900', strokeW: 5 });
     this.sellBin.add([sg, si, st]);
     (this.sellBin as any).glow = sg;
-    this.sellBin.setSize(170, 190).setInteractive({ useHandCursor: true });
+    this.sellBin.setSize(170, 180).setInteractive({ useHandCursor: true });
     this.sellBin.on('pointerup', () => {
       if (this.modal || this.dragging) return;
       if (this.selected >= 0) { this.sellAt(this.selected); return; }
       ctx.sfx.play('tick');
       this.toast('Drag a relic onto the scales to sell it.');
     });
-    // satchel (overflow)
-    this.satchelBtn = this.add.container(ox + 92, y - 4).setDepth(20);
-    const sb = this.add.image(0, 0, 'ic_satchel').setDisplaySize(118, 118);
-    const sd = this.add.image(38, -40, 'seal_blue').setDisplaySize(56, 56);
-    this.satchelText = txt(this, 38, -40, '0', { size: 28, font: 'num', weight: '700' });
+    // satchel (overflow) + VIP crate float just above the row corners
+    this.satchelBtn = this.add.container(ox + 128, y - 150).setDepth(21);
+    const sb = this.add.image(0, 0, 'ic_satchel').setDisplaySize(104, 104);
+    const sd = this.add.image(36, -36, 'seal_blue').setDisplaySize(52, 52);
+    this.satchelText = txt(this, 36, -36, '0', { size: 26, font: 'num', weight: '700' });
     this.satchelBtn.add([sb, sd, this.satchelText]);
-    this.satchelBtn.setSize(130, 130).setInteractive({ useHandCursor: true });
+    this.satchelBtn.setSize(120, 120).setInteractive({ useHandCursor: true });
     this.satchelBtn.on('pointerup', () => { if (this.modal) return; this.dropSatchel(); });
-    // VIP crate
-    this.vipBtn = this.add.container(ox + 990, y - 4).setDepth(20);
-    const vb = this.add.image(0, 0, 'ic_chest').setDisplaySize(112, 112).setTint(0xffe9a3);
-    const vc = this.add.image(0, -56, 'crown').setDisplaySize(56, 56);
-    this.vipBtn.add([this.add.image(0, 0, 'relicGlow').setDisplaySize(180, 180).setTint(0xf4c45a).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.5), vb, vc]);
-    this.vipBtn.setSize(130, 130).setInteractive({ useHandCursor: true });
+    this.vipBtn = this.add.container(ox + 956, y - 150).setDepth(21);
+    const vb = this.add.image(0, 0, 'ic_chest').setDisplaySize(104, 104).setTint(0xffe9a3);
+    const vc = this.add.image(0, -52, 'crown').setDisplaySize(52, 52);
+    this.vipBtn.add([this.add.image(0, 0, 'relicGlow').setDisplaySize(170, 170).setTint(0xf4c45a).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.5), vb, vc]);
+    this.vipBtn.setSize(120, 120).setInteractive({ useHandCursor: true });
     this.vipBtn.on('pointerup', () => { if (this.modal) return; this.claimVip(); });
     this.tweens.add({ targets: this.vipBtn, y: this.vipBtn.y - 8, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
+    this.refreshGenerators(true);
+  }
+
+  /** Lock/level state of the three generators; celebrates a chain waking up. */
+  refreshGenerators(instant = false) {
+    const s = ctx.state;
+    this.gens.forEach((g, c) => {
+      const P = (g as any).parts;
+      const on = (s.gens[c] ?? 0) > 0;
+      P.lock.setVisible(!on);
+      P.lvl.setVisible(on);
+      P.lvlT.setText(String(s.gens[c] ?? 0));
+      P.f.setAlpha(on ? 1 : 0.35);
+      P.aura.setVisible(on);
+      if (!instant && on && !(this.knownGens[c] > 0)) this.chainWakes(c);
+    });
+    this.knownGens = s.gens.slice();
+  }
+
+  private chainWakes(c: number) {
+    const g = this.gens[c];
+    this.fx.ring(g.x, g.y, CHAINS[c].color, 3, 900);
+    this.fx.burst(g.x, g.y, 50, CHAINS[c].color);
+    this.fx.confetti(g.x, g.y - 100, 50);
+    this.tweens.add({ targets: g, scale: { from: 1.4, to: 1 }, duration: 700, ease: 'Elastic.Out' });
+    ctx.sfx.play('rank');
+    ctx.telemetry.track('chain_unlock', { chain: c });
+    const line = c === 1
+      ? 'The Crypt Brazier wakes. Bone, candle, soul-glass. Some relics need a binding from another chain.'
+      : 'The Star Well opens. Draw it up. The sky pays well for its missing pieces.';
+    this.time.delayedCall(700, () => { if (!this.modal) this.keeperSays(line); else this.toast(line); });
   }
 
   refreshButtons() {
@@ -460,7 +527,7 @@ export class VaultScene extends Phaser.Scene {
         if (this.overSell(p)) { this.sellAt(pr.i); return; }
         const t = this.cellAt(p.x, p.y);
         if (t >= 0 && t !== pr.i) {
-          if (canMerge(ctx.state, pr.i, t)) { this.doMerge(pr.i, t); return; }
+          if (canMerge(ctx.state, pr.i, t)) { if (!this.doMerge(pr.i, t)) this.settle(v, pr.i); return; }
           this.moveRelic(pr.i, t);
           return;
         }
@@ -550,17 +617,18 @@ export class VaultScene extends Phaser.Scene {
   }
 
   // ------------------------------------------------------------------ core verbs
-  doForge() {
+  doForge(chain = 0) {
     const s = ctx.state;
     ctx.sfx.unlock();
     this.lastActionAt = Date.now(); this.idleHinted = false;
-    const prefer = this.tut.forgePrefer();
-    const r = forge(s, ctx.rng, prefer);
-    const fp = { x: this.forgeBtn.x, y: this.forgeBtn.y - 30 };
+    const prefer = chain === 0 ? this.tut.forgePrefer() : undefined;
+    const r = forge(s, ctx.rng, prefer, chain);
+    const gen = this.gens[chain] ?? this.forgeBtn;
+    const fp = { x: gen.x, y: gen.y - 30 };
     if (!r.ok) {
       ctx.sfx.play('error');
       ctx.haptic([30, 30, 30]);
-      this.tweens.add({ targets: this.forgeBtn, x: this.forgeBtn.x + 12, duration: 50, yoyo: true, repeat: 3 });
+      this.tweens.add({ targets: gen, x: gen.x + 12, duration: 50, yoyo: true, repeat: 3 });
       this.cameras.main.shake(160, 0.004);
       ctx.telemetry.track('board_full', { merges: s.stats.merges });
       ctx.director.onBoardFull();
@@ -570,10 +638,10 @@ export class VaultScene extends Phaser.Scene {
     ctx.sfx.play('forge');
     ctx.haptic(8);
     ctx.telemetry.actions++;
-    ctx.telemetry.track('forge', { tier: r.tier });
-    this.fx.burst(fp.x, fp.y, 14, 0xffb03a);
-    this.fx.emberPuff(fp.x, fp.y, 8);
-    const v = this.makeRelic(r.index, r.tier);
+    ctx.telemetry.track('forge', { tier: r.tier, chain });
+    this.fx.burst(fp.x, fp.y, 14, CHAINS[chain].color);
+    if (chain === 0) this.fx.emberPuff(fp.x, fp.y, 8);
+    const v = this.makeRelic(r.index, r.item);
     const p = this.cellPos(r.index);
     const base = RELIC_SIZE / BOARD_FRAME;
     const parts = [v.spr, v.iris, v.glow, v.gild].filter(Boolean) as Phaser.GameObjects.Image[];
@@ -597,18 +665,95 @@ export class VaultScene extends Phaser.Scene {
         if (r.tier > 1) { this.fx.floatText(p.x, p.y - 40, r.tier === 3 ? 'LUCKY!!' : 'LUCKY!', { size: 48, gold: true }); this.fx.ring(p.x, p.y, 0x3fe39a, 1.2); ctx.sfx.play('gem'); }
       },
     });
-    ctx.persist();
+    this.afterAction();
     this.updateVaultMood();
     this.tut.onForge(r.index);
     this.hud.refresh();
   }
 
-  doMerge(a: number, b: number) {
+  /** Every core action advances order refills (action-based, never wall-clock) and saves. */
+  afterAction() {
+    tickOrders(ctx.state, ctx.rng);
+    this.orders?.poll();
+    ctx.persist();
+  }
+
+  // ------------------------------------------------------------------ patron orders (RV-D2)
+  onOrderTap(i: number) {
+    const s = ctx.state;
+    if (this.modal || this.dragging) return;
+    const o = s.orders[i];
+    if (!o) { ctx.sfx.play('tick'); this.toast('A patron is on the way. Keep merging.'); return; }
+    const pos = o.want.map((id) => s.board.findIndex((t) => t === id));
+    const res = deliver(s, i, ctx.rng);
+    if (!res.ok) {
+      ctx.sfx.play('tick');
+      this.orders.pop(i);
+      const missing = o.want.filter((_, k) => pos[k] < 0 || o.want.slice(0, k).includes(o.want[k]));
+      const need = missing[0] ?? o.want[0];
+      const bind = BINDINGS[need];
+      this.toast(`${patronLine(o.patron)}  Wants: ${o.want.map((id) => ITEMS[id].name).join(', ')}${bind ? ` (needs a ${ITEMS[bind].name} binding)` : ''}.`);
+      return;
+    }
+    this.lastActionAt = Date.now(); this.idleHinted = false;
+    ctx.telemetry.actions++;
+    ctx.telemetry.track('order_filled', { items: o.want.length, gold: o.gold, patron: o.patron });
+    const to = this.orders.anchor(i);
+    // relics fly from their sockets into the patron's card
+    res.sockets.forEach((sock, k) => {
+      const v = this.relics[sock];
+      this.relics[sock] = null;
+      if (!v) return;
+      v.lifted = true;
+      v.shadow.setVisible(false);
+      const parts = [v.spr, v.iris, v.glow, v.gild].filter(Boolean) as Phaser.GameObjects.Image[];
+      parts.forEach((p) => p.setDepth(55));
+      this.tweens.add({
+        targets: parts, x: to.x, y: to.y, scale: 0.3, duration: 420, delay: k * 90, ease: 'Cubic.In',
+        onComplete: () => { this.destroyRelic(v); this.fx.flash(to.x, to.y, 0.8, 0x8cf08a); this.orders.pop(i); ctx.sfx.play('coin', k + 2); },
+      });
+    });
+    this.time.delayedCall(420 + res.sockets.length * 90, () => {
+      ctx.sfx.play('purchase');
+      ctx.haptic([12, 30, 20]);
+      this.fx.ring(to.x, to.y, 0x8cf08a, 1.8);
+      this.fx.burst(to.x, to.y, 24, 0xf4c45a);
+      this.fx.floatText(to.x, to.y - 40, `+${fmt(o.gold)}`, { size: 50, gold: true, rise: 90 });
+      this.fx.flyTo('coin', to.x, to.y, this.hud.anchor('gold'), Math.min(12, 3 + o.want.length * 3), (k) => { ctx.sfx.play('coin', k); this.hud.bump('gold'); if (k === 0) this.time.delayedCall(450, () => this.hud.tickGold()); });
+      if (o.gems) this.fx.flyTo('gem', to.x, to.y, this.hud.anchor('gems'), Math.min(8, o.gems + 2), (k) => { ctx.sfx.play('gem'); if (k === 0) this.time.delayedCall(450, () => this.hud.tickGems()); });
+      if (this.dock.unlocked('events')) { const ev = this.hud.anchor('event'); this.fx.floatText(ev.x + 120, ev.y + 40, `+${o.pts}`, { size: 34, color: '#8CF08A', rise: 50, dur: 600 }); }
+      if (res.card) this.cardDrop(res.card, to);
+      if (res.rankUps > 0) this.time.delayedCall(300, () => this.rankUp(res.rankUps));
+      this.hud.refresh();
+      this.dock.refresh();
+      this.refreshGenerators();
+      this.orders.refresh();
+    });
+    if (!s.flags.firstOrder) { s.flags.firstOrder = 1; this.time.delayedCall(900, () => this.toast('Patrons pay best: gold, rank, Pass and Rush points. Keep what they want.')); }
+    this.afterAction();
+    this.updateVaultMood();
+    this.pumpOffers();
+  }
+
+  onOrderDismiss(i: number) {
+    if (this.modal) return;
+    const o = ctx.state.orders[i];
+    if (!o || !dismissOrder(ctx.state, i)) return;
+    ctx.sfx.play('whoosh');
+    ctx.telemetry.track('order_dismissed', { patron: o.patron });
+    this.toast('The patron leaves. Another arrives after a few actions.');
+    this.orders.refresh();
+    ctx.persist();
+  }
+
+  doMerge(a: number, b: number): boolean {
     const s = ctx.state;
     this.lastActionAt = Date.now(); this.idleHinted = false;
-    const prevMax = s.stats.maxTier;
     const res = merge(s, a, b, ctx.rng);
-    if (!res.ok) return;
+    if (!res.ok) {
+      if (res.reason === 'binding' && res.binding) this.bindingHint(b, res.item, res.binding);
+      return false;
+    }
     ctx.telemetry.verb();
     const now = Date.now();
     this.combo = now - this.lastMergeAt < 1800 ? this.combo + 1 : 1;
@@ -620,7 +765,20 @@ export class VaultScene extends Phaser.Scene {
     this.relics[a] = null; this.relics[b] = null;
     const pb = this.cellPos(b);
     const tier = Math.min(res.tier, 9);
-    const color = RELICS[tier].color;
+    const color = res.ascended ? CHAINS[res.chain].color : ITEMS[res.item].color;
+    // the binding relic from another chain is drawn in and consumed
+    if (res.bindingIndex !== undefined) {
+      const vbind = this.relics[res.bindingIndex];
+      this.relics[res.bindingIndex] = null;
+      if (vbind) {
+        vbind.lifted = true;
+        const parts = [vbind.spr, vbind.iris, vbind.glow, vbind.gild].filter(Boolean) as Phaser.GameObjects.Image[];
+        this.tweens.add({ targets: parts, x: pb.x, y: pb.y, scale: 0.4, duration: 150, ease: 'Quad.In', onComplete: () => this.destroyRelic(vbind) });
+        const link = this.add.image(pb.x, pb.y - 70, 'ic_link').setDisplaySize(90, 90).setDepth(60);
+        this.tweens.add({ targets: link, y: pb.y - 150, alpha: 0, duration: 900, onComplete: () => link.destroy() });
+        vbind.shadow.setVisible(false);
+      }
+    }
     this.busy++;
     if (va) {
       va.lifted = true;
@@ -634,20 +792,40 @@ export class VaultScene extends Phaser.Scene {
       this.time.delayedCall(34, () => {
         this.destroyRelic(va); this.destroyRelic(vb);
         this.mergeJuice(res, pb, tier, color, comboGold);
-        if (!res.ascended && res.tier > prevMax && res.tier >= 3 && !s.flags[`disc_${res.tier}`]) { s.flags[`disc_${res.tier}`] = 1; this.discoveries.push(res.tier); this.time.delayedCall(1100, () => this.pumpOffers()); }
+        if (!res.ascended && res.tier >= 3 && !s.flags[`disc_${res.item}`]) { s.flags[`disc_${res.item}`] = 1; this.discoveries.push(res.item); this.time.delayedCall(1100, () => this.pumpOffers()); }
         this.busy--;
       });
     });
     ctx.director.onMerge(res);
-    ctx.persist();
+    this.afterAction();
     this.tut.onMerge(b);
     this.updateVaultMood();
+    return true;
+  }
+
+  /** A top-tier merge is missing its binding: say which relic, from which chain, and show it. */
+  private bindingHint(at: number, making: number, binding: number) {
+    ctx.sfx.play('error');
+    ctx.haptic([20, 20]);
+    const p = this.cellPos(at);
+    const box = this.add.container(p.x, p.y - 120).setDepth(70);
+    const bg = this.add.nineslice(0, 0, 'panelDark', undefined, 250, 130, 50, 50, 50, 50);
+    const ic = this.add.image(-60, 0, 'relic96', `i${binding}`).setDisplaySize(84, 84);
+    const ln = this.add.image(10, 0, 'ic_link').setDisplaySize(52, 52);
+    const out = this.add.image(76, 0, 'relic96', `i${making}`).setDisplaySize(84, 84).setAlpha(0.6);
+    box.add([bg, ic, ln, out]);
+    box.setScale(0.5).setAlpha(0);
+    this.tweens.add({ targets: box, scale: 1, alpha: 1, duration: 220, ease: 'Back.Out' });
+    this.time.delayedCall(2200, () => this.tweens.add({ targets: box, alpha: 0, duration: 250, onComplete: () => box.destroy() }));
+    const locked = (ctx.state.gens[Math.floor(binding / 10)] ?? 0) <= 0;
+    this.toast(`${ITEMS[making].name} needs a binding: one ${ITEMS[binding].name} on the board${locked ? ` (from the ${CHAINS[Math.floor(binding / 10)].gen}, which wakes at rank ${CHAINS[Math.floor(binding / 10)].unlockRank})` : ''}.`);
+    ctx.telemetry.track('binding_missing', { making, binding });
   }
 
   private mergeJuice(res: MergeResult, pb: { x: number; y: number }, tier: number, color: number, comboGold = 0) {
     const base = RELIC_SIZE / BOARD_FRAME;
     if (!res.ascended) {
-      const v = this.makeRelic(res.to, res.tier);
+      const v = this.makeRelic(res.to, res.item);
       v.spr.setScale(base * 0.3);
       this.tweens.chain({
         targets: v.spr,
@@ -726,6 +904,7 @@ export class VaultScene extends Phaser.Scene {
     this.fx.flyTo('gem', a.x, a.y + 80, this.hud.anchor('gems'), ECON.rankGems * n, (k) => { ctx.sfx.play('gem'); if (k === ECON.rankGems * n - 1) this.hud.tickGems(); });
     this.toast(`${COPY.rankUp}  +${ECON.rankGems * n} gems`);
     this.dock.refresh();
+    this.refreshGenerators();
   }
 
   cardDrop(card: CardResult, from: { x: number; y: number }) {
@@ -771,9 +950,9 @@ export class VaultScene extends Phaser.Scene {
     ctx.sfx.play('sell');
     ctx.haptic(12);
     this.fx.flash(p.x, p.y, 1);
-    this.fx.shards(p.x, p.y, 8 + Math.min(6, tier), RELICS[tier].color, this.hud.anchor('gold'), () => { this.hud.tickGold(); this.hud.bump('gold'); });
+    this.fx.shards(p.x, p.y, 8 + Math.min(6, tierOf(tier)), ITEMS[tier].color, this.hud.anchor('gold'), () => { this.hud.tickGold(); this.hud.bump('gold'); });
     this.fx.floatText(p.x, p.y - 30, `+${r.gold}`, { size: 44, color: '#FFE9A3', rise: 90 });
-    ctx.persist();
+    this.afterAction();
     this.updateVaultMood();
     this.hud.refresh();
   }
@@ -784,7 +963,7 @@ export class VaultScene extends Phaser.Scene {
       const v = this.relics[i];
       if (!v) continue;
       this.relics[i] = null;
-      this.fx.shards(v.spr.x, v.spr.y, 10, RELICS[v.tier].color, this.hud.anchor('gold'));
+      this.fx.shards(v.spr.x, v.spr.y, 10, ITEMS[v.tier].color, this.hud.anchor('gold'));
       this.fx.flash(v.spr.x, v.spr.y, 0.9);
       this.destroyRelic(v);
     }
@@ -810,8 +989,8 @@ export class VaultScene extends Phaser.Scene {
         targets: parts, x: p.x, y: p.y, duration: 480, ease: 'Bounce.Out',
         onComplete: () => {
           v.lifted = false;
-          this.fx.ring(p.x, p.y, RELICS[tier].color, 1.4);
-          this.fx.burst(p.x, p.y, 12, RELICS[tier].color);
+          this.fx.ring(p.x, p.y, ITEMS[tier].color, 1.4);
+          this.fx.burst(p.x, p.y, 12, ITEMS[tier].color);
           this.fx.dust(p.x, p.y);
           ctx.sfx.play('land');
         },
@@ -1068,6 +1247,12 @@ export class VaultScene extends Phaser.Scene {
   // ------------------------------------------------------------------ toast
   private toasts: Phaser.GameObjects.Container[] = [];
   toast(msg: string) {
+    // at most two on screen: the newest pushes out the oldest so they never bury the order cards
+    while (this.toasts.length >= 2) {
+      const old = this.toasts.shift()!;
+      this.tweens.killTweensOf(old);
+      this.tweens.add({ targets: old, alpha: 0, duration: 150, onComplete: () => old.destroy() });
+    }
     const y0 = this.safeTop + 320;
     const c = this.add.container(this.W / 2, y0 - 40).setDepth(400).setAlpha(0);
     const t = txt(this, 30, 0, msg, { size: 32, font: 'num', weight: '500', color: '#FFE9A3', wrap: 760 });

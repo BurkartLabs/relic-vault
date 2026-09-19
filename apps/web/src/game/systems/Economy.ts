@@ -6,7 +6,8 @@ import type { GameState } from './State';
 import { utcDay } from './State';
 import { Rng, pickWeighted } from './Rng';
 import { computeLuck } from './LuckSystem';
-import { placeOrStash, lowest, empties } from './BoardSystem';
+import { placeOrStash, lowest, empties, sellValue } from './BoardSystem';
+import { CHAINS, GEN_UPGRADE_GOLD, GEN_MAX_LEVEL } from '../data/items';
 
 // ---------------- currencies ----------------
 export function grantGold(s: GameState, n: number) {
@@ -31,7 +32,7 @@ export function spendGold(s: GameState, n: number): boolean {
 export function piggyCents(s: GameState) { return s.piggy; }
 
 // ---------------- rank ----------------
-export function xpToNext(rank: number) { return ECON.rankXpBase + (rank - 1) * ECON.rankXpStep; }
+export function xpToNext(rank: number) { return ECON.rankXpBase + (rank - 1) * ECON.rankXpStep + (rank - 1) * (rank - 1) * (ECON.rankXpQuad ?? 0); }
 
 export function addXp(s: GameState, n: number): number {
   s.xp += n;
@@ -42,7 +43,30 @@ export function addXp(s: GameState, n: number): number {
     s.gems += ECON.rankGems;
     ups++;
   }
+  if (ups) unlockGenerators(s);
   return ups;
+}
+
+// ---------------- generators (RV-D3) ----------------
+/** Unlock any generator whose rank requirement is met. Returns newly unlocked chain ids. */
+export function unlockGenerators(s: GameState): number[] {
+  const out: number[] = [];
+  for (const c of CHAINS) if ((s.gens[c.id] ?? 0) === 0 && s.rank >= c.unlockRank) { s.gens[c.id] = 1; out.push(c.id); }
+  return out;
+}
+
+export function genUpgradeCost(s: GameState, chain: number): number | null {
+  const lvl = s.gens[chain] ?? 0;
+  if (lvl <= 0 || lvl >= GEN_MAX_LEVEL) return null;
+  return GEN_UPGRADE_GOLD[lvl + 1];
+}
+
+/** Gold sink: each level adds +2% chance of higher-tier output from that generator. Never a gate. */
+export function upgradeGenerator(s: GameState, chain: number): boolean {
+  const cost = genUpgradeCost(s, chain);
+  if (cost == null || !spendGold(s, cost)) return false;
+  s.gens[chain]++;
+  return true;
 }
 
 // ---------------- album ----------------
@@ -51,9 +75,12 @@ export interface CardResult { id: number; duplicate: boolean; pageCompleted: num
 export function grantCard(s: GameState, rng: Rng, missingOnly = false): CardResult {
   const missing = CARDS.filter((c) => !s.album[c.id]).map((c) => c.id);
   let id: number;
-  if (missingOnly && missing.length) id = missing[Math.floor(rng() * missing.length)];
-  // Bias toward missing cards 60% of the time so the album feels like it moves.
-  else if (missing.length && rng() < 0.6) id = missing[Math.floor(rng() * missing.length)];
+  // The album fills page by page: most drops come from the lowest unfinished page, so a page completes
+  // (and decorates the vault) before the next one starts to matter.
+  const openPage = s.pagesDone.findIndex((d) => !d);
+  const pageMissing = openPage >= 0 ? missing.filter((id) => CARDS[id].page === openPage) : [];
+  if (missingOnly && missing.length) id = (pageMissing.length ? pageMissing : missing)[Math.floor(rng() * (pageMissing.length || missing.length))];
+  else if (pageMissing.length && rng() < ECON.cardPageBias) id = pageMissing[Math.floor(rng() * pageMissing.length)];
   else id = Math.floor(rng() * CARDS.length);
   const duplicate = s.album[id] > 0;
   s.album[id]++;
@@ -81,8 +108,8 @@ export function fillCard(s: GameState, rng: Rng): CardResult | null {
 }
 
 export function cardDropChance(tier: number) {
-  if (tier < 4) return 0;
-  return ECON.cardDropBase + (tier - 4) * ECON.cardDropPerTier;
+  if (tier < ECON.cardDropMinTier) return 0;
+  return ECON.cardDropBase + (tier - ECON.cardDropMinTier) * ECON.cardDropPerTier;
 }
 
 // ---------------- chests ----------------
@@ -169,7 +196,7 @@ export function gemClear(s: GameState): { ok: boolean; cleared: number[]; gold: 
   const lo = lowest(s, 3);
   if (!lo.length || !spendGems(s, ECON.gemClearCost)) return { ok: false, cleared: [], gold: 0 };
   let gold = 0;
-  for (const i of lo) { gold += ECON.sellGold[s.board[i]]; s.board[i] = 0; }
+  for (const i of lo) { gold += sellValue(s.board[i]); s.board[i] = 0; }
   s.gold += gold;
   return { ok: true, cleared: lo, gold };
 }
@@ -178,7 +205,7 @@ export function gemClear(s: GameState): { ok: boolean; cleared: number[]; gold: 
 export function adSalvage(s: GameState): { index: number; gold: number } {
   const [i] = lowest(s, 1);
   if (i === undefined) return { index: -1, gold: 0 };
-  const gold = ECON.sellGold[s.board[i]] * 2 + 10;
+  const gold = sellValue(s.board[i]) * 2 + 10;
   s.board[i] = 0;
   grantGold(s, gold);
   return { index: i, gold };
@@ -246,7 +273,7 @@ export function buyBoost(s: GameState, now: number): boolean {
 export const QUESTS = [
   { id: 0, label: 'Forge 10 relics', goal: 10, key: 'forge' as const },
   { id: 1, label: 'Merge a Gold Mask', goal: 1, key: 't4' as const },
-  { id: 2, label: 'Open 1 chest', goal: 1, key: 'chest' as const },
+  { id: 2, label: 'Fill 3 patron orders', goal: 3, key: 'orders' as const },
 ];
 export function questProgress(s: GameState, q: number) {
   const d = QUESTS[q];

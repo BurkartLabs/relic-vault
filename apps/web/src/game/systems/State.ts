@@ -1,8 +1,21 @@
 ﻿import { BOARD_SIZE, ECON, CARDS, ALBUM_PAGES } from '../data/catalog';
 
-export const SAVE_VERSION = 3;
+export const SAVE_VERSION = 4;
 
 export type AgeBand = 'unknown' | 'adult' | 'minor';
+
+/** A patron's request (RV-D2). `want` holds item ids; rewards are fixed when the order is posted. */
+export interface Order {
+  id: number;
+  patron: number;
+  want: number[];
+  gold: number;
+  gems: number;
+  xp: number;
+  pass: number;
+  pts: number;
+  card: boolean;
+}
 
 export interface GameState {
   v: number;
@@ -10,6 +23,14 @@ export interface GameState {
   board: number[];
   /** relics waiting for space (chest/purchase overflow). Never lost. */
   satchel: number[];
+  /** open patron orders (null = empty slot waiting `orderWait` actions to refill) */
+  orders: (Order | null)[];
+  orderWait: number[];
+  orderSeq: number;
+  /** generator level per chain; 0 = locked */
+  gens: number[];
+  /** best tier reached per chain */
+  best: number[];
   gold: number;
   gems: number;
   xp: number;
@@ -22,7 +43,7 @@ export interface GameState {
   crumbs: number;
   stats: {
     merges: number; forges: number; chests: number; sells: number; ads: number;
-    maxTier: number; sessions: number; playSeconds: number; t4Merges: number;
+    maxTier: number; sessions: number; playSeconds: number; t4Merges: number; orders: number; bindings: number;
   };
   ent: {
     welcome: boolean; comeback: boolean; passPremium: boolean; vip: boolean; vipUntil: number;
@@ -30,7 +51,7 @@ export interface GameState {
   };
   pass: { season: number; xp: number; free: number[]; prem: number[] };
   event: { cycle: number; points: number; claimed: number[]; boostUntil: number };
-  quests: { day: number; forge: number; t4: number; chest: number; claimed: number[] };
+  quests: { day: number; forge: number; t4: number; chest: number; orders: number; claimed: number[] };
   daily: { vipCrateDay: number; adSpinsDay: number; adSpins: number };
   flags: Record<string, number>;
   age: AgeBand;
@@ -47,6 +68,11 @@ export function createState(now = Date.now()): GameState {
     v: SAVE_VERSION,
     board,
     satchel: [],
+    orders: [null, null, null],
+    orderWait: [0, 0, 0],
+    orderSeq: 0,
+    gens: [1, 0, 0],
+    best: [1, 0, 0],
     gold: ECON.startGold,
     gems: ECON.startGems,
     xp: 0,
@@ -57,11 +83,11 @@ export function createState(now = Date.now()): GameState {
     album: new Array(CARDS.length).fill(0),
     pagesDone: ALBUM_PAGES.map(() => false),
     crumbs: 0,
-    stats: { merges: 0, forges: 0, chests: 0, sells: 0, ads: 0, maxTier: 1, sessions: 0, playSeconds: 0, t4Merges: 0 },
+    stats: { merges: 0, forges: 0, chests: 0, sells: 0, ads: 0, maxTier: 1, sessions: 0, playSeconds: 0, t4Merges: 0, orders: 0, bindings: 0 },
     ent: { welcome: false, comeback: false, passPremium: false, vip: false, vipUntil: 0, removeAds: false, skin: false, skinOn: false },
     pass: { season: seasonId(now), xp: 0, free: [], prem: [] },
     event: { cycle: eventCycle(now), points: 0, claimed: [], boostUntil: 0 },
-    quests: { day: utcDay(now), forge: 0, t4: 0, chest: 0, claimed: [] },
+    quests: { day: utcDay(now), forge: 0, t4: 0, chest: 0, orders: 0, claimed: [] },
     daily: { vipCrateDay: -1, adSpinsDay: -1, adSpins: 0 },
     flags: {},
     age: 'unknown',
@@ -84,7 +110,7 @@ export function eventEndsAt(now: number) { return EVENT_ANCHOR + (eventCycle(now
 /** Roll time-boxed containers (quests, event, season) forward. Pure. */
 export function rollover(s: GameState, now: number) {
   const day = utcDay(now);
-  if (s.quests.day !== day) s.quests = { day, forge: 0, t4: 0, chest: 0, claimed: [] };
+  if (s.quests.day !== day) s.quests = { day, forge: 0, t4: 0, chest: 0, orders: 0, claimed: [] };
   const cyc = eventCycle(now);
   if (s.event.cycle !== cyc) s.event = { cycle: cyc, points: 0, claimed: [], boostUntil: 0 };
   const sea = seasonId(now);
@@ -113,6 +139,17 @@ const MIGRATIONS: Record<number, (r: Raw, now: number) => Raw> = {
       delete r.eventPoints;
     }
     r.v = 3;
+    return r;
+  },
+  // v3 -> v4 (Deepen cycle 1): chains, generators, patron orders
+  3: (r) => {
+    const rank = r.rank || 1;
+    r.gens = [1, rank >= 3 ? 1 : 0, rank >= 6 ? 1 : 0];
+    r.best = [Math.max(1, r.stats?.maxTier || 1), 0, 0];
+    r.orders = [null, null, null];
+    r.orderWait = [0, 0, 0];
+    r.orderSeq = 0;
+    r.v = 4;
     return r;
   },
 };

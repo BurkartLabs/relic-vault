@@ -8,6 +8,9 @@ import { gemClear, adSalvage, QUESTS, questProgress, claimQuest, xpToNext, grant
 import { computeLuck } from '../systems/LuckSystem';
 import { DAY } from '../systems/State';
 import type { VaultScene } from '../scenes/VaultScene';
+import { CHAINS, ITEMS, BINDINGS, itemId, chainOf, tierOf, isTop } from '../data/items';
+import { genUpgradeCost, upgradeGenerator } from '../systems/Economy';
+import { GEN_MAX_LEVEL } from '../data/items';
 
 // ---------------------------------------------------------------- Vault Jammed
 export class JammedSheet extends Modal {
@@ -36,7 +39,7 @@ export class JammedSheet extends Modal {
     };
     if (lo !== undefined) {
       const t = s.board[lo];
-      opt('relic256', `R${t}`, 'SELL THE LOWEST', `${RELICS[t].name} · poor rate`, new Button(vs, 0, 0, 230, 96, `+${sellValue(t)}`, () => {
+      opt('relic256', `R${t}`, 'SELL THE LOWEST', `${ITEMS[t].name} · poor rate`, new Button(vs, 0, 0, 230, 96, `+${sellValue(t)}`, () => {
         this.close(); vs.sellAt(lo);
       }, { color: 'gold', size: 36, icon: 'coin', iconScale: 0.4 }));
     }
@@ -62,22 +65,29 @@ export class JammedSheet extends Modal {
 // ---------------------------------------------------------------- Inspect (long-press)
 export class InspectCard extends Modal {
   constructor(vs: VaultScene, index: number) {
-    const tier = ctx.state.board[index];
-    super(vs, { w: 900, h: 1280, title: RELICS[tier].name.toUpperCase() });
+    const tier = ctx.state.board[index]; // item id
+    super(vs, { w: 900, h: 1280, title: ITEMS[tier].name.toUpperCase() });
     this.kind = 'InspectCard';
     const B = this.box, top = this.top;
-    const def = RELICS[tier];
+    const def = ITEMS[tier];
     const rays = vs.add.image(0, top + 380, 'relicGlow').setDisplaySize(700, 700).setTint(def.color).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.5);
     const img = vs.add.image(0, top + 380, 'relic256', `R${tier}`).setDisplaySize(440, 440);
     B.add([rays, img]);
     vs.tweens.add({ targets: img, y: img.y - 14, duration: 1400, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
     vs.tweens.add({ targets: rays, angle: 360, duration: 20000, repeat: -1 });
-    B.add(txt(vs, 0, top + 660, `TIER ${tier} · ${def.material.toUpperCase()}`, { size: 34, font: 'num', weight: '700', color: '#b9a9c6' }));
+    B.add(txt(vs, 0, top + 660, `${CHAINS[chainOf(tier)].name.toUpperCase()} · TIER ${tierOf(tier)} · ${def.material.toUpperCase()}`, { size: 34, font: 'num', weight: '700', color: '#b9a9c6' }));
     B.add(txt(vs, 0, top + 760, `“${def.lore}”`, { size: 32, font: 'title', weight: '700', color: '#FFE9A3', wrap: 760 }));
-    if (tier < MAX_TIER) {
-      B.add(txt(vs, -80, top + 880, 'Merge two to make', { size: 28, font: 'body', color: '#b9a9c6' }));
-      B.add(vs.add.image(140, top + 880, 'relic96', `i${tier + 1}`).setDisplaySize(96, 96));
-    } else B.add(txt(vs, 0, top + 880, `Merge two to ASCEND: ${fmt(ECON.ascendGold)} gold + ${ECON.ascendGems} gems`, { size: 28, font: 'body', color: '#FF7AD9' }));
+    if (!isTop(tier)) {
+      const bind = BINDINGS[tier + 1];
+      B.add(txt(vs, bind ? -170 : -80, top + 880, 'Merge two to make', { size: 28, font: 'body', color: '#b9a9c6' }));
+      B.add(vs.add.image(bind ? 40 : 140, top + 880, 'relic96', `i${tier + 1}`).setDisplaySize(96, 96));
+      if (bind) {
+        B.add(txt(vs, 120, top + 880, '+', { size: 44, font: 'num', weight: '700', color: '#FFE9A3' }));
+        B.add(vs.add.image(200, top + 880, 'relic96', `i${bind}`).setDisplaySize(84, 84));
+        B.add(vs.add.image(200, top + 830, 'ic_link').setDisplaySize(44, 44));
+        B.add(txt(vs, 0, top + 950, `Binding: one ${ITEMS[bind].name} on the board is consumed`, { size: 24, font: 'body', color: '#7EE0FF' }));
+      }
+    } else B.add(txt(vs, 0, top + 880, 'Merge two to ASCEND: a jackpot of gold and gems', { size: 28, font: 'body', color: '#FF7AD9' }));
     B.add(new Button(vs, -200, top + 1060, 340, 120, `SELL +${sellValue(tier)}`, () => { this.close(); vs.sellAt(index); }, { color: 'red', size: 38 }));
     B.add(new Button(vs, 200, top + 1060, 340, 120, 'KEEP', () => this.close(), { color: 'gold', size: 42 }));
   }
@@ -100,7 +110,7 @@ export class QuestsModal extends Modal {
       const prog = questProgress(s, i);
       const done = prog >= q.goal, claimed = s.quests.claimed.includes(i);
       B.add(vs.add.nineslice(0, y, done && !claimed ? 'panel' : 'panelDark', undefined, 880, 220, 70, 70, 70, 70));
-      const icon = i === 0 ? vs.add.image(-350, y, 'forge').setDisplaySize(130, 130) : i === 1 ? vs.add.image(-350, y, 'relic256', 'R4').setDisplaySize(140, 140) : vs.add.image(-350, y, 'ic_chest').setDisplaySize(130, 130);
+      const icon = i === 0 ? vs.add.image(-350, y, 'forge').setDisplaySize(130, 130) : i === 1 ? vs.add.image(-350, y, 'relic256', 'R4').setDisplaySize(140, 140) : vs.add.image(-350, y, 'patron0').setDisplaySize(130, 130);
       B.add(icon);
       B.add(txt(vs, -260, y - 50, q.label, { size: 36, weight: '900', gold: true, origin: [0, 0.5] }));
       const g = vs.add.graphics();
@@ -258,3 +268,58 @@ export class OddsModal extends Modal {
 }
 
 export { sell };
+
+// ---------------------------------------------------------------- generator (RV-D3)
+export class GeneratorSheet extends Modal {
+  constructor(vs: VaultScene, private chain: number) {
+    super(vs, { w: 980, h: 1420, title: CHAINS[chain].gen.toUpperCase(), panelKey: chain === 2 ? 'panelBlue' : 'panelDark' });
+    this.kind = 'GeneratorSheet';
+    this.build();
+  }
+  private build() {
+    const vs = this.vs, s = ctx.state, B = this.box, top = this.top, c = CHAINS[this.chain];
+    const lvl = s.gens[this.chain] ?? 0;
+    B.add(vs.add.image(0, top + 250, 'relicGlow').setDisplaySize(620, 620).setTint(c.color).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.45));
+    B.add(vs.add.image(0, top + 250, this.chain === 0 ? 'forge' : `gen${this.chain}`).setDisplaySize(330, 330));
+    B.add(txt(vs, 0, top + 450, c.genBlurb, { size: 30, font: 'title', weight: '700', color: '#FFE9A3', wrap: 820 }));
+    if (lvl <= 0) {
+      B.add(vs.add.image(0, top + 250, 'ic_lock').setDisplaySize(150, 150));
+      B.add(txt(vs, 0, top + 540, `Wakes at Vault Rank ${c.unlockRank}`, { size: 40, weight: '900', gold: true }));
+    } else {
+      B.add(txt(vs, 0, top + 540, `LEVEL ${lvl} / ${GEN_MAX_LEVEL}  ·  +${Math.round((lvl - 1) * ECON.genLevelLuck * 100)}% higher-tier output`, { size: 34, font: 'num', weight: '700', color: '#8CF08A' }));
+      const cost = genUpgradeCost(s, this.chain);
+      if (cost != null) {
+        const b: Button = new Button(vs, 0, top + 650, 520, 120, `UPGRADE · ${fmt(cost)}`, () => {
+          if (!upgradeGenerator(s, this.chain)) { ctx.sfx.play('error'); vs.toast('Not enough gold. Patrons pay best.'); return; }
+          ctx.sfx.play('purchase');
+          vs.hud.tickGold();
+          vs.refreshGenerators();
+          ctx.persist();
+          const m = b.getWorldTransformMatrix();
+          vs.fx.ring(m.tx, m.ty - 400, c.color, 2.4); vs.fx.burst(m.tx, m.ty - 400, 40, c.color);
+          this.box.removeAll(true); this.build();
+        }, { color: 'gold', size: 38, icon: 'coin', iconScale: 0.45 });
+        B.add(b);
+      } else B.add(txt(vs, 0, top + 650, 'MASTERWORK', { size: 44, weight: '900', gold: true }));
+      B.add(txt(vs, 0, top + 730, 'Upgrades are paid in gold only. A generator never runs out and never needs waiting.', { size: 22, font: 'body', color: '#8a7a98', strokeW: 0 }));
+    }
+    // the chain ladder with its bindings
+    B.add(txt(vs, 0, top + 820, 'THE CHAIN', { size: 34, weight: '900', gold: true }));
+    const n = c.maxTier, gap = Math.min(110, 900 / n);
+    for (let t = 1; t <= n; t++) {
+      const id = itemId(this.chain, t);
+      const x = (t - (n + 1) / 2) * gap, y = top + 930;
+      const seen = (s.best[this.chain] ?? 0) >= t;
+      const ic = vs.add.image(x, y, 'relic96', `i${id}`).setDisplaySize(gap - 12, gap - 12);
+      if (!seen) ic.setTint(0x000000).setAlpha(0.55);
+      B.add(ic);
+      const bind = BINDINGS[id];
+      if (bind) {
+        B.add(vs.add.image(x, y + 80, 'ic_link').setDisplaySize(40, 40));
+        B.add(vs.add.image(x, y + 132, 'relic96', `i${bind}`).setDisplaySize(64, 64));
+      }
+    }
+    B.add(txt(vs, 0, top + 1130, 'A chain link means the merge also consumes that relic from another chain.', { size: 24, font: 'body', color: '#b9a9c6', wrap: 820 }));
+    void chainOf; void tierOf; void isTop; void ITEMS;
+  }
+}

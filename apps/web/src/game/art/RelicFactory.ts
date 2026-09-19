@@ -1,4 +1,6 @@
 import type Phaser from 'phaser';
+import { CHAIN_PAINTERS } from './ChainArt';
+import { ITEM_IDS } from '../data/items';
 import {
   Ctx, makeCanvas, lin, rad, poly, smooth, star, glow, shade, MAT, metal, chrome, facets, sparkle, rrPath,
 } from './paint';
@@ -477,11 +479,13 @@ const PAINTERS: ((ctx: Ctx, full: boolean) => void)[] = [
   () => {}, flint, copperIdol, silverUrn, goldMask, scarab, sapphireHeart, rubyCrown, starArk, livingRelic,
 ];
 
-export function paintRelic(ctx: Ctx, tier: number, withIris = true) {
+/** Paint any relic by item id (1–9 Forge, 11–17 Crypt, 21–27 Star Well) into a 256×256 box. */
+export function paintRelic(ctx: Ctx, id: number, withIris = true) {
   ctx.save();
   // keep everything inside the frame with a small margin
   ctx.translate(128, 128); ctx.scale(0.94, 0.94); ctx.translate(-128, -128);
-  PAINTERS[tier](ctx, withIris);
+  if (id <= 9) PAINTERS[id](ctx, withIris);
+  else CHAIN_PAINTERS[id]?.(ctx);
   ctx.restore();
 }
 
@@ -507,47 +511,49 @@ export const SHEEN_FRAMES = 6;
 export const BOARD_FRAME = 160;
 
 export function bakeRelics(scene: Phaser.Scene) {
-  // masters
-  const masters: HTMLCanvasElement[] = [];
-  const mastersNoIris: HTMLCanvasElement[] = [];
-  for (let t = 1; t <= 9; t++) {
+  // masters for every item id; grid atlases keep every texture under 4096px for older phones
+  const ids = ITEM_IDS;
+  const masters: Record<number, HTMLCanvasElement> = {};
+  const mastersNoIris: Record<number, HTMLCanvasElement> = {};
+  for (const id of ids) {
     const [c, ctx] = makeCanvas(256, 256);
-    paintRelic(ctx, t, true);
-    masters[t] = c;
-    if (t === 9) {
+    paintRelic(ctx, id, true);
+    masters[id] = c;
+    if (id === 9) {
       const [c2, ctx2] = makeCanvas(256, 256);
-      paintRelic(ctx2, t, false);
-      mastersNoIris[t] = c2;
-    } else mastersNoIris[t] = c;
+      paintRelic(ctx2, id, false);
+      mastersNoIris[id] = c2;
+    } else mastersNoIris[id] = c;
   }
+  const COLS = 8, rows = Math.ceil(ids.length / COLS);
+  const grid = (k: number, size: number) => ({ x: (k % COLS) * size, y: Math.floor(k / COLS) * size });
   // 256 atlas
-  const [a256, x256] = makeCanvas(256 * 9, 256);
-  for (let t = 1; t <= 9; t++) x256.drawImage(masters[t], (t - 1) * 256, 0);
+  const [a256, x256] = makeCanvas(256 * COLS, 256 * rows);
+  ids.forEach((id, k) => { const p = grid(k, 256); x256.drawImage(masters[id], p.x, p.y); });
   const tex256 = scene.textures.addCanvas('relic256', a256)!;
-  for (let t = 1; t <= 9; t++) tex256.add(`R${t}`, 0, (t - 1) * 256, 0, 256, 256);
-
+  ids.forEach((id, k) => { const p = grid(k, 256); tex256.add(`R${id}`, 0, p.x, p.y, 256, 256); });
   // 96 icons
-  const [a96, x96] = makeCanvas(96 * 9, 96);
-  for (let t = 1; t <= 9; t++) x96.drawImage(masters[t], (t - 1) * 96, 0, 96, 96);
+  const [a96, x96] = makeCanvas(96 * COLS, 96 * rows);
+  ids.forEach((id, k) => { const p = grid(k, 96); x96.drawImage(masters[id], p.x, p.y, 96, 96); });
   const tex96 = scene.textures.addCanvas('relic96', a96)!;
-  for (let t = 1; t <= 9; t++) tex96.add(`i${t}`, 0, (t - 1) * 96, 0, 96, 96);
+  ids.forEach((id, k) => { const p = grid(k, 96); tex96.add(`i${id}`, 0, p.x, p.y, 96, 96); });
 
-  // board atlas with sheen frames
+  // board atlas with sheen frames: one row per item
   const F = BOARD_FRAME, cols = SHEEN_FRAMES + 1;
-  const [ab, xb] = makeCanvas(F * cols, F * 9);
-  for (let t = 1; t <= 9; t++) {
+  const [ab, xb] = makeCanvas(F * cols, F * ids.length);
+  ids.forEach((id, row) => {
     const [small, sctx] = makeCanvas(F, F);
     // two-step downscale for crisper edges
     const [mid, mctx] = makeCanvas(F * 1.25, F * 1.25);
-    mctx.drawImage(mastersNoIris[t], 0, 0, F * 1.25, F * 1.25);
+    mctx.drawImage(mastersNoIris[id], 0, 0, F * 1.25, F * 1.25);
     sctx.drawImage(mid, 0, 0, F, F);
     for (let f = 0; f < cols; f++) {
       const frame = sheenOver(small, f === 0 ? -1 : (f - 1) / (SHEEN_FRAMES - 1));
-      xb.drawImage(frame, f * F, (t - 1) * F);
+      xb.drawImage(frame, f * F, row * F);
     }
-  }
+  });
   const texB = scene.textures.addCanvas('relics', ab)!;
-  for (let t = 1; t <= 9; t++) for (let f = 0; f < cols; f++) texB.add(`r${t}_${f}`, 0, f * F, (t - 1) * F, F, F);
+  ids.forEach((id, row) => { for (let f = 0; f < cols; f++) texB.add(`r${id}_${f}`, 0, f * F, row * F, F, F); });
 
   // live iris for the Living Relic
   const [ic, ictx] = makeCanvas(64, 64);

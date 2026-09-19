@@ -8,6 +8,9 @@ import { rollChest, openChest, gemClear, adSalvage, claimQuest, spinWheel, claim
 import { computeLuck } from './LuckSystem';
 import { OfferDirector } from './OfferDirector';
 import { mulberry32 } from './Rng';
+import { generateOrder, refillOrders, deliver, dismissOrder, tickOrders, matchOrder } from './OrderSystem';
+import { upgradeGenerator, unlockGenerators } from './Economy';
+import { BINDINGS, CHAINS, itemWork } from '../data/items';
 import { grantReward, claimVipCrate, enforceChestRules } from './Economy';
 import { welcomeOpen, welcomeDeadline, WELCOME_WINDOW_MS } from './Offers';
 import { skuValuePct } from '../data/catalog';
@@ -65,7 +68,8 @@ describe('merge', () => {
   it('ranks up and grants gems', () => {
     const s = createState();
     const gems = s.gems;
-    for (let i = 0; i < 6; i++) { s.board[0] = 6; s.board[1] = 6; merge(s, 0, 1, rng()); }
+    // T6 -> T7 needs its binding (a Candle Skull) on the board
+    for (let i = 0; i < 12; i++) { s.board[0] = 6; s.board[1] = 6; s.board[2] = 13; expect(merge(s, 0, 1, rng()).ok).toBe(true); }
     expect(s.rank).toBeGreaterThan(1);
     expect(s.gems).toBeGreaterThan(gems);
   });
@@ -364,5 +368,98 @@ describe('honest offers (Critic ITERATE #2)', () => {
     expect(skuValuePct('gems500')).toBe(125);
     expect(skuValuePct('gems1200')).toBe(150);
     expect(skuValuePct('welcome')).toBe(Math.round(((160 / 1.99) / (200 / 4.99)) * 100));
+  });
+});
+
+describe('deepen cycle 1: chains, bindings, generators (RV-D3)', () => {
+  it('top tiers need a binding from another chain and consume it', () => {
+    const s = createState();
+    s.board[0] = 6; s.board[1] = 6;
+    const r = merge(s, 0, 1, rng());
+    expect(r.ok).toBe(false);
+    expect(r.reason).toBe('binding');
+    expect(r.binding).toBe(BINDINGS[7]);
+    s.board[5] = BINDINGS[7];
+    const ok = merge(s, 0, 1, rng());
+    expect(ok.ok).toBe(true);
+    expect(s.board[1]).toBe(7);
+    expect(s.board[5]).toBe(0);
+    expect(s.stats.bindings).toBe(1);
+  });
+  it('crypt and star chains merge within their own chain and ascend at their top', () => {
+    const s = createState();
+    s.board[0] = 11; s.board[1] = 11;
+    expect(merge(s, 0, 1, rng()).item).toBe(12);
+    s.board[2] = 27; s.board[3] = 27;
+    const r = merge(s, 2, 3, rng());
+    expect(r.ascended).toBe(true);
+    expect(r.gold).toBe(Math.round(ECON.ascendGold * CHAINS[2].value));
+    expect(merge(s, 1, 4, rng()).ok).toBe(false); // mismatch / empty never cross chains
+  });
+  it('generators unlock by rank and cannot be used while locked', () => {
+    const s = createState();
+    s.board = s.board.map(() => 0);
+    expect(forge(s, rng(), undefined, 1).reason).toBe('locked');
+    s.rank = CHAINS[1].unlockRank;
+    expect(unlockGenerators(s)).toEqual([1]);
+    const f = forge(s, rng(), undefined, 1);
+    expect(f.ok).toBe(true);
+    expect(Math.floor(f.item / 10)).toBe(1);
+  });
+  it('generator upgrades cost gold and never gate play', () => {
+    const s = createState();
+    s.gold = 0;
+    expect(upgradeGenerator(s, 0)).toBe(false);
+    s.gold = 100000;
+    expect(upgradeGenerator(s, 0)).toBe(true);
+    expect(s.gens[0]).toBe(2);
+  });
+});
+
+describe('deepen cycle 1: patron orders (RV-D2)', () => {
+  it('orders ask for reachable relics and pay by work', () => {
+    const s = createState();
+    for (let k = 0; k < 50; k++) {
+      const o = generateOrder(s, mulberry32(k));
+      expect(o.want.length).toBeGreaterThan(0);
+      for (const id of o.want) { expect(Math.floor(id / 10)).toBe(0); expect(id % 10).toBeGreaterThanOrEqual(2); }
+      expect(o.gold).toBeGreaterThanOrEqual(Math.round(o.want.reduce((a, id) => a + itemWork(id), 0) * ECON.orders.goldPerWork));
+    }
+  });
+  it('delivering consumes exactly the wanted relics, pays, and refills the slot', () => {
+    const s = createState();
+    refillOrders(s, rng());
+    const o = s.orders[0]!;
+    s.board = s.board.map(() => 0);
+    o.want.forEach((id, i) => { s.board[i] = id; });
+    s.board[30] = 1;
+    expect(matchOrder(s, o)).not.toBeNull();
+    const g0 = s.gold, p0 = s.pass.xp, e0 = s.event.points;
+    const r = deliver(s, 0, rng());
+    expect(r.ok).toBe(true);
+    expect(s.board.filter((t) => t > 0)).toEqual([1]);
+    expect(s.gold).toBeGreaterThan(g0);
+    expect(s.pass.xp - p0).toBe(o.pass);
+    expect(s.event.points - e0).toBe(o.pts);
+    expect(s.orders[0]).not.toBeNull();
+    expect(s.orders[0]!.id).not.toBe(o.id);
+    expect(s.stats.orders).toBe(1);
+  });
+  it('orders never expire on a clock; dismissing is free and refills after actions', () => {
+    const s = createState();
+    refillOrders(s, rng());
+    expect(dismissOrder(s, 1)).toBe(true);
+    expect(s.orders[1]).toBeNull();
+    for (let k = 0; k < ECON.orders.dismissWait - 1; k++) { tickOrders(s, rng()); expect(s.orders[1]).toBeNull(); }
+    tickOrders(s, rng());
+    expect(s.orders[1]).not.toBeNull();
+  });
+  it('migrates a v3 save into chains: forge progress kept, generators by rank', () => {
+    const v3 = { v: 3, board: [4, 4, 0], rank: 7, stats: { maxTier: 6 }, gold: 10 };
+    const s = migrate(v3);
+    expect(s.gens).toEqual([1, 1, 1]);
+    expect(s.best[0]).toBe(6);
+    expect(s.orders.length).toBe(3);
+    expect(s.board.slice(0, 2)).toEqual([4, 4]);
   });
 });
