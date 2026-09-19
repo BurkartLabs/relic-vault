@@ -45,7 +45,7 @@ export class WelcomePack extends Modal {
 
     const row = vs.add.container(0, top + 790);
     const random = chestsAllowed(ctx.state);
-    const items: [string, string, string?][] = [['gem', '120'], ['coin', '800'], random ? ['ic_chest', 'x1'] : ['relic256', 'x1', 'R4']];
+    const items: [string, string, string?][] = [['gem', String(SKUS.welcome.gems)], ['coin', SKUS.welcome.gold!.toLocaleString('en-US')], random ? ['ic_chest', 'x1'] : ['relic256', 'x1', 'R4']];
     items.forEach(([k, n], i) => {
       const x = (i - 1) * 290;
       const plate = vs.add.nineslice(x, 0, 'panelDark', undefined, 260, 150, 60, 60, 60, 60);

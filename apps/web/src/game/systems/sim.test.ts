@@ -167,7 +167,7 @@ describe('purchases', () => {
     const s = createState();
     const g = applyPurchase(s, 'welcome', rng());
     expect(g.gems).toBe(120);
-    expect(g.gold).toBe(800);
+    expect(g.gold).toBe(10000); // Board, #330: 800 was ~100 early actions
     expect(s.board.filter((t) => t === 4).length).toBe(2);
     expect(s.board.filter((t) => t === 3).length).toBe(1);
     expect(s.freeChests).toBe(1);

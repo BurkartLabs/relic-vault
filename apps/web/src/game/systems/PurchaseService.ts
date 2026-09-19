@@ -35,7 +35,7 @@ export function applyPurchase(s: GameState, sku: SkuId, rng: Rng, now = Date.now
   switch (sku) {
     case 'welcome':
       s.ent.welcome = true;
-      s.gems += 120; s.gold += 800; g.gems = 120; g.gold = 800;
+      s.gems += def.gems!; s.gold += def.gold!; g.gems = def.gems!; g.gold = def.gold!;
       for (const t of [4, 4, 3]) g.relics.push({ tier: t, index: placeOrStash(s, t, rng) });
       { const exact = grantChests(s, 1, rng); if (exact.length) g.relics.push(...exact); else g.freeChests = 1; }
       break;

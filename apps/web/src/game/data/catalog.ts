@@ -55,8 +55,8 @@ export interface Sku {
 }
 
 export const SKUS: Record<SkuId, Sku> = {
-  welcome: { id: 'welcome', title: 'Keeper’s Welcome', price: 1.99, gems: 120, gold: 800, badge: 'ONE TIME', oneTime: true,
-    blurb: '120 gems, 800 gold, two Gold Masks, a Silver Urn and a Lucky Chest on the house.' },
+  welcome: { id: 'welcome', title: 'Keeper’s Welcome', price: 1.99, gems: 120, gold: 10000, badge: 'ONE TIME', oneTime: true,
+    blurb: '120 gems, 10,000 gold, two Gold Masks, a Silver Urn and a Lucky Chest on the house.' },
   gems200: { id: 'gems200', title: 'Pouch of Gems', price: 4.99, gems: 200, blurb: 'A modest tithe.' },
   gems500: { id: 'gems500', title: 'Chest of Gems', price: 9.99, gems: 500, badge: 'POPULAR', blurb: 'The vault’s preferred offering.' },
   gems1200: { id: 'gems1200', title: 'Hoard of Gems', price: 19.99, gems: 1200, badge: 'BEST VALUE', blurb: 'For keepers who intend to stay.' },
