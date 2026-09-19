@@ -1,7 +1,7 @@
 # ECONOMY — Relic Vault (current numbers)
 
 Source of truth: `apps/web/src/game/data/economy.json`, `catalog.ts` and `items.ts`. This file mirrors them;
-if they disagree, the code wins and this file is stale. Last synced: Deepen cycle 1 (save v4).
+if they disagree, the code wins and this file is stale. Last synced: Board pricing feedback, 2026-09-19 (save v5).
 
 ## Core rules
 
@@ -35,7 +35,8 @@ if they disagree, the code wins and this file is stale. Last synced: Deepen cycl
 | 26 Star Lyre | 6 Sapphire Heart |
 | 27 Heart of the Sky | 16 Ossuary Chest |
 
-**Generator upgrades** (gold sink, never a gate): level 2 300 · level 3 900 · level 4 2,500 · level 5 6,000.
+**Generator upgrades** (gold sink, never a gate), every generator up to level 10: level 2 300 · 3 900 · 4 2,500 ·
+5 6,000 · 6 12,000 · 7 20,000 · 8 32,000 · 9 50,000 · 10 80,000. Each level above 1 adds +2% higher-tier output.
 
 ## Per-tier table (Forge values; Crypt × 1.25, Star Well × 1.5, rounded)
 
@@ -61,7 +62,9 @@ Combo: the 3rd+ merge within 1.8 s of the previous one adds `combo × 2 + tier �
 - An order asks for 1–3 items. It never asks for T1, never above the player's best tier + 1, and never for an item
   whose binding chain is still locked.
 - "Work" of an item = 2^(tier−1) T1 forges, plus the work of its binding, × chain value. Rewards per unit of work:
-  3 gold · 0.6 XP · 2.1 Rush pts; pass XP = √work. Orders with more than one item pay +15% per extra item.
+  10 gold · 0.6 XP · 2.1 Rush pts; pass XP = √work. A top-tier relic pays at least 60% of its ascension gold, so a
+  patron always outbids keeping it. Orders with more than one item pay +15% per extra item.
+- The first time an order can be filled from the board, the Keeper points it out (once).
 - 2–5 gems on every 4th order; 4.5% chance of an album card.
 - Orders never expire on a clock. Dismissing is free; the slot refills after 3 actions.
 
@@ -69,7 +72,7 @@ Combo: the 3rd+ merge within 1.8 s of the previous one adds `combo × 2 + tier �
 
 - Start: 150 gold, 30 gems.
 - Gold sinks: generator upgrades (above); Relic Market (T2 60 · T3 180 · T4 520 · T5 1,500).
-- Gem sinks: Lucky Chest 40 · exact Emerald Scarab 150 · fill album card 80 · gem-clear 10 · wheel 15 ·
+- Gem sinks: Lucky Chest 5 · exact Emerald Scarab 5 · fill album card 80 · gem-clear 10 · wheel 15 ·
   x2 Rush Boost 60 (30 min).
 - Gem faucets: rank-ups (3 each), orders, daily quests (2 gems + 120 gold each), duplicate cards (3), pass, Rush,
   wheel, VIP crate, ascension.
@@ -88,13 +91,14 @@ Generator levels add on top of the cap (forge only).
 
 | Result | Chance |
 |---|---|
-| T2 Copper Idol | 45% |
-| T3 Silver Urn | 33% |
-| T4 Gold Mask | 14% |
-| T5 Emerald Scarab | 6% |
-| T6 Sapphire Heart | 2% |
+| T4 Gold Mask | 40% |
+| T5 Emerald Scarab | 30% |
+| T6 Sapphire Heart | 18% |
+| T7 Ruby Crown | 9% |
+| T8 Star-Metal Ark | 3% |
 
-Pity: the 15th chest in a row without ≥T4 is drawn from the ≥T4 rows only. Luck can upgrade any result by one tier (max T6).
+5 gems; no longer sold for cash. Pity: the 15th chest in a row without ≥T6 is drawn from the ≥T6 rows only. Luck can
+upgrade any result by one tier (max T8).
 20% chance of an album card per chest. Minors and `lootboxesAllowed=false` get an exact Gold Mask instead of any chest.
 
 ## Album
@@ -105,8 +109,8 @@ and a decoration in the vault.
 
 ## Piggy
 
-Stores 10% of gold earned (1 stored gold = 1¢ displayed), cap 600. Smash $2.99 → stored × 4 gold + 15 gems.
-Offered once at $2.00.
+Stores gems: one every 4 merges, cap 250. Smash $2.99 → every whole stored gem (~84 gems per dollar at the cap).
+Offered once at 50 gems. Save v5 emptied the old gold pig.
 
 ## Season pass (14 days, 20 tiers, 80 XP each)
 
@@ -122,18 +126,17 @@ Milestones at 15 / 50 / 120 / 250 / 450 / 750 / 1,200 / 2,000 / 3,500 / 6,000 po
 
 | SKU id | Name | Price | Grants |
 |---|---|---|---|
-| welcome | Keeper's Welcome | $1.99 one time | 120 gems, 800 gold, 2× T4, 1× T3, 1 free chest |
+| welcome | Keeper's Welcome | $1.99 one time | 120 gems, 10,000 gold, 2× T4, 1× T3, 1 free chest |
 | gems200 | Pouch of Gems | $4.99 | 200 gems (baseline rate) |
 | gems500 | Chest of Gems | $9.99 | 500 gems (POPULAR) |
 | gems1200 | Hoard of Gems | $19.99 | 1,200 gems (BEST VALUE) |
-| chest_cash | Lucky Chest | $2.99 | 1 chest now (not sold to minors) |
 | piggy | Smash the Pig | $2.99 | piggy × 4 + 15 gems |
 | pass | Keeper's Pass | $9.99 | premium track |
 | noads | Silence the Criers | $7.99 | no interstitials / banner |
 | vip | Vault VIP | $9.99 / 30 days | daily crate, +2% luck, crown, no ads |
 | comeback | So Close Bundle | $2.99 one time | T5, 60 gems, 1,500 gold |
-| — | Exact Emerald Scarab | 150 gems | exactly one T5 |
+| — | Exact Emerald Scarab | 5 gems | exactly one T5 |
 
 "Value" ribbons are computed, never hardcoded (`skuValuePct`): gem-equivalent per dollar against the $4.99 pack
-(200 gems). The Welcome pack counts its chest at 40 gems, which gives 201%. The `gems200` id used to be `gems80`;
+(200 gems). The Welcome pack counts its chest at the chest's gem price (5), which gives 157%; its 10,000 gold is not counted. The `gems200` id used to be `gems80`;
 old purchase history is renamed when a save loads.
