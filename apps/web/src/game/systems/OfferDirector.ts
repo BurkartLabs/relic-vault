@@ -63,11 +63,9 @@ export class OfferDirector {
     if (s.piggy >= ECON.piggyNagAt && this.once('offer_piggy')) {
       this.push({ id: 'piggy', trigger: 'piggy_200', delayMs: 300 });
     }
-    const left = eventEnds - now;
-    const cycleFlag = `offer_boost_${s.event.cycle}`;
-    if (left < 48 * 3600000 && s.event.points > 0 && s.stats.merges >= 30 && this.once(cycleFlag)) {
-      this.push({ id: 'boost', trigger: 'event_last_48h', delayMs: 500 });
-    }
+    // RV-D6 (Depth review #2): the Rush Boost is never pushed. With paced events a deadline pop-up
+    // selling "finish faster" is FOMO, which RUBRIC scores as coercion. It stays in the Events panel.
+    void eventEnds; void now;
     if (s.stats.merges >= 60 && !s.ent.vip && this.once('offer_vip')) {
       this.push({ id: 'vip', trigger: 'merge_60', delayMs: 600 });
     }

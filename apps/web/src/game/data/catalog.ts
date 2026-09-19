@@ -60,7 +60,7 @@ export const SKUS: Record<SkuId, Sku> = {
   gems80: { id: 'gems80', title: 'Pouch of Gems', price: 4.99, gems: 200, blurb: 'A modest tithe.' },
   gems500: { id: 'gems500', title: 'Chest of Gems', price: 9.99, gems: 500, badge: 'POPULAR', blurb: 'The vault’s preferred offering.' },
   gems1200: { id: 'gems1200', title: 'Hoard of Gems', price: 19.99, gems: 1200, badge: 'BEST VALUE', blurb: 'For keepers who intend to stay.' },
-  chest_cash: { id: 'chest_cash', title: 'Lucky Chest', price: 2.99, random: true, blurb: 'Skip the gems. Open one now.' },
+  chest_cash: { id: 'chest_cash', title: 'Lucky Chest', price: 2.99, random: true, blurb: 'One Lucky Chest, opened now. Odds are on the card.' },
   piggy: { id: 'piggy', title: 'Smash the Pig', price: 2.99, blurb: 'Everything it swallowed, times four. Plus 15 gems.' },
   pass: { id: 'pass', title: 'Keeper’s Pass', price: 9.99, blurb: 'Premium track: gems, a wildcard card, the Gilded skin, +4% luck.' },
   noads: { id: 'noads', title: 'Silence the Criers', price: 7.99, blurb: 'Removes interstitials and the shop banner. Rewarded ads stay optional.' },

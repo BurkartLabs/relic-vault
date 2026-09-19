@@ -1,5 +1,50 @@
 # DEPTH — relic-vault
 
+## Review #2 — 2026-09-19 (after Deepen cycle 1) · **3.0 / 5 · DEEPEN**
+
+Reviewer: Depth Critic (fresh context, read-only). Build: commit 6a92f9b on `deepen/cycle-1`.
+Probe: `ops/probes/relic-vault-runway.ts` → `probes/2026-09-19-deepen1.txt` (re-run by the Critic, identical output).
+Cycle 1 shipped: RV-D1 pacing, RV-D2 Patron Orders, RV-D3 Crypt + Star Well chains with bindings and generator levels.
+Kill-review rule: **met** (+1.5; the cycle target was 2.8).
+
+### Probe audit (the Critic's, accepted)
+
+- "Decision density 99%" is **inflated**: every unlocked generator counts as an option. Trust keep-vs-merge tension (**43%**) instead.
+- Mastery gap (4.2× orders) is measured against a **strawman** greedy bot that skips half the deliverable orders.
+- Runway: the planner's last new relic is day 9.4, but there is a **content gap from ~91 min to day 6**.
+- Time-box numbers assume a 25 min/day near-optimal player. A casual player finishes neither the pass nor the Rush.
+- Not yet measured: goal ladder, world change, the gold sink (the planner banks ~6.5k gold/day unspent), recipes.
+
+| Gate | #1 | #2 | Evidence |
+|---|---|---|---|
+| Decision density | 1 | 3 | 43% of planner turns are real keep-vs-merge trades (orders, bindings) |
+| Goal ladder | 2 | 3 | Next merge → 3 orders → bindings → daily quests → Rush (day 3.8) → pass (day 11.9) |
+| Content runway | 1 | 2 | Greedy last new relic at 59 min; all systems open by 24 min; day-2–6 gap |
+| Time-box fidelity | 1 | 4 | Pass day 11.9 (target 10–12), Rush top day 3.8 of 4, page I day 5.6 |
+| System interplay | 1 | 3 | Bindings link chains; orders feed gold, rank, pass and Rush; rank wakes generators; levels add luck |
+| Mastery | 1 | 3 | 4.2× orders vs baseline, but the baseline is weak |
+| World change | 3 | 3 | Nothing new beyond generators waking |
+| Return reason | 2 | 3 | Multi-day arcs and named patrons; no story or project yet |
+| **Average** | **1.5** | **3.0** | |
+
+**How it feels:** at minute 5, patrons give merging a purpose and the Crypt wakes. By minute 30 all three generators are live, bindings make you hold pieces, and it is busier (sometimes confusing). At minute 120 orders start repeating and gold piles up. On day 3 nothing is new and the vault looks like day 1. By day 14 an engaged player has finished the pass and a casual player has finished nothing.
+
+**Charter/Soul check:** bindings, action-based order refills and generator levels are **not** disguised energy. Bindings must never be sold. The new risk was the auto-pushed Rush Boost: a FOMO offer selling "finish faster" against slower pacing. It was **fixed immediately after this review (RV-D6 part 1)**: the boost is never pushed, and the Lucky Chest copy no longer says "Skip the gems".
+
+### Cycle 2 (≤3 epics, ranked)
+
+| # | Epic | Hypothesis | Probe target (acceptance) | Size |
+|---|---|---|---|---|
+| 1 | **RV-P2 Honest probe v2** | We can't deepen against a flattering meter | Density redefined (planner choice ≠ baseline choice); order-aware greedy baseline; casual 12 min/day profile; longest-gap metric; gold-sink metric | S |
+| 2 | **RV-D6 No pay-to-finish** (push already removed) | Paced events + paid boost = coercion | Casual 12 min/day bot reaches ≥ Rush milestone 9 and pass tier ≥ 15 by day 14 without spending | S |
+| 3 | **RV-D4 Vault rooms & cursed sockets** (gold-paid restoration) | Placement matters, the world tells your story, gold gets a sink | ≥4 rooms (~1 per 3 days); planner beats order-aware greedy by ≥20% on room clears; gold banked/day −50% | M |
+
+Queued for cycle 3: RV-D5a relic abilities (≥4 cross-system effects; keeping a T6+ is right in ≥25% of decisions), RV-D5b Keeper story + mid-game items (longest gap ≤1 day; ≥27 items; a chapter every ~2 days).
+
+---
+
+## Review #1 (baseline)
+
 Review #: 1
 Date: 2026-09-19
 Reviewer: Director (interim, first run of the Depth loop; future reviews are by a fresh-context Depth Critic)
