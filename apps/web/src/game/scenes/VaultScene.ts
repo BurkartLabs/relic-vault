@@ -112,6 +112,8 @@ export class VaultScene extends Phaser.Scene {
     this.my = this.safeTop + extra * 0.5;
     this.relics = new Array(BOARD_SIZE).fill(null);
     this.cameras.main.setBackgroundColor('#07060B');
+    // punch-ins may zoom and pan, but never past the painted world
+    this.cameras.main.setBounds(0, 0, this.W, this.H);
     this.cameras.main.fadeIn(420, 7, 6, 11);
 
     this.fx = new Fx(this, 30);

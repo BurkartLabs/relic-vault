@@ -70,14 +70,24 @@ let storage = await shotSession('02-boot-first-verb', async (page, h) => {
 // Shot 3: the loop, once, with juice (continue the same profile)
 storage = await shotSession('03-loop', async (page, h) => {
   await page.goto(url); await h.ready(); await h.wait(800);
-  await h.ev(() => { const s = window.__rv.state; s.flags.tut = 3; window.__vault.modal?.close(); });
+  await h.ev(() => {
+    const s = window.__rv.state; s.flags.tut = 3;
+    for (const f of ['offer_comeback', 'offer_pass', 'offer_shop20', 'offer_piggy', 'offer_vip', 'disc_3', 'disc_4', 'disc_5', 'disc_6', 'disc_7']) s.flags[f] = 1;
+    window.__rv.director.queue = [];
+    // a believable mid-session board: pairs to fuse at several tiers
+    const seed = [1, 1, 2, 2, 1, 3, 3, 1, 2, 4, 4, 1, 5, 2, 1, 3, 6, 1, 2, 5];
+    s.board = s.board.map(() => 0); seed.forEach((t, i) => { s.board[(i * 7) % 36] = t; });
+    s.stats.maxTier = 7;
+    window.__vault.syncBoard(); window.__vault.modal?.close();
+  });
+  await h.wait(900);
   for (let k = 0; k < 16; k++) {
     await h.ev(() => window.__vault.modal?.close());
     if (!(await h.mergeAny())) await h.forge();
     await h.wait(120);
   }
   // a big merge for the sarcophagus + shareable moment
-  await h.ev(() => { const s = window.__rv.state; s.board[26] = 7; s.board[27] = 7; window.__vault.syncBoard(); window.__vault.modal?.close(); });
+  await h.ev(() => { const s = window.__rv.state; s.board[26] = 7; s.board[27] = 7; window.__rv.director.queue = []; window.__vault.syncBoard(); window.__vault.modal?.close(); });
   await h.wait(500);
   await h.drag(await h.cell(26), await h.cell(27)); await h.wait(3200);
   await h.wait(1500);

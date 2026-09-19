@@ -67,12 +67,12 @@ export class Tutorial {
     const vs = this.vs;
     ctx.telemetry.track('funnel_step', { step: 'forge_hint' });
     const f = vs.forgeBtn;
-    this.finger.setVisible(true).setPosition(f.x + 40, f.y + 10).setAlpha(0);
+    this.finger.setVisible(true).setPosition(f.x + 70, f.y - 40).setAlpha(0);
     this.label.setText(COPY.forgeHint).setPosition(f.x, f.y - 160).setVisible(true);
     this.loop = vs.tweens.chain({
       targets: this.finger, loop: -1,
       tweens: [
-        { alpha: 1, y: f.y + 10, duration: 250 },
+        { alpha: 1, y: f.y - 40, duration: 250 },
         { scale: '*=0.85', duration: 140, yoyo: true, hold: 60 },
         { alpha: 0.9, duration: 500 },
       ],

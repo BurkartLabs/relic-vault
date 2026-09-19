@@ -1,7 +1,7 @@
 # BRIEF — relic-vault
 
 Size: M
-Stage: Brief ready
+Stage: Preview (Critic SHIP, 2026-09-19) — production Board-gated
 Scorecard: verb 5 (merge is visible), session 4, bet 3, doctrine 5 if we learn
            "no-energy merge can still convert", distribution 3, measurement 4
 
@@ -21,10 +21,18 @@ Casual phone players. PWA first. Shareable merge juice.
 
 `verb_first` within 30s of `app_open`, then 7-day return after 200 sessions.
 
+## Telemetry sink
+
+Self-hosted NDJSON collector (`apps/web/tools/collector.mjs`, $0) wired via `VITE_TELEMETRY_URL`.
+Where it runs publicly is a Board decision; until then events are proven only in QA.
+Identity: anonymous `rv_did` (localStorage), per-boot session id, app version, platform.
+
 ## Monetization
 
 Demo IAP stack: $1.99 welcome pack timed after first merge, dual currency,
 chests with published odds, piggy, pass, album. No play-stopping cooldown.
+Amended by Critic (Soul > spec): real 48h welcome deadline, computed value ribbons,
+no fake leaderboard, no random rewards or pushed offers for under-16s.
 
 ## Out of scope
 
@@ -32,10 +40,10 @@ Real StoreKit, accounts, live PvP, kids mode.
 
 ## Acceptance for Preview
 
-- [ ] stranger can merge without us talking
-- [ ] telemetry events fire
-- [ ] no play-stopping cooldown
-- [ ] screenshot looks like a dark-fantasy product, not a form
+- [x] stranger can merge without us talking (ghost finger; scripted verb_first 5.8–8.8s; no human test yet)
+- [x] telemetry events fire (TELEMETRY.md set; arrive at self-hosted collector in e2e)
+- [x] no play-stopping cooldown (e2e: 60 rapid actions never refused)
+- [x] screenshot looks like a dark-fantasy product, not a form (Critic gate 1)
 
 ## Estimated load
 

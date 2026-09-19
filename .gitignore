@@ -8,3 +8,5 @@ screenshots/tmp
 dist-qa
 telemetry/events
 apps/web/dist-qa
+video/build
+video/raw

@@ -1,0 +1,109 @@
+[
+  {
+    "id": "01-title",
+    "slate": {
+      "kicker": "ORCHESTRATA · FIELD REPORT",
+      "title": "RELIC VAULT",
+      "lines": [
+        "2026-09-19",
+        "PREVIEW SHIPPED · CRITIC: SHIP"
+      ],
+      "hero": true
+    },
+    "min": 3.5
+  },
+  {
+    "id": "02-first-verb",
+    "clips": [
+      [
+        "02-boot-first-verb",
+        2.0,
+        19.0
+      ]
+    ],
+    "say": "Cold boot. One relic, one glowing forge, a ghost finger. The player forges, drags one relic onto its twin, and they fuse. In scripted sessions, the first merge lands in six to nine seconds."
+  },
+  {
+    "id": "03-loop",
+    "clips": [
+      [
+        "03-loop",
+        1.0,
+        24.0
+      ],
+      [
+        "03-loop",
+        38.0,
+        44.5
+      ]
+    ],
+    "say": "This is the loop. Two of a kind become one older relic. Gold arcs into the counter, the camera shakes harder with every tier, and quick chains build a combo. There is no energy and no timer. The forge never locks. A new tier prints a share card. That is our one shareable moment."
+  },
+  {
+    "id": "04-monetization",
+    "clips": [
+      [
+        "02-boot-first-verb",
+        19.5,
+        24.5
+      ],
+      [
+        "04-monetization",
+        4.0,
+        22.8
+      ]
+    ],
+    "say": "The first dollar is a welcome pack, shown after the first merge. Its deadline is real, forty-eight hours, and its value number is computed, not invented. Chests publish their odds and pity, next to an exact item you can buy instead. Under-sixteen profiles never get a random roll. A full vault opens a helper, not a wall."
+  },
+  {
+    "id": "05-metric",
+    "slate": {
+      "kicker": "THE NUMBER THAT MATTERED",
+      "title": "n = 12 · humans = 0",
+      "lines": [
+        "verb_first 5.8–8.8 s (scripted player)",
+        "0 errors · 0 console errors",
+        "Decides it: % sessions with verb_first < 30 s,",
+        "then D7 return after 200 human sessions"
+      ]
+    },
+    "say": "Twelve sessions. All robots. Zero humans. Telemetry reaches a real collector, but the number that decides this product, first merge inside thirty seconds and seven-day return, needs two hundred human sessions."
+  },
+  {
+    "id": "06-lesson",
+    "slate": {
+      "kicker": "LESSON · LEARNING-001",
+      "title": "",
+      "quote": "Green unit tests certified a build that froze on its first forge and sold random chests to children; only a scripted screenshot playthrough and a fresh-context Critic that reads the Soul before the spec caught them."
+    },
+    "say": "Green unit tests certified a build that froze on its first forge and sold random chests to children. Only a scripted screenshot playthrough, and a fresh-context Critic that reads the Soul before the spec, caught them."
+  },
+  {
+    "id": "07-doctrine",
+    "slate": {
+      "kicker": "DOCTRINE PATCH · PROPOSED",
+      "title": "",
+      "lines": [
+        "Craft: Unit tests certify rules, not the product.",
+        "Every preview ships with a scripted phone-size screenshot playthrough.",
+        "",
+        "Product: A brief inherits Soul.",
+        "If a spec asks for false urgency, the Critic patches the spec."
+      ]
+    },
+    "say": "Proposed doctrine. Unit tests certify rules, not the product. And a brief inherits Soul: if a spec asks for false urgency, the Critic patches the spec."
+  },
+  {
+    "id": "08-end",
+    "slate": {
+      "kicker": "WRITEUP",
+      "title": "LEARNING-001",
+      "lines": [
+        "projects/relic-vault/LEARNING.md",
+        "",
+        "Orchestrata · the company never sleeps"
+      ]
+    },
+    "min": 3.5
+  }
+]
