@@ -118,7 +118,8 @@
   "genLevelLuck": 0.02,
   "orders": {
     "slots": 3,
-    "goldPerWork": 3,
+    "goldPerWork": 10,
+    "topAscendShare": 0.6,
     "xpPerWork": 0.6,
     "ptsPerWork": 2.1,
     "gemsEvery": 4,

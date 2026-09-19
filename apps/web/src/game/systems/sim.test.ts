@@ -466,6 +466,20 @@ describe('deepen cycle 1: patron orders (RV-D2)', () => {
       expect(o.gold).toBeGreaterThanOrEqual(Math.round(o.want.reduce((a, id) => a + itemWork(id), 0) * ECON.orders.goldPerWork));
     }
   });
+  it('an order for a top relic pays more gold than keeping it for half an ascension (Bug #333)', () => {
+    const s = createState();
+    s.gens = [1, 1, 1]; s.best = [9, 7, 7]; s.rank = 20;
+    const seen = new Set<number>();
+    for (let k = 0; k < 3000 && seen.size < 3; k++) {
+      const o = generateOrder(s, mulberry32(k));
+      const tops = o.want.filter((id) => [9, 17, 27].includes(id));
+      if (!tops.length) continue;
+      tops.forEach((id) => seen.add(id));
+      const halfAscensions = tops.reduce((a, id) => a + (ECON.ascendGold * CHAINS[Math.floor(id / 10)].value) / 2, 0);
+      expect(o.gold, `order ${o.want}`).toBeGreaterThan(halfAscensions);
+    }
+    expect([...seen].sort()).toEqual([17, 27, 9]);
+  });
   it('delivering consumes exactly the wanted relics, pays, and refills the slot', () => {
     const s = createState();
     refillOrders(s, rng());

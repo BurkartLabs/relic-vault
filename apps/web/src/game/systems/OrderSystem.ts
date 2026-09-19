@@ -1,5 +1,5 @@
 import { ECON } from '../data/catalog';
-import { CHAINS, PATRONS, BINDINGS, itemId, itemWork, chainOf, tierOf } from '../data/items';
+import { CHAINS, PATRONS, BINDINGS, itemId, itemWork, chainOf, tierOf, isTop } from '../data/items';
 import type { GameState, Order } from './State';
 import type { Rng } from './Rng';
 import { grantGold, addXp, grantCard, CardResult } from './Economy';
@@ -64,11 +64,13 @@ function rollOrder(s: GameState, rng: Rng, patron: (typeof PATRONS)[number]): Or
   want.sort((a, b) => a - b);
   const work = want.reduce((a, id) => a + itemWork(id), 0);
   const bonus = 1 + 0.15 * (n - 1); // multi-item orders pay a premium: they tie up space
+  // a top-tier relic could ascend instead, so a patron must outbid that (Bug #333)
+  const itemGold = (id: number) => Math.max(itemWork(id) * O.goldPerWork, isTop(id) ? CHAINS[chainOf(id)].value * ECON.ascendGold * O.topAscendShare : 0);
   return {
     id: 0,
     patron: patron.id,
     want,
-    gold: Math.round(work * O.goldPerWork * bonus),
+    gold: Math.round(want.reduce((a, id) => a + itemGold(id), 0) * bonus),
     xp: Math.max(2, Math.round(work * O.xpPerWork * bonus)),
     pass: Math.max(1, Math.round(Math.sqrt(work) * O.passPerRootWork)),
     pts: Math.max(1, Math.round(work * O.ptsPerWork)),
