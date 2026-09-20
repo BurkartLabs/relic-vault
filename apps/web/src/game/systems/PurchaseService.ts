@@ -49,8 +49,10 @@ export function applyPurchase(s: GameState, sku: SkuId, rng: Rng, now = Date.now
     case 'noads': s.ent.removeAds = true; break;
     case 'vip': s.ent.vip = true; s.ent.vipUntil = now + 30 * 86400000; break;
     case 'comeback':
+      // Bug #366: these numbers used to be restated here (60 / 1,500) while the shop advertised the catalog's
+      // 120 / 15,000, so a $2.99 purchase paid out a tenth of the gold it promised. Read the SKU, never retype it.
       s.ent.comeback = true;
-      s.gems += 60; grantGold(s, 1500); g.gems = 60; g.gold = 1500;
+      s.gems += def.gems!; grantGold(s, def.gold!); g.gems = def.gems!; g.gold = def.gold!;
       g.relics.push({ tier: 5, index: placeOrStash(s, 5, rng) });
       break;
   }

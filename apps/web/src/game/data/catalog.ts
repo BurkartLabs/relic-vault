@@ -72,8 +72,13 @@ export const SKUS: Record<SkuId, Sku> = {
     blurb: 'An Emerald Scarab, 120 gems and 15,000 gold. The next tier is right there.' },
 };
 
-/** Baseline gem rate for every "value" ribbon: the entry pack, whatever it costs today (see systems/Offers.ts). */
-export const GEMS_PER_DOLLAR_BASELINE = SKUS.gems200.gems! / SKUS.gems200.price;
+/**
+ * Baseline for every "value" ribbon: the entry pack, whatever it costs today. The SKU itself is exported, not
+ * just the rate, so anything that names the baseline in player-facing copy names *this* pack rather than a
+ * literal price that drifts the next time the ladder moves (Bug #367, TRANSFERABLE T-003).
+ */
+export const BASELINE_SKU = SKUS.gems200;
+export const GEMS_PER_DOLLAR_BASELINE = BASELINE_SKU.gems! / BASELINE_SKU.price;
 
 /** Computed, never hardcoded: gem-equivalent per dollar vs the baseline. Welcome counts its chest at 40 gems. */
 export function skuValuePct(id: SkuId): number {

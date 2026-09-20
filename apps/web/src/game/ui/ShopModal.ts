@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { Modal, keeperLine } from './Modal';
 import { Button, txt, Scroller, badge, money, fmt, iconAmount } from './kit';
 import { ctx } from '../GameCtx';
-import { SKUS, SkuId, COPY, ECON, CHEST_ODDS, CHEST_PITY_TIER, CHEST_TOP_TIER, RELICS, skuValuePct, GEMS_PER_DOLLAR_BASELINE } from '../data/catalog';
+import { SKUS, SkuId, COPY, ECON, CHEST_ODDS, CHEST_PITY_TIER, CHEST_TOP_TIER, RELICS, skuValuePct, GEMS_PER_DOLLAR_BASELINE, BASELINE_SKU } from '../data/catalog';
 import { skuAvailable } from '../systems/PurchaseService';
 import { computeLuck } from '../systems/LuckSystem';
 import { chestsAllowed, buyExact, buyMarket, openChest, exactRelicOffer, exactRelicCost } from '../systems/Economy';
@@ -210,7 +210,7 @@ export class ShopModal extends Modal {
     const legal = txt(vs, 490, y + 70,
       `Lucky Chest odds: ${odds}. Every ${ECON.pityEvery}th chest without a ${RELICS[CHEST_PITY_TIER].name} or better is guaranteed one. ` +
       `Luck may upgrade a result by one tier. Exact relics are always available for gems or gold.\n` +
-      `Value ribbons compare gems per dollar against the ${money(4.99)} pack (${GEMS_PER_DOLLAR_BASELINE.toFixed(1)} gems/$); the Welcome figure counts its chest at ${ECON.chestGemCost} gems, gold and relics are extra. ` +
+      `Value ribbons compare gems per dollar against the ${money(BASELINE_SKU.price)} pack (${GEMS_PER_DOLLAR_BASELINE.toFixed(1)} gems/$); the Welcome figure counts its chest at ${ECON.chestGemCost} gems, gold and relics are extra. ` +
       `DEMO MODE: purchases are simulated. No real money is charged. Restore & manage purchases in Settings.`,
       { size: 22, font: 'body', color: '#9a8aa8', wrap: 900, strokeW: 0, shadow: false, lineSpacing: 4 });
     C.add(legal);
