@@ -13,7 +13,7 @@ import { upgradeGenerator, unlockGenerators, genUpgradeCost, buyExact, exactReli
 import { BINDINGS, CHAINS, itemWork, buildGold } from '../data/items';
 import { grantReward, claimVipCrate, enforceChestRules } from './Economy';
 import { welcomeOpen, welcomeDeadline, WELCOME_WINDOW_MS } from './Offers';
-import { skuValuePct, GEMS_PER_DOLLAR_BASELINE } from '../data/catalog';
+import { skuValuePct, GEMS_PER_DOLLAR_BASELINE, BASELINE_SKU } from '../data/catalog';
 import { ECON, SKUS, SkuId, CARDS, MAX_TIER } from '../data/catalog';
 
 const rng = () => mulberry32(1234);
@@ -162,6 +162,35 @@ describe('purchases', () => {
       expect(JSON.stringify(s), sku).not.toBe(before);
       expect(s.purchases.at(-1)!.sku).toBe(sku);
     }
+  });
+  /**
+   * Bug #366: the So Close Bundle advertised 120 gems and 15,000 gold and paid out 60 and 1,500, because the
+   * grant restated the numbers instead of reading the catalog. A test for that one SKU would not have helped —
+   * the next SKU to change would break the same way — so this asserts the rule for every SKU that declares
+   * contents: what the shop says it sells is what the player receives.
+   */
+  it('every SKU delivers exactly what the catalog advertises', () => {
+    for (const sku of all) {
+      const def = SKUS[sku];
+      if (def.gems === undefined && def.gold === undefined) continue; // entitlement-only (pass, vip, noads)
+      if (sku === 'piggy') continue; // the pig pays what it holds, which is not a catalog number
+      const s = createState();
+      const g = applyPurchase(s, sku, rng());
+      expect(g.ok, sku).toBe(true);
+      if (def.gems !== undefined) {
+        expect(g.gems, `${sku} grant`).toBe(def.gems);
+        expect(s.gems, `${sku} wallet`).toBe(createState().gems + def.gems);
+      }
+      if (def.gold !== undefined) {
+        expect(g.gold, `${sku} grant`).toBe(def.gold);
+        expect(s.gold, `${sku} wallet`).toBe(createState().gold + def.gold);
+      }
+    }
+  });
+  it('the shop names the pack its value ribbons are measured against', () => {
+    // Bug #367: the footer said "the $4.99 pack (66.9 gems/$)" — one pack's name beside another's rate
+    expect(BASELINE_SKU.gems! / BASELINE_SKU.price).toBe(GEMS_PER_DOLLAR_BASELINE);
+    expect(skuValuePct(BASELINE_SKU.id)).toBe(100); // the baseline is by definition 100%
   });
   it('welcome pack: gems, gold, two T4 + one T3, free chest, one time only', () => {
     const s = createState();
