@@ -62,14 +62,42 @@ export class Telemetry {
     else this.track('verb_repeat', { count_in_session: this.verbCount });
   }
 
-  sessionEnd() {
-    if (this.ended) return;
-    this.ended = true;
-    this.track('session_end', { duration_s: Math.round((Date.now() - this.bootAt) / 1000), actions: this.actions });
+  /**
+   * Bug #326. Hiding the tab used to send `session_end`, and `resume()` re-armed it, so one 22-minute boot
+   * produced **270 session_end events** — one every few seconds while the tab sat idle in a browser pane. Any
+   * retention or session-length number read from session counts was wrong by two orders of magnitude, and those
+   * are the first numbers the company would have trusted.
+   *
+   * A hide is not an end. On mobile it is often the only moment we get, so it is still worth recording — as
+   * `session_pause`, which is cheap to count and impossible to confuse with a session. A session ends once:
+   * on `pagehide`, or after the tab has been hidden longer than the TELEMETRY.md timeout.
+   */
+  static readonly HIDDEN_TIMEOUT_MS = 30 * 60_000;
+  private hiddenAt = 0;
+  private pauses = 0;
+
+  /** The tab went away. Records a pause, and ends the session only if it stays away past the timeout. */
+  pause() {
+    if (this.ended || this.hiddenAt) return;
+    this.hiddenAt = Date.now();
+    this.pauses++;
+    this.track('session_pause', { duration_s: Math.round((Date.now() - this.bootAt) / 1000), actions: this.actions, n_pause: this.pauses });
     this.flush(true);
   }
-  /** a hidden tab that comes back starts counting again as the same session */
-  resume() { this.ended = false; }
+
+  /** The tab came back. Same session, unless it was away long enough that TELEMETRY.md calls it a new one. */
+  resume() {
+    if (this.hiddenAt && Date.now() - this.hiddenAt >= Telemetry.HIDDEN_TIMEOUT_MS) this.sessionEnd('timeout');
+    this.hiddenAt = 0;
+  }
+
+  /** The session is over: the page is going away, or it was hidden past the timeout. Sent at most once. */
+  sessionEnd(reason: 'pagehide' | 'timeout' = 'pagehide') {
+    if (this.ended) return;
+    this.ended = true;
+    this.track('session_end', { duration_s: Math.round((Date.now() - this.bootAt) / 1000), actions: this.actions, pauses: this.pauses, reason });
+    this.flush(true);
+  }
 
   flush(beacon = false) {
     if (!this.endpoint || !this.pending.length) return;

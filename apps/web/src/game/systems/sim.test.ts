@@ -8,6 +8,7 @@ import { rollChest, openChest, gemClear, adSalvage, claimQuest, spinWheel, claim
 import { computeLuck } from './LuckSystem';
 import { OfferDirector } from './OfferDirector';
 import { mulberry32 } from './Rng';
+import { Telemetry } from './Telemetry';
 import { generateOrder, refillOrders, deliver, dismissOrder, tickOrders, matchOrder } from './OrderSystem';
 import { upgradeGenerator, unlockGenerators, genUpgradeCost, buyExact, exactRelicCost, exactRelicOffer } from './Economy';
 import { BINDINGS, CHAINS, itemWork, buildGold } from '../data/items';
@@ -599,6 +600,55 @@ describe('deepen cycle 1: patron orders (RV-D2)', () => {
     expect(s.best[0]).toBe(6);
     expect(s.orders.length).toBe(3);
     expect(s.board.slice(0, 2)).toEqual([4, 4]);
+  });
+});
+
+/**
+ * Bug #326: one 22-minute boot produced 270 `session_end` events, one per tab hide, because the client re-armed
+ * the end event every time the page came back. Any retention or session-length figure read from session counts
+ * was wrong by two orders of magnitude — and those are the first numbers the company would have trusted.
+ */
+describe('telemetry sessions', () => {
+  const fresh = () => new Telemetry('test', 'test'); // no endpoint: events stay in the local ring buffer
+
+  it('a hide is a pause, not an end, however many times it happens', () => {
+    const t = fresh();
+    for (let i = 0; i < 10; i++) { t.pause(); t.resume(); }
+    expect(t.count('session_pause')).toBe(10);
+    expect(t.count('session_end')).toBe(0); // the bug produced 10 here, and 270 in the wild
+  });
+
+  it('numbers each pause, so a long play with interruptions is still one session', () => {
+    const t = fresh();
+    t.pause(); t.resume(); t.pause();
+    const pauses = t.buf.filter((e) => e.event === 'session_pause');
+    expect(pauses.map((e) => e.props.n_pause)).toEqual([1, 2]);
+    expect(new Set(t.buf.map((e) => e.session_id)).size).toBe(1);
+  });
+
+  it('ends once on pagehide, and not again', () => {
+    const t = fresh();
+    t.sessionEnd('pagehide');
+    t.sessionEnd('pagehide');
+    expect(t.count('session_end')).toBe(1);
+    expect(t.buf.find((e) => e.event === 'session_end')!.props.reason).toBe('pagehide');
+  });
+
+  it('ends the session when the tab has been hidden past the timeout', () => {
+    const t = fresh();
+    t.pause();
+    // come back after the TELEMETRY.md timeout: that is a new session, not a continuation
+    (t as unknown as { hiddenAt: number }).hiddenAt = Date.now() - Telemetry.HIDDEN_TIMEOUT_MS - 1;
+    t.resume();
+    expect(t.count('session_end')).toBe(1);
+    expect(t.buf.find((e) => e.event === 'session_end')!.props.reason).toBe('timeout');
+  });
+
+  it('reports how many times a session was interrupted', () => {
+    const t = fresh();
+    t.pause(); t.resume(); t.pause(); t.resume();
+    t.sessionEnd();
+    expect(t.buf.find((e) => e.event === 'session_end')!.props.pauses).toBe(2);
   });
 });
 

@@ -58,9 +58,11 @@ export class GameCtx {
     const src = new URLSearchParams(location.search).get('src') || (document.referrer ? 'referral' : 'direct');
     this.telemetry.track('app_open', { source: src, returning: this.state.stats.sessions > 1, session_n: this.state.stats.sessions });
     document.addEventListener('visibilitychange', () => {
-      if (document.hidden) { this.persistNow(); this.telemetry.sessionEnd(); } else this.telemetry.resume();
+      // Bug #326: hiding a tab is a pause, not an end. Saving still happens on every hide, because losing
+      // progress is the one thing worth being paranoid about; only the telemetry meaning changed.
+      if (document.hidden) { this.persistNow(); this.telemetry.pause(); } else this.telemetry.resume();
     });
-    window.addEventListener('pagehide', () => { this.persistNow(); this.telemetry.sessionEnd(); });
+    window.addEventListener('pagehide', () => { this.persistNow(); this.telemetry.sessionEnd('pagehide'); });
     window.addEventListener('error', (ev) => this.error(ev.message || String(ev.error)));
     window.addEventListener('unhandledrejection', (ev) => this.error(String((ev as PromiseRejectionEvent).reason)));
   }
