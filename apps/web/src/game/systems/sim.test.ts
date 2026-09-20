@@ -15,6 +15,9 @@ import { grantReward, claimVipCrate, enforceChestRules } from './Economy';
 import { welcomeOpen, welcomeDeadline, WELCOME_WINDOW_MS } from './Offers';
 import { skuValuePct, GEMS_PER_DOLLAR_BASELINE, BASELINE_SKU } from '../data/catalog';
 import { ECON, SKUS, SkuId, CARDS, MAX_TIER } from '../data/catalog';
+import { standings, playerPlace, cyclePrize, keeperPoints } from './Standings';
+import { TITLES, earnedTitles, unclaimedRankRewards, defaultProfile, profileName, CRESTS } from './Profile';
+import { claimRankReward, claimCyclePrize } from './Economy';
 
 const rng = () => mulberry32(1234);
 const fullBoard = (s: ReturnType<typeof createState>, t = 1) => { s.board = s.board.map((_, i) => ((i % 7) + t) % 8 + 1); };
@@ -584,5 +587,86 @@ describe('deepen cycle 1: patron orders (RV-D2)', () => {
     expect(s.best[0]).toBe(6);
     expect(s.orders.length).toBe(3);
     expect(s.board.slice(0, 2)).toEqual([4, 4]);
+  });
+});
+
+/**
+ * Board requests, 2026-09-19: leaderboards ("you can fill it with dummy data for now"), Gold Rush rewards
+ * ("both for completing the most milestones but also having the highest score compared to other players"),
+ * and level-up rewards / account personalisation.
+ */
+describe('standings, cycle prizes and the profile', () => {
+  it('the board is stable for a cycle, so it does not reshuffle between two looks', () => {
+    const s = createState();
+    const a = standings(s).map((r) => `${r.name}:${r.points}`);
+    const b = standings(s).map((r) => `${r.name}:${r.points}`);
+    expect(a).toEqual(b);
+  });
+
+  it('every rival is marked as not human, so the UI can never imply real players', () => {
+    // Soul forbids fabricated social proof: dummy data is allowed, pretending it is people is not
+    const rows = standings(createState());
+    expect(rows.filter((r) => !r.isPlayer).every((r) => r.isHuman === false)).toBe(true);
+    expect(rows.filter((r) => r.isHuman).length).toBe(1); // only the player
+  });
+
+  it('is beatable: a committed player can take first place', () => {
+    const s = createState();
+    s.event.points = 100000;
+    expect(playerPlace(s)).toBe(1);
+    expect(cyclePrize(s).placeLabel).toBe('Vault Champion');
+  });
+
+  it('a tie does not pass a keeper: you have to beat the score, not match it', () => {
+    const s = createState();
+    s.event.points = keeperPoints(s.event.cycle, 0);
+    expect(playerPlace(s)).toBe(2);
+    s.event.points += 1;
+    expect(playerPlace(s)).toBe(1);
+  });
+
+  it('pays nothing for a cycle you did not enter', () => {
+    const s = createState();
+    s.event.points = 0;
+    const p = cyclePrize(s);
+    expect(p.placeRewards).toEqual([]);
+    expect(p.diligenceRewards).toEqual([]);
+    expect(claimCyclePrize(s, rng())).toBeNull(); // a prize everyone gets is not a prize
+  });
+
+  it('pays for milestones separately from placing, and only once per cycle', () => {
+    const s = createState();
+    s.event.points = 100000;
+    const gems = s.gems;
+    const g = claimCyclePrize(s, rng())!;
+    expect(g.gems).toBe(300 + 120); // champion + the 10-milestone diligence award
+    expect(s.gems).toBe(gems + 420);
+    expect(claimCyclePrize(s, rng())).toBeNull();
+  });
+
+  it('rank rewards are claimed once, and only for ranks actually reached', () => {
+    const s = createState();
+    expect(claimRankReward(s, 3, rng())).toBeNull(); // rank 1: not yet
+    s.rank = 6;
+    const g = claimRankReward(s, 3, rng())!;
+    expect(g.gold).toBe(1500);
+    expect(claimRankReward(s, 3, rng())).toBeNull();
+    expect(unclaimedRankRewards(s)).toEqual([2, 4, 5, 6]); // nothing is skipped by ranking past it
+  });
+
+  it('titles are earned by play and never sold', () => {
+    const s = createState();
+    expect(earnedTitles(s)).toEqual([]);
+    s.rank = 5;
+    expect(earnedTitles(s).map((t) => t.id)).toContain('keeper');
+    for (const t of TITLES) expect(t.why.length).toBeGreaterThan(0); // every title says what earned it
+  });
+
+  it('the profile has no free-text field anywhere', () => {
+    const p = defaultProfile();
+    expect(typeof p.adjective).toBe('number');
+    expect(typeof p.noun).toBe('number');
+    expect(CRESTS).toContain(p.crest);
+    expect(profileName({ ...p, adjective: 1, noun: 2 })).toMatch(/^[A-Z][a-z]+ [A-Z][a-z]+$/);
   });
 });

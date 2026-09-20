@@ -8,6 +8,8 @@ import { Rng, pickWeighted, mulberry32 } from './Rng';
 import { computeLuck } from './LuckSystem';
 import { placeOrStash, lowest, empties, sellValue } from './BoardSystem';
 import { CHAINS, GEN_UPGRADE_GOLD, GEN_MAX_LEVEL, itemWork } from '../data/items';
+import { RANK_REWARDS } from './Profile';
+import { cyclePrize } from './Standings';
 
 // ---------------- currencies ----------------
 export function grantGold(s: GameState, n: number) {
@@ -280,6 +282,38 @@ export function claimEvent(s: GameState, i: number, rng: Rng): Granted | null {
   s.event.claimed.push(i);
   return grantReward(s, EVENT_MILESTONES[i].reward, rng);
 }
+/**
+ * Take the reward for a rank landmark. Rewards are claimed, not auto-granted: a pile of gold that appears in the
+ * wallet while the player is mid-merge is a reward nobody notices, and ranking up is the most frequent
+ * progression moment in the game (Board: "Level up rewards?").
+ */
+export function claimRankReward(s: GameState, rank: number, rng: Rng): Granted | null {
+  const entry = RANK_REWARDS[rank];
+  if (!entry || s.rank < rank) return null;
+  if (!s.rankClaimed) s.rankClaimed = [];
+  if (s.rankClaimed.includes(rank)) return null;
+  s.rankClaimed.push(rank);
+  let g = emptyGrant();
+  for (const r of entry.rewards) g = grantReward(s, r, rng, g);
+  return g;
+}
+
+/**
+ * Take the end-of-cycle Gold Rush prizes: one for where the player placed, one for how many milestones they
+ * completed (Board: rewards "both for completing the most milestones but also having the highest score compared
+ * to other players"). Claimable once per cycle, and only if the player actually entered.
+ */
+export function claimCyclePrize(s: GameState, rng: Rng): Granted | null {
+  const key = `cyclePrize:${s.event.cycle}`;
+  if (s.flags[key]) return null;
+  const prize = cyclePrize(s);
+  if (!prize.placeRewards.length && !prize.diligenceRewards.length) return null;
+  s.flags[key] = 1;
+  let g = emptyGrant();
+  for (const r of [...prize.placeRewards, ...prize.diligenceRewards]) g = grantReward(s, r, rng, g);
+  return g;
+}
+
 export function buyBoost(s: GameState, now: number): boolean {
   if (!spendGems(s, ECON.boostGemCost)) return false;
   s.event.boostUntil = Math.max(now, s.event.boostUntil) + ECON.boostMinutes * 60000;
