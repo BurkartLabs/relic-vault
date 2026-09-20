@@ -1,5 +1,5 @@
 ﻿import { describe, it, expect } from 'vitest';
-import { createState, migrate, SAVE_VERSION } from './State';
+import { createState, migrate, SAVE_VERSION, type GameState } from './State';
 import { merge, canMerge } from './MergeSystem';
 import { forge, rollForgeTier } from './ForgeSystem';
 import { canForge, sell, empties, placeOrStash } from './BoardSystem';
@@ -730,5 +730,116 @@ describe('standings, cycle prizes and the profile', () => {
     expect(typeof p.noun).toBe('number');
     expect(CRESTS).toContain(p.crest);
     expect(profileName({ ...p, adjective: 1, noun: 2 })).toMatch(/^[A-Z][a-z]+ [A-Z][a-z]+$/);
+  });
+});
+
+/**
+ * Bug #443: choosing a title bricked the save. `fill` decides what to do from the *default* value's type, and
+ * `typeof null === 'object'`, so a nullable field fell into the object branch where `Object.keys(null)` throws —
+ * inside the load path, so the game hung on "opening the vault" and the save could never be read again. The only
+ * way back in was to clear site data, which threw the player's progress away.
+ *
+ * The gap that let it ship: every existing test starts from a fresh save, where `title` is still null. The
+ * migration tests carried *old* saves forward; nothing round-tripped a *current* save through `migrate`, which is
+ * what every single real load does. So the round trip is the test, and it is generic rather than about titles.
+ */
+describe('a save survives being saved and loaded (#443)', () => {
+  const roundTrip = (s: GameState) => migrate(JSON.parse(JSON.stringify(s)));
+
+  it('loads a save whose profile carries an earned title', () => {
+    const s = createState();
+    s.profile.title = 'keeper';
+    expect(() => roundTrip(s)).not.toThrow();
+  });
+
+  it('keeps the title rather than quietly resetting it', () => {
+    // returning the default would not crash, and would silently strip what the player chose: a quieter version
+    // of the same bug, and the reason this assertion is separate from the one above
+    const s = createState();
+    s.profile.title = 'archivist';
+    s.profile.crest = 'ic_luck';
+    s.profile.adjective = 3;
+    const back = roundTrip(s);
+    expect(back.profile.title).toBe('archivist');
+    expect(back.profile.crest).toBe('ic_luck');
+    expect(back.profile.adjective).toBe(3);
+  });
+
+  it('refuses an object where a nullable field expects a value', () => {
+    // a shape we cannot validate must not reach code that reads the field as a string
+    const raw: any = JSON.parse(JSON.stringify(createState()));
+    raw.profile.title = { nope: true };
+    expect(roundTrip(raw as GameState).profile.title).toBeNull();
+  });
+
+  /**
+   * The general form: a save that has been played is not a fresh one, so round-trip a state with every container
+   * populated. Any field the loader mishandles shows up here rather than in a player's console.
+   */
+  it('round-trips a played save with every container populated', () => {
+    const s = createState();
+    s.profile.title = 'binder';
+    s.rank = 12; s.xp = 40; s.gold = 99_000; s.gems = 640; s.crumbs = 7; s.piggy = 12.5;
+    s.board = s.board.map((_, i) => (i % 3 === 0 ? 4 : i % 5 === 0 ? 13 : 0));
+    s.satchel = [1, 4, 24];
+    s.gens = [6, 3, 1];
+    s.best = [9, 7, 5];
+    s.album = s.album.map((_, i) => (i < 12 ? 1 : 0));
+    s.pagesDone = [true, false, false];
+    s.rankClaimed = [2, 3, 4];
+    s.pass = { season: s.pass.season, xp: 900, free: [1, 2, 3], prem: [] };
+    s.event = { cycle: s.event.cycle, points: 2400, claimed: [0, 1, 2], boostUntil: 0 };
+    s.quests = { day: s.quests.day, forge: 4, t4: 1, chest: 2, orders: 3, claimed: [0] };
+    s.flags = { tut: 3, 'cyclePrize:5': 1 };
+    s.purchases = [{ sku: 'gems200', t: 1 }];
+    s.stats = { ...s.stats, merges: 812, maxTier: 9, bindings: 30, orders: 64 };
+    s.ent = { ...s.ent, welcome: true, passPremium: true, skin: true, skinOn: true };
+    s.age = 'adult';
+    s.settings = { muted: true, music: false, haptics: true };
+
+    const back = roundTrip(s);
+    expect(back.profile.title).toBe('binder');
+    expect(back.rank).toBe(12);
+    expect(back.gold).toBe(99_000);
+    expect(back.satchel).toEqual([1, 4, 24]);
+    expect(back.best).toEqual([9, 7, 5]);
+    expect(back.rankClaimed).toEqual([2, 3, 4]);
+    expect(back.flags.tut).toBe(3);
+    expect(back.flags['cyclePrize:5']).toBe(1);
+    expect(back.pass.free).toEqual([1, 2, 3]);
+    expect(back.stats.merges).toBe(812);
+    expect(back.ent.passPremium).toBe(true);
+    expect(back.settings.muted).toBe(true);
+    expect(back.purchases).toEqual([{ sku: 'gems200', t: 1 }]);
+    expect(back.board).toEqual(s.board);
+  });
+
+  /**
+   * Nothing in the state may be null-by-default without a test, because the next nullable field added would
+   * reintroduce #443 exactly. This finds them by walking the defaults, so it covers fields nobody thought about.
+   */
+  it('every nullable field in the state survives holding a real value', () => {
+    const nullable: string[] = [];
+    const walk = (o: any, path: string) => {
+      for (const [k, v] of Object.entries(o ?? {})) {
+        const p = path ? `${path}.${k}` : k;
+        if (v === null) nullable.push(p);
+        else if (v && typeof v === 'object' && !Array.isArray(v)) walk(v, p);
+      }
+    };
+    walk(createState(), '');
+    // profile.title is the known one; the loop is what matters if that ever changes
+    expect(nullable).toContain('profile.title');
+    for (const path of nullable) {
+      const raw: any = JSON.parse(JSON.stringify(createState()));
+      const parts = path.split('.');
+      let node = raw;
+      for (const part of parts.slice(0, -1)) node = node[part];
+      node[parts[parts.length - 1]] = 'a-real-value';
+      expect(() => migrate(raw), `a saved value in ${path} must load`).not.toThrow();
+      let out: any = migrate(raw);
+      for (const part of parts) out = out[part];
+      expect(out, `a saved value in ${path} must survive the load`).toBe('a-real-value');
+    }
   });
 });

@@ -169,6 +169,17 @@ const MIGRATIONS: Record<number, (r: Raw, now: number) => Raw> = {
 
 function fill<T>(def: T, raw: any): T {
   if (raw === undefined || raw === null) return def;
+  /**
+   * Bug #443: `typeof null === 'object'`, so a **nullable** field used to fall into the object branch below,
+   * where `Object.keys(null)` throws — and it threw inside the load path, so the game never opened and the save
+   * could not be read again. `profile.title` (`string | null`) was the state's first nullable field, which is
+   * why this only began the moment a player chose a title.
+   *
+   * A null default carries no type to validate against, so a primitive is taken from the save as-is (that is the
+   * whole point of a nullable field: the saved value is the real one). An object or array is refused, because a
+   * shape we cannot check should not be smuggled into a field the rest of the code reads as a string.
+   */
+  if (def === null) return (raw !== null && typeof raw === 'object' ? def : raw) as T;
   if (Array.isArray(def)) return (Array.isArray(raw) ? raw : def) as T;
   if (typeof def === 'object') {
     const out: any = { ...def };

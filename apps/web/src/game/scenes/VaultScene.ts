@@ -151,6 +151,14 @@ export class VaultScene extends Phaser.Scene {
     (window as any).__vault = this;
     // first ever session: tutorial. Returning: VIP crate / satchel nudges.
     this.time.delayedCall(700, () => this.tut.start());
+    // Bug #443: a save we could not read is kept, not discarded, and the player hears it from the Keeper rather
+    // than finding an empty vault and drawing their own conclusion.
+    if (ctx.save.unreadable) {
+      ctx.telemetry.track('save_unreadable', { why: ctx.save.unreadable });
+      this.time.delayedCall(1400, () => this.keeperSays(
+        'Something in your ledger was written in a hand I cannot read. I have kept the page. Start here, and if I ever learn that hand, your vault comes back.',
+      ));
+    }
   }
 
   private resizeTimer?: number;
