@@ -43,7 +43,18 @@ export class BootLoadScene extends Phaser.Scene {
       } else {
         label.setText('Opening the vault…');
         const ready: Promise<void> = (window as any).__ready ?? Promise.resolve();
-        ready.then(() => {
+        /**
+         * Bug #443: this used to be a bare `.then`, so anything that rejected during boot left the splash sitting
+         * at "Opening the vault…" for ever — the only trace being an "Uncaught (in promise)" in a console the
+         * player never opens. One unreadable field in the save cost a player their entire game that way.
+         *
+         * The vault now opens whatever happened. A failed boot is a degraded game, which the player can see and
+         * report; a hung splash is a dead one that tells them nothing.
+         */
+        ready.catch((e) => {
+          console.error('[boot] continuing with a degraded start:', e);
+          try { (window as any).__rv?.telemetry?.track('boot_error', { why: String((e as Error)?.message ?? e).slice(0, 200) }); } catch { /* telemetry must never be the thing that stops the boot */ }
+        }).then(() => {
           this.cameras.main.fadeOut(350, 7, 6, 11);
           this.scene.get('Boot').cameras.main.fadeOut(350, 7, 6, 11);
           this.time.delayedCall(360, () => {

@@ -97,27 +97,31 @@ test('reload restores the exact board', async ({ page }) => {
   expect((await state(page)).board).toEqual(before);
 });
 
-test('board full never softlocks: forge opens Vault Jammed, every exit frees space', async ({ page }) => {
+test('a full dais says so and fades, and the advice it gives is true', async ({ page }) => {
+  // Board, #441: the full-screen Vault Jammed sheet is gone. It offered to sell a way out of a state the player
+  // can almost always clear themselves, which is why this test now checks the opposite: nothing opens, the
+  // player is told, and the one thing the line tells them to do actually works.
   const errors = await boot(page);
   await page.evaluate(() => { (window as any).__rv.state.flags.tut = 3; (window as any).__vault.debugFill(); });
   await tapForge(page);
-  await page.waitForFunction(() => (window as any).__vault.modal?.kind === 'JammedSheet', null, { timeout: 4000 });
-  expect(await events(page)).toContain('board_full');
-  await page.screenshot({ path: 'screenshots/qa/jammed.png' });
-  // gem-clear path
-  await page.evaluate(() => { const rv = (window as any).__rv; rv.state.gems += 50; });
-  const gemsBefore = (await state(page)).gems;
-  // drive through the actual sheet button handler rather than internals
-  await page.evaluate(() => {
-    const m = (window as any).__vault.modal;
-    const btn = m.box.list.find((o: any) => o.label?.text === '10');
-    btn.onClick();
-  });
-  await page.waitForTimeout(800);
-  const s = await state(page);
-  expect(s.gems).toBe(gemsBefore - 10);
-  expect(s.board.filter((t: number) => t === 0).length).toBe(3);
-  const forgesBefore = s.stats.forges;
+  await page.waitForFunction(() => !!(window as any).__vault.lastToast, null, { timeout: 4000 });
+
+  expect(await events(page)).toContain('board_full'); // the friction is still measured
+  expect(await modalName(page)).toBeNull(); // and play is never stopped to sell the way out of it
+  expect(await page.evaluate(() => (window as any).__vault.lastToast)).toBe('The dais is full. Merge two of a kind to make room.');
+  await page.screenshot({ path: 'screenshots/qa/board-full.png' });
+
+  // "Merge two of a kind to make room" has to be true, not just reassuring
+  const pair = await page.evaluate(() => (window as any).__vault.pair as [number, number] | null);
+  expect(pair).not.toBeNull();
+  const full = await state(page);
+  expect(full.board.filter((t: number) => t === 0).length).toBe(0);
+
+  await dragCells(page, pair![0], pair![1]);
+  const after = await state(page);
+  expect(after.board.filter((t: number) => t === 0).length).toBe(1);
+
+  const forgesBefore = after.stats.forges;
   await tapForge(page);
   expect((await state(page)).stats.forges).toBe(forgesBefore + 1);
   expect(errors).toEqual([]);
