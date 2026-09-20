@@ -297,3 +297,118 @@ test('the Crypt Brazier wakes at rank 3 and forges crypt relics', async ({ page 
   await page.screenshot({ path: 'screenshots/qa/crypt-awake.png' });
   expect(errors).toEqual([]);
 });
+
+test('the Keeper asks, the seal turns green, and the Chronicle pays out', async ({ page }) => {
+  // docs/STORY.md: the badge on the Keeper's portrait, and the main line behind it
+  const errors = await boot(page);
+  await page.evaluate(() => { (window as any).__rv.state.flags.tut = 3; });
+
+  // the first quest asks for 12 forges. Do them through the real generator button.
+  const need = await page.evaluate(() => (window as any).__vault.currentQuestGoal());
+  for (let i = 0; i < need; i++) {
+    await page.evaluate(() => { const v = (window as any).__vault; v.debugClear(); v.doForge(); });
+  }
+  await page.waitForTimeout(300);
+  expect(await page.evaluate(() => (window as any).__vault.bubbleState())).toBe('ready');
+  await page.screenshot({ path: 'screenshots/qa/keeper-ready.png' });
+
+  // tapping the Keeper opens the Chronicle
+  await page.evaluate(() => (window as any).__vault.keeperBtn.emit('pointerup'));
+  await page.waitForFunction(() => (window as any).__vault.modal?.kind === 'ChronicleModal', null, { timeout: 4000 });
+  await page.waitForTimeout(500); // let the pop-in settle: a screenshot mid-tween is not what a player sees
+  await page.screenshot({ path: 'screenshots/qa/chronicle.png' });
+
+  const goldBefore = (await state(page)).gold;
+  await page.evaluate(() => {
+    const m = (window as any).__vault.modal;
+    const find = (o: any): any => o?.label?.text === 'CLAIM' ? o : (o?.list ?? []).map(find).find(Boolean);
+    find(m.box).onClick();
+  });
+  // the beat is delivered by the Keeper himself, then the reward flies in
+  await page.waitForFunction(() => (window as any).__vault.modal?.kind === 'KeeperDialog', null, { timeout: 4000 });
+  await page.screenshot({ path: 'screenshots/qa/chronicle-beat.png' });
+  await page.evaluate(() => (window as any).__vault.modal?.close());
+  await page.waitForTimeout(900);
+
+  const s = await state(page);
+  expect(s.chronicle.claimed).toContain(0);
+  expect(s.gold).toBeGreaterThan(goldBefore);
+  expect(await events(page)).toContain('chronicle_claim');
+  expect(await page.evaluate(() => (window as any).__vault.bubbleState())).toBe('active'); // on to the next
+  expect(errors).toEqual([]);
+});
+
+test('clearing a floor opens two doors, and descending changes the ladder', async ({ page }) => {
+  // docs/ROOMS.md: ascending the capstone clears the floor; both doors are free and neither is forced
+  const errors = await boot(page);
+  await page.evaluate(() => {
+    const rv = (window as any).__rv, v = (window as any).__vault;
+    rv.state.flags.tut = 3;
+    v.debugClear();
+    const cap = v.capstone();
+    rv.state.board[0] = cap; rv.state.board[1] = cap;
+    v.syncBoard();
+  });
+  await dragCells(page, 0, 1);
+  await page.waitForTimeout(900);
+  expect((await state(page)).clears[0]).toBeGreaterThan(0);
+
+  // an ascension celebrates, and the Keeper will not talk over another sheet, so wait for a clear screen
+  for (let i = 0; i < 12; i++) {
+    const open = await modalName(page);
+    if (!open) break;
+    await page.evaluate(() => (window as any).__vault.modal?.close());
+    await page.waitForTimeout(350);
+  }
+  expect(await modalName(page)).toBeNull();
+  await page.evaluate(() => (window as any).__vault.offerFloorDoors());
+  await page.waitForFunction(() => (window as any).__vault.modal?.kind === 'FloorDoorsModal', null, { timeout: 6000 });
+  await page.waitForTimeout(500);
+  await page.screenshot({ path: 'screenshots/qa/floor-doors.png' });
+
+  const chainBefore = await page.evaluate(() => (window as any).__vault.chainOfSlot(0));
+  await page.evaluate(() => {
+    const m = (window as any).__vault.modal;
+    const find = (o: any): any => o?.label?.text === 'GO DOWN' ? o : (o?.list ?? []).map(find).find(Boolean);
+    find(m.box).onClick();
+  });
+  // the scene restarts on arrival, so wait for the new one to come up
+  await page.waitForFunction(() => !!(window as any).__vault?.hud, null, { timeout: 15_000 });
+  await page.waitForTimeout(600);
+
+  const s = await state(page);
+  expect(s.floor).toBe(1);
+  expect(await page.evaluate(() => (window as any).__vault.chainOfSlot(0))).not.toBe(chainBefore);
+  expect(await events(page)).toContain('floor_descend');
+
+  // the floor's own generator forges the new floor's relics, not the old ones
+  const forges = s.stats.forges;
+  await page.evaluate(() => (window as any).__vault.doForge());
+  const s2 = await state(page);
+  expect(s2.stats.forges).toBe(forges + 1);
+  expect(s2.board.some((id: number) => id >= 31 && id <= 39)).toBe(true);
+
+  /**
+   * And they are actually *drawn*. The board atlas only holds the floor you are on, so a floor change that
+   * forgot to re-lay it would leave every socket empty with nothing in the console — the relics would be in the
+   * save and invisible on screen, which is the failure this whole feature is most exposed to.
+   */
+  await page.evaluate(() => {
+    const rv = (window as any).__rv, v = (window as any).__vault;
+    [31, 33, 33, 35, 39].forEach((id, i) => { rv.state.board[i] = id; });
+    v.syncBoard();
+  });
+  await page.waitForTimeout(900);
+  const drawn = await page.evaluate(() => {
+    const v = (window as any).__vault;
+    return v.relics.filter(Boolean).map((r: any) => ({ frame: r.spr.frame.name, w: r.spr.displayWidth, visible: r.spr.visible }));
+  });
+  expect(drawn.length).toBeGreaterThanOrEqual(5);
+  for (const d of drawn) {
+    expect(d.frame, 'a relic with no atlas frame draws nothing').toMatch(/^r\d+_\d$/);
+    expect(d.visible).toBe(true);
+    expect(d.w).toBeGreaterThan(20);
+  }
+  await page.screenshot({ path: 'screenshots/qa/floor-2.png' });
+  expect(errors).toEqual([]);
+});

@@ -7,9 +7,11 @@ import { sell, move, fillRatio, canForge, findPair, empties } from '../systems/B
 import { applyPurchase, skuAvailable } from '../systems/PurchaseService';
 import { chestsAllowed, dropFromSatchel, claimVipCrate, CardResult, Granted } from '../systems/Economy';
 import { eventEndsAt, rollover } from '../systems/State';
+import { activeChain, currentFloor, capstoneOf, isCleared } from '../systems/Floors';
+import { bubble, currentMain, resetFloorStats, refillErrands } from '../systems/Chronicle';
 import { OfferRequest } from '../systems/OfferDirector';
 import { CELL, DAIS_PAD } from '../art/VaultBackground';
-import { SHEEN_FRAMES, BOARD_FRAME } from '../art/RelicFactory';
+import { SHEEN_FRAMES, BOARD_FRAME, rebakeBoardFor } from '../art/RelicFactory';
 import { Fx } from '../art/ParticleCatalog';
 import { Hud } from '../ui/Hud';
 import { Dock, TabId } from '../ui/Dock';
@@ -26,6 +28,7 @@ import { PiggySheet } from '../ui/Piggy';
 import { WheelModal } from '../ui/Wheel';
 import { SettingsModal } from '../ui/Settings';
 import { InspectCard, QuestsModal, OfferSheet, RankInfo, KeeperDialog, GeneratorSheet } from '../ui/Sheets';
+import { ChronicleModal, FloorDoorsModal } from '../ui/Chronicle';
 import { OrdersPanel, patronLine } from '../ui/Orders';
 import { ITEMS, CHAINS, tierOf, BINDINGS } from '../data/items';
 import { tickOrders, refillOrders, deliver, dismissOrder, matchOrder } from '../systems/OrderSystem';
@@ -68,6 +71,9 @@ export class VaultScene extends Phaser.Scene {
   selRing!: Phaser.GameObjects.Image;
   hoverRing!: Phaser.GameObjects.Image;
   forgeBtn!: Phaser.GameObjects.Container;
+  /** The Keeper's portrait and its badge: the way into the Chronicle (docs/STORY.md). */
+  keeperBtn?: Phaser.GameObjects.Container;
+  private bubbleWasReady = false;
   gens: Phaser.GameObjects.Container[] = [];
   orders!: OrdersPanel;
   private knownGens: number[] = [];
@@ -136,6 +142,7 @@ export class VaultScene extends Phaser.Scene {
     this.orders = new OrdersPanel(this, this.ox, this.my + 432);
     this.hud = new Hud(this, this.ox, this.safeTop + 10);
     this.dock = new Dock(this, this.ox, this.H - 150 - this.safeBottom);
+    this.buildKeeper();
     this.buildInput();
     this.syncBoard();
     this.updateVaultMood(true);
@@ -151,6 +158,18 @@ export class VaultScene extends Phaser.Scene {
     (window as any).__vault = this;
     // first ever session: tutorial. Returning: VIP crate / satchel nudges.
     this.time.delayedCall(700, () => this.tut.start());
+    /**
+     * The Chronicle introduces itself once, in the Keeper's own voice (docs/STORY.md: "the advisor already
+     * exists"). Gated on having merged something, so it never lands on top of the first-run tutorial — a player
+     * learning to drag does not want a second voice.
+     */
+    if (!ctx.state.flags.chronicleIntro && ctx.state.stats.merges >= 3 && currentMain(ctx.state)) {
+      ctx.state.flags.chronicleIntro = 1;
+      this.time.delayedCall(2200, () => this.keeperSays(
+        'You fuse well. Well enough that I am going to start asking for things. Tap me when the seal turns green and I will tell you what the vault is, one piece at a time.',
+        () => this.refreshKeeperBubble(),
+      ));
+    }
     // Bug #443: a save we could not read is kept, not discarded, and the player hears it from the Keeper rather
     // than finding an empty vault and drawing their own conclusion.
     if (ctx.save.unreadable) {
@@ -354,15 +373,20 @@ export class VaultScene extends Phaser.Scene {
   private buildForgeRow() {
     const { ox, my } = this;
     const y = my + FORGE_Y;
-    // three generators (RV-D3): Crypt Brazier · Forge · Star Well
-    const X = [540, 322, 758], SIZE = [220, 168, 168], KEY = ['forge', 'gen1', 'gen2'], LABEL = ['FORGE', 'CRYPT', 'STARS'];
+    // three generators (RV-D3): the floor's own, then the Crypt Brazier and the Star Well, which run every floor
+    const X = [540, 322, 758], SIZE = [220, 168, 168], KEY = ['forge', 'gen1', 'gen2'];
     const AURA = [0xff8a2a, 0x7dffb0, 0x9ab8ff];
-    for (let c = 0; c < 3; c++) {
-      const g = this.add.container(ox + X[c], y + (c ? 12 : 0)).setDepth(20);
-      const aura = this.add.image(0, 0, 'relicGlow').setDisplaySize(SIZE[c] * 1.7, SIZE[c] * 1.7).setTint(AURA[c]).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.5);
-      const f = this.add.image(0, 0, KEY[c]).setDisplaySize(SIZE[c], SIZE[c]);
-      const lbl = txt(this, 0, SIZE[c] / 2 - 6, LABEL[c], { size: c ? 28 : 36, gold: true, weight: '900', strokeW: 6 });
-      const lvl = this.add.container(SIZE[c] / 2 - 18, -SIZE[c] / 2 + 18);
+    const LABEL = [currentFloor(ctx.state).gen.toUpperCase(), 'CRYPT', 'STARS'];
+    AURA[0] = currentFloor(ctx.state).color;
+    for (let slot = 0; slot < 3; slot++) {
+      // slot 0 forges the ladder of the floor you are standing on (docs/ROOMS.md): descending changes what it
+      // makes, not what it is. Slots 1 and 2 are fixed chains, so slot and chain only differ for slot 0.
+      const c = this.chainOfSlot(slot);
+      const g = this.add.container(ox + X[slot], y + (slot ? 12 : 0)).setDepth(20);
+      const aura = this.add.image(0, 0, 'relicGlow').setDisplaySize(SIZE[slot] * 1.7, SIZE[slot] * 1.7).setTint(AURA[slot]).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.5);
+      const f = this.add.image(0, 0, KEY[slot]).setDisplaySize(SIZE[slot], SIZE[slot]);
+      const lbl = txt(this, 0, SIZE[slot] / 2 - 6, LABEL[slot], { size: slot ? 28 : 30, gold: true, weight: '900', strokeW: 6 });
+      const lvl = this.add.container(SIZE[slot] / 2 - 18, -SIZE[slot] / 2 + 18);
       const lvlBg = this.add.image(0, 0, 'seal_gold').setDisplaySize(62, 62);
       const lvlT = txt(this, 0, 0, '1', { size: 26, font: 'num', weight: '700', color: '#3a1c02', strokeW: 0, shadow: false });
       lvl.add([lvlBg, lvlT]);
@@ -376,13 +400,13 @@ export class VaultScene extends Phaser.Scene {
       const lock = this.add.container(0, 0);
       lock.add([this.add.image(0, -8, 'ic_lock').setDisplaySize(84, 84), txt(this, 0, 44, `RANK ${CHAINS[c].unlockRank}`, { size: 24, font: 'num', weight: '700', color: '#FFE9A3' })]);
       g.add([aura, f, lbl, lock, lvl]);
-      (g as any).parts = { aura, f, lvlT, lock, lvl, size: SIZE[c] };
-      this.tweens.add({ targets: aura, alpha: { from: 0.3, to: 0.65 }, duration: 900 + c * 150, yoyo: true, repeat: -1 });
-      g.setSize(SIZE[c] + 20, SIZE[c] + 20).setInteractive({ useHandCursor: true });
-      g.on('pointerdown', () => { if (this.modal) return; this.tweens.add({ targets: f, displayWidth: SIZE[c] * 0.9, displayHeight: SIZE[c] * 0.9, duration: 60 }); });
-      g.on('pointerout', () => this.tweens.add({ targets: f, displayWidth: SIZE[c], displayHeight: SIZE[c], duration: 90 }));
+      (g as any).parts = { aura, f, lvlT, lock, lvl, size: SIZE[slot], chain: c };
+      this.tweens.add({ targets: aura, alpha: { from: 0.3, to: 0.65 }, duration: 900 + slot * 150, yoyo: true, repeat: -1 });
+      g.setSize(SIZE[slot] + 20, SIZE[slot] + 20).setInteractive({ useHandCursor: true });
+      g.on('pointerdown', () => { if (this.modal) return; this.tweens.add({ targets: f, displayWidth: SIZE[slot] * 0.9, displayHeight: SIZE[slot] * 0.9, duration: 60 }); });
+      g.on('pointerout', () => this.tweens.add({ targets: f, displayWidth: SIZE[slot], displayHeight: SIZE[slot], duration: 90 }));
       g.on('pointerup', () => {
-        this.tweens.add({ targets: f, displayWidth: SIZE[c], displayHeight: SIZE[c], duration: 180, ease: 'Back.Out' });
+        this.tweens.add({ targets: f, displayWidth: SIZE[slot], displayHeight: SIZE[slot], duration: 180, ease: 'Back.Out' });
         if (this.modal) return;
         if (!(ctx.state.gens[c] > 0)) {
           ctx.sfx.play('error');
@@ -436,11 +460,40 @@ export class VaultScene extends Phaser.Scene {
     this.refreshGenerators(true);
   }
 
+  /**
+   * The Keeper, standing at the side of the dais with the floor's name under him. Tapping him opens the
+   * Chronicle. He is the advisor the game always had a portrait for and never gave anything to say.
+   */
+  private buildKeeper() {
+    const x = this.ox + 118, y = this.my + FORGE_Y - 250;
+    const c = this.add.container(x, y).setDepth(22);
+    const glow = this.add.image(0, 0, 'relicGlow').setDisplaySize(230, 230).setTint(currentFloor(ctx.state).color)
+      .setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.28);
+    const face = this.add.image(0, 0, 'keeper').setDisplaySize(150, 150);
+    const seal = this.add.image(46, -52, 'seal_gold').setDisplaySize(64, 64);
+    const tick = txt(this, 46, -52, '✓', { size: 34, font: 'num', weight: '900', color: '#0a3a14', strokeW: 0, shadow: false });
+    const name = txt(this, 0, 92, `FLOOR ${(ctx.state.floor ?? 0) + 1}`, { size: 24, font: 'num', weight: '700', gold: true, strokeW: 4 });
+    c.add([glow, face, seal, tick, name]);
+    (c as any).parts = { seal, tick };
+    c.setSize(170, 210).setInteractive({ useHandCursor: true });
+    c.on('pointerdown', () => this.tweens.add({ targets: face, displayWidth: 136, displayHeight: 136, duration: 60 }));
+    c.on('pointerup', () => {
+      this.tweens.add({ targets: face, displayWidth: 150, displayHeight: 150, duration: 170, ease: 'Back.Out' });
+      // a cleared floor is the more urgent thing he has to say, so it comes first
+      if (isCleared(ctx.state) && !currentMain(ctx.state)) this.offerFloorDoors();
+      else this.openChronicle();
+    });
+    this.tweens.add({ targets: glow, alpha: { from: 0.18, to: 0.4 }, duration: 1600, yoyo: true, repeat: -1 });
+    this.keeperBtn = c;
+    this.refreshKeeperBubble();
+  }
+
   /** Lock/level state of the three generators; celebrates a chain waking up. */
   refreshGenerators(instant = false) {
     const s = ctx.state;
-    this.gens.forEach((g, c) => {
+    this.gens.forEach((g, slot) => {
       const P = (g as any).parts;
+      const c = this.chainOfSlot(slot);
       const on = (s.gens[c] ?? 0) > 0;
       P.lock.setVisible(!on);
       P.lvl.setVisible(on);
@@ -630,13 +683,17 @@ export class VaultScene extends Phaser.Scene {
   }
 
   // ------------------------------------------------------------------ core verbs
-  doForge(chain = 0) {
+  /** Which chain a generator slot forges. Only slot 0 moves: it is the floor's own ladder (docs/ROOMS.md). */
+  chainOfSlot(slot: number) { return slot === 0 ? activeChain(ctx.state) : slot; }
+  private slotOfChain(chain: number) { return chain === activeChain(ctx.state) ? 0 : chain; }
+
+  doForge(chain = activeChain(ctx.state)) {
     const s = ctx.state;
     ctx.sfx.unlock();
     this.lastActionAt = Date.now(); this.idleHinted = false;
-    const prefer = chain === 0 ? this.tut.forgePrefer() : undefined;
+    const prefer = chain === activeChain(s) ? this.tut.forgePrefer() : undefined;
     const r = forge(s, ctx.rng, prefer, chain);
-    const gen = this.gens[chain] ?? this.forgeBtn;
+    const gen = this.gens[this.slotOfChain(chain)] ?? this.forgeBtn;
     const fp = { x: gen.x, y: gen.y - 30 };
     if (!r.ok) {
       ctx.sfx.play('error');
@@ -656,7 +713,7 @@ export class VaultScene extends Phaser.Scene {
     ctx.telemetry.actions++;
     ctx.telemetry.track('forge', { tier: r.tier, chain });
     this.fx.burst(fp.x, fp.y, 14, CHAINS[chain].color);
-    if (chain === 0) this.fx.emberPuff(fp.x, fp.y, 8);
+    if (chain === activeChain(s)) this.fx.emberPuff(fp.x, fp.y, 8);
     const v = this.makeRelic(r.index, r.item);
     const p = this.cellPos(r.index);
     const base = RELIC_SIZE / BOARD_FRAME;
@@ -1157,6 +1214,7 @@ export class VaultScene extends Phaser.Scene {
     this.hud.tick(now);
     ctx.director.tick(now, eventEndsAt(now));
     this.pumpOffers();
+    this.refreshKeeperBubble(); // the badge turns green the moment the quest is done, not on the next tap
     // auto-drop satchel items when space frees
     if (s.satchel.length && canForge(s) && !this.modal && !this.dragging && Math.random() < 0.25) this.dropSatchel();
     if (s.stats.playSeconds % 10 === 0) this.hud.refresh();
@@ -1307,8 +1365,71 @@ export class VaultScene extends Phaser.Scene {
     this.openModal(new KeeperDialog(this, line, onDone));
   }
 
-  /** debug helpers */
+  // ---------------------------------------------------------------- the Chronicle and the floors
+
+  /**
+   * The Keeper's badge (docs/STORY.md): quiet gold while a quest is running, a green seal with a check when it
+   * is done. It pulses once on turning green and then sits still, because a badge that pulses for ever is a nag.
+   */
+  refreshKeeperBubble() {
+    if (!this.keeperBtn) return;
+    const state = bubble(ctx.state);
+    const P = (this.keeperBtn as any).parts as { seal: Phaser.GameObjects.Image; tick: Phaser.GameObjects.Text };
+    const ready = state === 'ready';
+    P.seal.setVisible(state !== 'none').setTexture(ready ? 'seal_green' : 'seal_gold');
+    P.tick.setVisible(ready);
+    if (ready && !this.bubbleWasReady) {
+      this.tweens.add({ targets: this.keeperBtn, scale: { from: 1, to: 1.14 }, duration: 260, yoyo: true, ease: 'Back.Out' });
+      ctx.sfx.play('tick');
+    }
+    this.bubbleWasReady = ready;
+  }
+
+  openChronicle() {
+    if (this.modal) return;
+    ctx.sfx.play('whoosh');
+    this.openModal(new ChronicleModal(this));
+  }
+
+  /** The two doors at the bottom of a floor. Never forced: the Keeper offers, and the player may walk away. */
+  offerFloorDoors() {
+    if (!isCleared(ctx.state)) return;
+    if (this.modal) { this.toast('The floor is clear. The Keeper is waiting.'); return; }
+    this.openModal(new FloorDoorsModal(this));
+  }
+
+  /**
+   * Arriving somewhere: either a floor below, or this one again. The board has already been cleared and the
+   * memento placed by the pure code — this is the part that has to be told to the player.
+   */
+  onFloorChanged(kind: 'descend' | 'restore', r: { recorded: number[]; memento?: number; renown: number }) {
+    const s = ctx.state;
+    resetFloorStats(s);
+    if (s.chronicle) { s.chronicle.side = [null, null]; }
+    refillErrands(s);
+    ctx.persistNow();
+    ctx.telemetry.track(kind === 'descend' ? 'floor_descend' : 'floor_restore', {
+      floor: s.floor, renown: s.renown, recorded: r.recorded.length, memento: r.memento ?? 0,
+    });
+    // the board atlas only ever holds the relics this floor can show, so it is re-laid before the scene comes
+    // back up (ten floors of sheen frames in one atlas is past the maximum texture size on a phone)
+    rebakeBoardFor(this, s.floor ?? 0);
+    // the scene is rebuilt because the forge row, the background mood and the board all belong to the floor
+    ctx.persistNow();
+    this.scene.restart();
+    const floor = currentFloor(s);
+    const line = kind === 'descend'
+      ? `${floor.name}. ${floor.subtitle}`
+      : `${floor.name}, again. Renown ${r.renown} — the vault will remember it even if I do not.`;
+    this.time.delayedCall(900, () => this.keeperSays(line));
+  }
+
+  /** debug helpers, and the handles the browser tests drive the real UI through */
   showDiscovery(t: number) { this.openModal(new DiscoveryCard(this, t)); }
+  bubbleState() { return bubble(ctx.state); }
+  currentQuestGoal() { return currentMain(ctx.state)?.goal ?? 0; }
+  capstone() { return capstoneOf(ctx.state.floor ?? 0); }
+  debugClear() { const s = ctx.state; for (let i = 0; i < BOARD_SIZE; i++) s.board[i] = 0; this.syncBoard(); }
   debugFill() { const s = ctx.state; for (let i = 0; i < BOARD_SIZE; i++) if (!s.board[i]) s.board[i] = 1 + (i % 7); this.syncBoard(); this.updateVaultMood(); }
   get pair() { return findPair(ctx.state); }
 }

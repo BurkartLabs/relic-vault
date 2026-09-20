@@ -1,6 +1,8 @@
 import { ECON } from '../data/catalog';
 import { CHAINS, PATRONS, BINDINGS, itemId, itemWork, buildGold, chainOf, tierOf, isTop } from '../data/items';
 import type { GameState, Order } from './State';
+import { noteFloorAction } from './Chronicle';
+import { liveChains } from './Floors';
 import type { Rng } from './Rng';
 import { grantGold, addXp, grantCard, CardResult } from './Economy';
 
@@ -11,8 +13,18 @@ import { grantGold, addXp, grantCard, CardResult } from './Economy';
  */
 const O = ECON.orders;
 
+/**
+ * Chains a patron may ask for: unlocked **and** live on this floor.
+ *
+ * Descending leaves the floor above's generator level alone, which is deliberate — taking it back would make
+ * descending a punishment — but it also means `gens[0]` stays above zero for ever. Without the second condition a
+ * patron on the Frost Ledger would ask for a Flint Shard the player has no way to forge, and an order nobody can
+ * fill is worse than no order: it sits in a slot, pays nothing, and teaches the player to ignore the system
+ * (T-005, "if ignoring a system is the optimal play, it is an economy bug").
+ */
 function unlockedChains(s: GameState) {
-  return CHAINS.filter((c) => (s.gens[c.id] ?? 0) > 0).map((c) => c.id);
+  const live = liveChains(s);
+  return CHAINS.filter((c) => (s.gens[c.id] ?? 0) > 0 && live.includes(c.id)).map((c) => c.id);
 }
 
 /**
@@ -140,6 +152,7 @@ export function deliver(s: GameState, slot: number, rng: Rng, now = Date.now()):
   s.event.points += o.pts * (s.event.boostUntil > now ? 2 : 1);
   s.stats.orders++;
   s.quests.orders++;
+  noteFloorAction(s, 'orders');
   let card: CardResult | undefined;
   if (o.card) card = grantCard(s, rng);
   s.orders[slot] = null;

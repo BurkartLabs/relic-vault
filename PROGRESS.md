@@ -6,7 +6,16 @@ The next session reads this before it reads the code.
 
 - Stage: **Deepen**, cycle 2. Depth review #2 = 3.0 / 5, DEEPEN (DEPTH.md). Deep enough needs an average ≥ 3.5 with no gate below 2.
 - Ticket: cycle 2 stories in ADO under Feature #269, all `agent-ready`, in this order:
-  #274 RV-P2 honest probe v2 · #275 RV-D6 casual player finishes without paying · #276 RV-D4a vault rooms design spike.
+  #274 RV-P2 honest probe v2 · #275 RV-D6 casual player finishes without paying.
+- **Floors and the Chronicle shipped** (Feature #444, stories #445-#447, Board request 2026-09-20): ten floors
+  each with their own nine-relic ladder, the Descend-or-Restore choice with Keeper's Renown, and the Keeper's
+  Chronicle (30 main quests, patron errands, the green seal on his portrait). Design of record:
+  **`docs/ROOMS.md`** and **`docs/STORY.md`** — read those before touching `data/floors.ts`,
+  `data/chronicle.ts`, `systems/Floors.ts` or `systems/Chronicle.ts`. This supersedes #276's design spike.
+- **The art is the open piece.** A floor's relics carry a `form` naming the silhouette they want, and the painter
+  does not compose from it yet: floors 2-10 currently draw with the tier-9 Forge masters tinted to the floor's
+  palette. The grammar (form x material x ornament) and hand-painted capstones are the next art pass, and
+  ROOMS.md explains why 81 bespoke paintings was the wrong answer.
 - Branch / worktree: `main` has v1 + Deepen cycle 1 (PR 1 merged). Agents work on `agent/<AB#id>` branches and open PRs; the Builder never merges.
 - Preview URL: Static Web App exists (https://ambitious-river-0aedc1d0f.6.azurestaticapps.net) but is empty until CI can run.
   Locally: `npm run dev` → http://localhost:5173, or `npm run build && npm run preview` → :4173.

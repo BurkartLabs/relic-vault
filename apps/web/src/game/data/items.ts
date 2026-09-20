@@ -1,4 +1,5 @@
 import { RELICS, ECON } from './catalog';
+import { FLOORS, CAPSTONE_TIER } from './floors';
 
 /**
  * Deepen cycle 1 (DEPTH.md RV-D3): three relic chains, each fed by its own generator.
@@ -18,10 +19,22 @@ export interface ChainDef {
   value: number;
 }
 
+/**
+ * Chains 0-2 are the vault's originals: the Antechamber's Forge, and the two that run the whole depth.
+ *
+ * Chains 3-11 are the ladders of floors 2-10 (docs/ROOMS.md), appended below from `FLOORS` rather than written
+ * out again — a floor's ladder *is* a chain, which is what lets descending reuse generators, bindings, per-chain
+ * `best` and the value multiplier without a second mechanism. `unlockRank: 0` means rank never unlocks them;
+ * they are opened by descending to that floor.
+ */
 export const CHAINS: ChainDef[] = [
   { id: 0, name: 'Forge', gen: 'Forge', genBlurb: 'Metal and gold, hammered from nothing.', maxTier: 9, unlockRank: 1, color: 0xf4c45a, value: 1 },
   { id: 1, name: 'Crypt', gen: 'Crypt Brazier', genBlurb: 'Bone and candle-smoke. The dead are generous.', maxTier: 7, unlockRank: 3, color: 0x7dffb0, value: 1.25 },
   { id: 2, name: 'Star Well', gen: 'Star Well', genBlurb: 'Draw water, get starlight. Nobody asks why.', maxTier: 7, unlockRank: 6, color: 0x9ab8ff, value: 1.5 },
+  ...FLOORS.filter((f) => f.chain > 2).map((f): ChainDef => ({
+    id: f.chain, name: f.name.replace(/^The /, ''), gen: f.gen, genBlurb: f.genBlurb,
+    maxTier: CAPSTONE_TIER, unlockRank: 0, color: f.color, value: f.value,
+  })),
 ];
 
 export interface ItemDef {
@@ -57,6 +70,14 @@ export const ITEMS: Record<number, ItemDef> = {};
 for (let t = 1; t <= 9; t++) ITEMS[t] = { id: t, chain: 0, tier: t, name: RELICS[t].name, material: RELICS[t].material, color: RELICS[t].color, lore: RELICS[t].lore };
 CRYPT.forEach((d, i) => { ITEMS[11 + i] = { id: 11 + i, chain: 1, tier: i + 1, ...d }; });
 STAR.forEach((d, i) => { ITEMS[21 + i] = { id: 21 + i, chain: 2, tier: i + 1, ...d }; });
+// floors 2-10: nine relics each, at chain * 10 + tier (docs/ROOMS.md)
+for (const f of FLOORS) {
+  if (f.chain <= 2) continue;
+  f.relics.forEach((r, i) => {
+    const id = f.chain * 10 + (i + 1);
+    ITEMS[id] = { id, chain: f.chain, tier: i + 1, name: r.name, material: r.material, color: r.color, lore: r.lore };
+  });
+}
 export const ITEM_IDS = Object.keys(ITEMS).map(Number).sort((a, b) => a - b);
 
 export const chainOf = (id: number) => Math.floor(id / 10);
@@ -81,6 +102,17 @@ export const BINDINGS: Record<number, number> = {
   26: 6,   // Star Lyre       <- Sapphire Heart
   27: 16,  // Heart of the Sky <- Ossuary Chest
 };
+/**
+ * Every floor's top three tiers need a binding from the Crypt or the Star Well, the same way the Antechamber's
+ * do. That is the reason those two chains run the whole depth (docs/ROOMS.md): descending changes the ladder in
+ * front of you without making the relics you saved, or the generator levels you paid for, worthless.
+ */
+for (const f of FLOORS) {
+  if (f.chain <= 2) continue;
+  BINDINGS[f.chain * 10 + 7] = 13; // Candle Skull
+  BINDINGS[f.chain * 10 + 8] = 24; // Moon Sickle
+  BINDINGS[f.chain * 10 + 9] = 16; // Ossuary Chest
+}
 
 /** Value of an item in "T1 forges": the work it represents. Drives order rewards. */
 export function itemWork(id: number): number {

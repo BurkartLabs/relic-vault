@@ -3,6 +3,8 @@ import { BINDINGS, CHAINS, chainOf, tierOf, isTop, tierValue } from '../data/ite
 import type { GameState } from './State';
 import type { Rng } from './Rng';
 import { grantGold, feedPiggy, addXp, grantCard, cardDropChance, CardResult } from './Economy';
+import { noteAscension } from './Floors';
+import { noteFloorAction } from './Chronicle';
 
 export interface MergeResult {
   ok: boolean;
@@ -15,6 +17,8 @@ export interface MergeResult {
   tier: number;
   chain: number;
   ascended: boolean;
+  /** true when this ascension cleared the floor: its capstone, not the Crypt's or the Star Well's top tier */
+  clearedFloor?: boolean;
   gold: number;
   gems: number;
   xp: number;
@@ -62,7 +66,7 @@ export function merge(s: GameState, a: number, b: number, rng: Rng, now = Date.n
 
   s.board[a] = 0;
   s.board[b] = next;
-  if (bindingIndex >= 0) { s.board[bindingIndex] = 0; s.stats.bindings++; }
+  if (bindingIndex >= 0) { s.board[bindingIndex] = 0; s.stats.bindings++; noteFloorAction(s, 'bindings'); }
 
   const value = CHAINS[chain].value;
   const tier = ascended ? tierOf(ia) + 1 : tierOf(next);
@@ -79,6 +83,9 @@ export function merge(s: GameState, a: number, b: number, rng: Rng, now = Date.n
   s.pass.xp += ascended ? 20 : tierValue(ECON.passXp, next);
 
   s.stats.merges++;
+  noteFloorAction(s, 'merges');
+  // ascending this floor's capstone is what clears the floor and opens the two doors (docs/ROOMS.md)
+  const clearedFloor = ascended ? noteAscension(s, chain) : false;
   feedPiggy(s);
   if (!ascended) {
     if (tier > (s.best[chain] ?? 0)) s.best[chain] = tier;
@@ -91,7 +98,7 @@ export function merge(s: GameState, a: number, b: number, rng: Rng, now = Date.n
 
   return {
     ok: true, from: a, to: b, item: next, tier: ascended ? CHAINS[chain].maxTier + 1 : tier, chain,
-    ascended, gold, gems, xp, rankUps, eventPts, card,
+    ascended, clearedFloor, gold, gems, xp, rankUps, eventPts, card,
     binding: need, bindingIndex: bindingIndex >= 0 ? bindingIndex : undefined,
   };
 }

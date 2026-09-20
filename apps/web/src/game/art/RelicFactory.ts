@@ -1,6 +1,7 @@
 import type Phaser from 'phaser';
 import { CHAIN_PAINTERS } from './ChainArt';
-import { ITEM_IDS } from '../data/items';
+import { ITEM_IDS, ITEMS } from '../data/items';
+import { floorDef } from '../data/floors';
 import {
   Ctx, makeCanvas, lin, rad, poly, smooth, star, glow, shade, MAT, metal, chrome, facets, sparkle, rrPath,
 } from './paint';
@@ -480,12 +481,44 @@ const PAINTERS: ((ctx: Ctx, full: boolean) => void)[] = [
 ];
 
 /** Paint any relic by item id (1–9 Forge, 11–17 Crypt, 21–27 Star Well) into a 256×256 box. */
+/**
+ * Recolour a painted relic to a floor's material without flattening it: `color` keeps the hue and chroma of the
+ * new material and the luminance of the painting underneath, so the metal still reads as metal. A plain tint
+ * would wash the whole silhouette one shade and look like a bug.
+ */
+function recolour(src: HTMLCanvasElement, hex: number): HTMLCanvasElement {
+  const [c, ctx] = makeCanvas(src.width, src.height);
+  ctx.drawImage(src, 0, 0);
+  ctx.save();
+  ctx.globalCompositeOperation = 'color';
+  ctx.fillStyle = '#' + hex.toString(16).padStart(6, '0');
+  ctx.fillRect(0, 0, src.width, src.height);
+  ctx.restore();
+  // keep the shape: the recolour pass must not bleed outside the painted pixels
+  ctx.globalCompositeOperation = 'destination-in';
+  ctx.drawImage(src, 0, 0);
+  return c;
+}
+
 export function paintRelic(ctx: Ctx, id: number, withIris = true) {
   ctx.save();
   // keep everything inside the frame with a small margin
   ctx.translate(128, 128); ctx.scale(0.94, 0.94); ctx.translate(-128, -128);
   if (id <= 9) PAINTERS[id](ctx, withIris);
-  else CHAIN_PAINTERS[id]?.(ctx);
+  else if (CHAIN_PAINTERS[id]) CHAIN_PAINTERS[id](ctx);
+  else {
+    /**
+     * A floor relic (chains 3+, docs/ROOMS.md). Until the form-and-material grammar is painted, these borrow the
+     * silhouette of the same tier on the Antechamber ladder and wear their own floor's material. That is a
+     * deliberate placeholder and it is *visible* — the alternative, which this replaced, was
+     * `CHAIN_PAINTERS[id]?.(ctx)`, which painted nothing at all and would have shipped ninety invisible relics
+     * with no error anywhere (P-WIRED-NOTHING).
+     */
+    const tier = id % 10;
+    const [master, mctx] = makeCanvas(256, 256);
+    PAINTERS[Math.max(1, Math.min(9, tier))](mctx, withIris);
+    ctx.drawImage(recolour(master, ITEMS[id]?.color ?? 0xffffff), 0, 0);
+  }
   ctx.restore();
 }
 
@@ -510,7 +543,43 @@ function sheenOver(src: HTMLCanvasElement, t: number): HTMLCanvasElement {
 export const SHEEN_FRAMES = 6;
 export const BOARD_FRAME = 160;
 
-export function bakeRelics(scene: Phaser.Scene) {
+/**
+ * Which relics can appear on the board right now: the floor's own ladder, plus the two chains that run the whole
+ * depth. With ten floors the board atlas would otherwise be 104 items tall (over 16,000px, past the maximum
+ * texture size on every phone we care about), for 81 relics that cannot be on the board.
+ */
+export function boardIds(floor: number): number[] {
+  const chains = [floorDef(floor).chain, 1, 2];
+  return ITEM_IDS.filter((id) => chains.includes(Math.floor(id / 10)));
+}
+
+/** The sheen-sweep atlas for one floor's relics. Rebaked when the floor changes, so it never grows. */
+export function bakeBoardAtlas(scene: Phaser.Scene, ids: number[], masters: Record<number, HTMLCanvasElement>) {
+  const F = BOARD_FRAME, cols = SHEEN_FRAMES + 1;
+  if (scene.textures.exists('relics')) scene.textures.remove('relics');
+  const [ab, xb] = makeCanvas(F * cols, F * ids.length);
+  ids.forEach((id, row) => {
+    const [small, sctx] = makeCanvas(F, F);
+    const [mid, mctx] = makeCanvas(F * 1.25, F * 1.25);
+    mctx.drawImage(masters[id], 0, 0, F * 1.25, F * 1.25);
+    sctx.drawImage(mid, 0, 0, F, F);
+    for (let f = 0; f < cols; f++) {
+      const frame = sheenOver(small, f === 0 ? -1 : (f - 1) / (SHEEN_FRAMES - 1));
+      xb.drawImage(frame, f * F, row * F);
+    }
+  });
+  const texB = scene.textures.addCanvas('relics', ab)!;
+  ids.forEach((id, row) => { for (let f = 0; f < cols; f++) texB.add(`r${id}_${f}`, 0, f * F, row * F, F, F); });
+}
+
+/** Masters kept from the boot bake so a floor change can re-lay the board atlas without repainting. */
+let boardMasters: Record<number, HTMLCanvasElement> = {};
+export function rebakeBoardFor(scene: Phaser.Scene, floor: number) {
+  const ids = boardIds(floor).filter((id) => boardMasters[id]);
+  if (ids.length) bakeBoardAtlas(scene, ids, boardMasters);
+}
+
+export function bakeRelics(scene: Phaser.Scene, floor = 0) {
   // masters for every item id; grid atlases keep every texture under 4096px for older phones
   const ids = ITEM_IDS;
   const masters: Record<number, HTMLCanvasElement> = {};
@@ -538,22 +607,9 @@ export function bakeRelics(scene: Phaser.Scene) {
   const tex96 = scene.textures.addCanvas('relic96', a96)!;
   ids.forEach((id, k) => { const p = grid(k, 96); tex96.add(`i${id}`, 0, p.x, p.y, 96, 96); });
 
-  // board atlas with sheen frames: one row per item
-  const F = BOARD_FRAME, cols = SHEEN_FRAMES + 1;
-  const [ab, xb] = makeCanvas(F * cols, F * ids.length);
-  ids.forEach((id, row) => {
-    const [small, sctx] = makeCanvas(F, F);
-    // two-step downscale for crisper edges
-    const [mid, mctx] = makeCanvas(F * 1.25, F * 1.25);
-    mctx.drawImage(mastersNoIris[id], 0, 0, F * 1.25, F * 1.25);
-    sctx.drawImage(mid, 0, 0, F, F);
-    for (let f = 0; f < cols; f++) {
-      const frame = sheenOver(small, f === 0 ? -1 : (f - 1) / (SHEEN_FRAMES - 1));
-      xb.drawImage(frame, f * F, row * F);
-    }
-  });
-  const texB = scene.textures.addCanvas('relics', ab)!;
-  ids.forEach((id, row) => { for (let f = 0; f < cols; f++) texB.add(`r${id}_${f}`, 0, f * F, row * F, F, F); });
+  // board atlas with sheen frames: one row per item, for this floor's relics only
+  boardMasters = mastersNoIris;
+  bakeBoardAtlas(scene, boardIds(floor), mastersNoIris);
 
   // live iris for the Living Relic
   const [ic, ictx] = makeCanvas(64, 64);
