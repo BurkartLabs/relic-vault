@@ -1,4 +1,5 @@
 ﻿import { BOARD_SIZE, ECON, CARDS, ALBUM_PAGES } from '../data/catalog';
+import { defaultProfile, type Profile } from './Profile';
 
 export const SAVE_VERSION = 5;
 
@@ -56,6 +57,10 @@ export interface GameState {
   flags: Record<string, number>;
   age: AgeBand;
   lootboxesAllowed: boolean;
+  /** Who the player is in the vault: a chosen name, crest and earned title. No free text anywhere (Profile.ts). */
+  profile: Profile;
+  /** Rank landmarks whose reward has been taken. Ranks are never skipped, so this only ever grows. */
+  rankClaimed: number[];
   settings: { muted: boolean; music: boolean; haptics: boolean };
   createdAt: number;
   purchases: { sku: string; t: number }[];
@@ -92,6 +97,8 @@ export function createState(now = Date.now()): GameState {
     flags: {},
     age: 'unknown',
     lootboxesAllowed: true,
+    profile: defaultProfile(),
+    rankClaimed: [],
     settings: { muted: false, music: true, haptics: true },
     createdAt: now,
     purchases: [],
