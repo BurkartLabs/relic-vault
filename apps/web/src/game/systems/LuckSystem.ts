@@ -1,5 +1,6 @@
 import { ECON } from '../data/catalog';
 import type { GameState } from './State';
+import { renownLuck } from './Floors';
 
 /**
  * Hidden luck stat. Raises forge high-tier chance and chest upgrade chance.
@@ -13,6 +14,7 @@ export function computeLuck(s: GameState): number {
     + (s.ent.vip ? 0.02 : 0)
     + (0.01 * Math.min(s.rank, 10)) / 10
     + 0.01 * s.pagesDone.filter(Boolean).length
-    + 0.002 * s.crumbs;
+    + 0.002 * s.crumbs
+    + renownLuck(s); // restoring a floor pays for ever, and cannot be bought (docs/ROOMS.md)
   return Math.min(ECON.luckCap, luck);
 }

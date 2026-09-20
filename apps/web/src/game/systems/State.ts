@@ -1,7 +1,8 @@
 ﻿import { BOARD_SIZE, ECON, CARDS, ALBUM_PAGES } from '../data/catalog';
 import { defaultProfile, type Profile } from './Profile';
+import { FLOOR_COUNT } from '../data/floors';
 
-export const SAVE_VERSION = 5;
+export const SAVE_VERSION = 6;
 
 export type AgeBand = 'unknown' | 'adult' | 'minor';
 
@@ -61,6 +62,19 @@ export interface GameState {
   profile: Profile;
   /** Rank landmarks whose reward has been taken. Ranks are never skipped, so this only ever grows. */
   rankClaimed: number[];
+  // ---- floors and the Chronicle (docs/ROOMS.md, docs/STORY.md) ----
+  /** Which floor of the vault the player is on, 0-based. Floor 1 is the Antechamber. */
+  floor: number;
+  /** Times each floor's capstone has been ascended. A history, not a score. */
+  clears: number[];
+  /** Keeper's Renown: +1 per restoration, permanent, never purchasable. */
+  renown: number;
+  /** Every relic ever put away when leaving a floor. Nothing is destroyed, only recorded. */
+  reliquary: number[];
+  /** What the player has done **on this floor**. Zeroed on descend and restore; the Chronicle reads it. */
+  floorStats: { forges: number; merges: number; orders: number; bindings: number };
+  /** Main quests claimed (ids), the two open errands, and how many errands have been filled. */
+  chronicle: { claimed: number[]; side: ({ tpl: number; base: number } | null)[]; sideSeq: number; errandsDone: number };
   settings: { muted: boolean; music: boolean; haptics: boolean };
   createdAt: number;
   purchases: { sku: string; t: number }[];
@@ -99,6 +113,12 @@ export function createState(now = Date.now()): GameState {
     lootboxesAllowed: true,
     profile: defaultProfile(),
     rankClaimed: [],
+    floor: 0,
+    clears: new Array(FLOOR_COUNT).fill(0),
+    renown: 0,
+    reliquary: [],
+    floorStats: { forges: 0, merges: 0, orders: 0, bindings: 0 },
+    chronicle: { claimed: [], side: [null, null], sideSeq: 0, errandsDone: 0 },
     settings: { muted: false, music: true, haptics: true },
     createdAt: now,
     purchases: [],
@@ -163,6 +183,25 @@ const MIGRATIONS: Record<number, (r: Raw, now: number) => Raw> = {
   4: (r) => {
     r.piggy = 0;
     r.v = 5;
+    return r;
+  },
+  /**
+   * v5 -> v6: floors and the Chronicle (docs/ROOMS.md, docs/STORY.md). Everyone starts on floor 1, which is the
+   * vault they have been playing, so nothing about their board, satchel or generators changes.
+   *
+   * The one judgement here: a save that has **already ascended the Living Relic** has cleared floor 1 by the new
+   * rules, and `stats.maxTier` records exactly that. Reading it means a returning player finds the two doors
+   * already open instead of being asked to do again the hardest thing they have ever done in this game.
+   */
+  5: (r) => {
+    r.floor = 0;
+    r.clears = new Array(FLOOR_COUNT).fill(0);
+    if ((r.stats?.maxTier ?? 0) >= 9) r.clears[0] = 1;
+    r.renown = 0;
+    r.reliquary = [];
+    r.floorStats = { forges: 0, merges: 0, orders: 0, bindings: 0 };
+    r.chronicle = { claimed: [], side: [null, null], sideSeq: 0, errandsDone: 0 };
+    r.v = 6;
     return r;
   },
 };

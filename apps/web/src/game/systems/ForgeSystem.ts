@@ -4,6 +4,7 @@ import type { GameState } from './State';
 import type { Rng } from './Rng';
 import { canForge, place } from './BoardSystem';
 import { computeLuck } from './LuckSystem';
+import { noteFloorAction } from './Chronicle';
 
 export interface ForgeResult { ok: boolean; reason?: 'full' | 'locked'; index: number; tier: number; item: number; chain: number }
 
@@ -34,5 +35,6 @@ export function forge(s: GameState, rng: Rng, prefer?: number, chain = 0): Forge
   if (tier > (s.best[chain] ?? 0)) s.best[chain] = tier;
   s.stats.forges++;
   s.quests.forge++;
+  noteFloorAction(s, 'forges');
   return { ok: true, index, tier, item: id, chain };
 }

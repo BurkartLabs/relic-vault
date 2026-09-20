@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { ctx } from '../GameCtx';
 import { bakeRelics } from '../art/RelicFactory';
 import { bakeVault } from '../art/VaultBackground';
 import { bakeUi, bakeCards } from '../art/UiArt';
@@ -16,7 +17,7 @@ export class BootLoadScene extends Phaser.Scene {
     const bw = 620, by = H / 2 + 600;
     const g = this.add.graphics();
     const steps: [string, () => void][] = [
-      ['Waking the relics', () => bakeRelics(this)],
+      ['Waking the relics', () => bakeRelics(this, ctx.state.floor ?? 0)],
       ['Carving the vault', () => bakeVault(this)],
       ['Gilding the frames', () => bakeUi(this)],
       ['Shuffling the album', () => bakeCards(this, CARDS, ALBUM_PAGES.map((p) => p.color))],

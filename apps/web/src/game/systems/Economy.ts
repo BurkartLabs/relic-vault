@@ -10,11 +10,13 @@ import { placeOrStash, lowest, empties, sellValue } from './BoardSystem';
 import { CHAINS, GEN_UPGRADE_GOLD, GEN_MAX_LEVEL, itemWork } from '../data/items';
 import { RANK_REWARDS } from './Profile';
 import { cyclePrize } from './Standings';
+import { renownGold } from './Floors';
 
 // ---------------- currencies ----------------
+/** Keeper's Renown multiplies gold, never gems: a deeper player earns faster without a shortcut past the ladder. */
 export function grantGold(s: GameState, n: number) {
   if (n <= 0) return;
-  s.gold += n;
+  s.gold += Math.round(n * renownGold(s));
 }
 
 /**
@@ -56,10 +58,19 @@ export function addXp(s: GameState, n: number): number {
 }
 
 // ---------------- generators (RV-D3) ----------------
-/** Unlock any generator whose rank requirement is met. Returns newly unlocked chain ids. */
+/**
+ * Unlock any generator whose rank requirement is met. Returns newly unlocked chain ids.
+ *
+ * A floor's own ladder has `unlockRank: 0`, which means *never by rank* — it is opened by descending to that
+ * floor (docs/ROOMS.md). Without this guard `s.rank >= 0` is true for every one of them, and ranking up once
+ * would hand the player every generator in the vault.
+ */
 export function unlockGenerators(s: GameState): number[] {
   const out: number[] = [];
-  for (const c of CHAINS) if ((s.gens[c.id] ?? 0) === 0 && s.rank >= c.unlockRank) { s.gens[c.id] = 1; out.push(c.id); }
+  for (const c of CHAINS) {
+    if (c.unlockRank <= 0) continue;
+    if ((s.gens[c.id] ?? 0) === 0 && s.rank >= c.unlockRank) { s.gens[c.id] = 1; out.push(c.id); }
+  }
   return out;
 }
 
