@@ -1280,7 +1280,10 @@ export class VaultScene extends Phaser.Scene {
 
   // ------------------------------------------------------------------ toast
   private toasts: Phaser.GameObjects.Container[] = [];
+  /** The last line the Keeper said in passing, so a test can assert the player was actually told (#441). */
+  lastToast = '';
   toast(msg: string) {
+    this.lastToast = msg;
     // at most two on screen: the newest pushes out the oldest so they never bury the order cards
     while (this.toasts.length >= 2) {
       const old = this.toasts.shift()!;
