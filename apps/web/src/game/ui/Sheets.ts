@@ -13,56 +13,14 @@ import { genUpgradeCost, upgradeGenerator } from '../systems/Economy';
 import { GEN_MAX_LEVEL } from '../data/items';
 
 // ---------------------------------------------------------------- Vault Jammed
-export class JammedSheet extends Modal {
-  constructor(vs: VaultScene) {
-    super(vs, { w: 960, h: 1400, title: 'VAULT JAMMED', offer: 'jammed' });
-    this.kind = 'JammedSheet';
-    const s = ctx.state, B = this.box, top = this.top;
-    keeperLine(vs, B, 0, top + 120, 860, COPY.jammedLine, 120);
-    const pair = findPair(s);
-    let y = top + 290;
-    if (pair) {
-      B.add(vs.add.nineslice(0, y, 'panelBlue', undefined, 860, 120, 60, 60, 50, 50));
-      B.add(txt(vs, -140, y, 'A merge is still waiting on the board!', { size: 30, font: 'body', weight: '700', color: '#8CF08A' }));
-      B.add(new Button(vs, 290, y, 220, 84, 'SHOW ME', () => { this.close(); vs.tut.hintPair(pair); }, { color: 'green', size: 32 }));
-      y += 150;
-    }
-    const lo = lowest(s, 1)[0];
-    const opt = (icon: string, frame: string | undefined, title: string, sub: string, btn: Button) => {
-      B.add(vs.add.nineslice(0, y + 110, 'panelDark', undefined, 880, 210, 70, 70, 70, 70));
-      B.add(vs.add.image(-350, y + 110, icon, frame).setDisplaySize(130, 130));
-      B.add(txt(vs, -260, y + 76, title, { size: 36, weight: '900', gold: true, origin: [0, 0.5] }));
-      B.add(txt(vs, -260, y + 124, sub, { size: 24, font: 'body', color: '#b9a9c6', origin: [0, 0.5], wrap: 380 }));
-      btn.setPosition(290, y + 110);
-      B.add(btn);
-      y += 235;
-    };
-    if (lo !== undefined) {
-      const t = s.board[lo];
-      opt('relic256', `R${t}`, 'SELL THE LOWEST', `${ITEMS[t].name} · poor rate`, new Button(vs, 0, 0, 230, 96, `+${sellValue(t)}`, () => {
-        this.close(); vs.sellAt(lo);
-      }, { color: 'gold', size: 36, icon: 'coin', iconScale: 0.4 }));
-    }
-    opt('gem', undefined, 'CLEAR LOWEST 3', 'Shatter the three weakest relics for their gold', new Button(vs, 0, 0, 230, 96, String(ECON.gemClearCost), () => {
-      ctx.analytics.log('gem_spend_click', { item: 'gem_clear', cost: ECON.gemClearCost });
-      if (s.gems < ECON.gemClearCost) { ctx.sfx.play('error'); vs.toast('Not enough gems.'); vs.openShop('jammed', 'gems'); return; }
-      const r = gemClear(s);
-      if (!r.ok) return;
-      this.close();
-      vs.hud.tickGems();
-      vs.shatterCells(r.cleared);
-      ctx.persist();
-    }, { color: 'blue', size: 36, icon: 'gem', iconScale: 0.45 }));
-    opt('ic_ad', undefined, 'SALVAGE', 'A crier buys your weakest relic at double', new Button(vs, 0, 0, 230, 96, 'FREE', () => {
-      const go = () => { const r = adSalvage(s); if (r.index >= 0) vs.shatterCells([r.index]); ctx.persist(); };
-      this.close();
-      if (ctx.adsSuppressed) go(); else vs.watchAd('salvage', go);
-    }, { color: 'purple', size: 36, icon: 'ic_ad', iconScale: 0.45 }));
-    B.add(txt(vs, 0, this.bottom - 90, 'Tip: drag relics onto the scales to sell. Merges free space too.', { size: 26, font: 'body', color: '#8a7a98', strokeW: 0 }));
-  }
-}
-
-// ---------------------------------------------------------------- Inspect (long-press)
+/*
+ * JammedSheet lived here: a full board opened a sheet offering to sell the lowest relic, gem-clear three, or
+ * watch an ad for a salvage. The Board removed it on 2026-09-20 - if the board is full, the player can almost
+ * always merge two like relics and find them unaided, so the sheet answered a question nobody had and
+ * interrupted the one moment they were already reacting to. A full board now shows a line that fades
+ * (COPY.boardFull) and nothing else. Vault Jammed was also the only offer a minor could ever see; with it gone,
+ * minors are sold nothing at all.
+ */
 export class InspectCard extends Modal {
   constructor(vs: VaultScene, index: number) {
     const tier = ctx.state.board[index]; // item id

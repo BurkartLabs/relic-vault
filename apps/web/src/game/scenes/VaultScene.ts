@@ -25,7 +25,7 @@ import { EventPanel } from '../ui/EventPanel';
 import { PiggySheet } from '../ui/Piggy';
 import { WheelModal } from '../ui/Wheel';
 import { SettingsModal } from '../ui/Settings';
-import { JammedSheet, InspectCard, QuestsModal, OfferSheet, RankInfo, KeeperDialog, GeneratorSheet } from '../ui/Sheets';
+import { InspectCard, QuestsModal, OfferSheet, RankInfo, KeeperDialog, GeneratorSheet } from '../ui/Sheets';
 import { OrdersPanel, patronLine } from '../ui/Orders';
 import { ITEMS, CHAINS, tierOf, BINDINGS } from '../data/items';
 import { tickOrders, refillOrders, deliver, dismissOrder, matchOrder } from '../systems/OrderSystem';
@@ -636,8 +636,11 @@ export class VaultScene extends Phaser.Scene {
       this.tweens.add({ targets: gen, x: gen.x + 12, duration: 50, yoyo: true, repeat: 3 });
       this.cameras.main.shake(160, 0.004);
       ctx.telemetry.track('board_full', { merges: s.stats.merges });
-      ctx.director.onBoardFull();
-      this.pumpOffers(true);
+      // Board, 2026-09-20: a full board is not a crisis and does not need a shop. In practice the player can
+      // almost always merge two like relics and find them without help, so the old Vault Jammed sheet - sell the
+      // lowest, gem-clear three, watch an ad - answered a question nobody was asking, and interrupted the one
+      // moment the player was already reacting to. The screen already shakes and buzzes; it just needed words.
+      this.toast(COPY.boardFull);
       return;
     }
     ctx.sfx.play('forge');
@@ -1119,7 +1122,7 @@ export class VaultScene extends Phaser.Scene {
     this.offerTimer = this.time.delayedCall(now ? 0 : req.delayMs, () => {
       this.pendingOffer = false;
       if (this.modal || this.dragging || this.busy > 0 || this.tut.blocking || this.streaking) { this.time.delayedCall(400, () => this.pumpOffers()); return; }
-      if (this.tut.step < 3 && ctx.director.queue[0]?.id !== 'jammed' && ctx.director.queue[0]?.id !== 'welcome') { this.time.delayedCall(800, () => this.pumpOffers()); return; }
+      if (this.tut.step < 3 && ctx.director.queue[0]?.id !== 'welcome') { this.time.delayedCall(800, () => this.pumpOffers()); return; }
       const r = ctx.director.next();
       if (r) this.showOffer(r);
     });
@@ -1130,7 +1133,6 @@ export class VaultScene extends Phaser.Scene {
     switch (r.id) {
       case 'welcome': if (!s.ent.welcome) this.openModal(new WelcomePack(this, r.trigger)); break;
       case 'comeback': if (!s.ent.comeback) this.openModal(new OfferSheet(this, 'comeback', r.trigger)); break;
-      case 'jammed': this.openModal(new JammedSheet(this)); break;
       case 'shopBest': this.openShop(r.trigger, 'best'); break;
       case 'doubleIt': this.openModal(new OfferSheet(this, 'doubleIt', r.trigger)); break;
       case 'piggy': this.openPiggy(r.trigger); break;

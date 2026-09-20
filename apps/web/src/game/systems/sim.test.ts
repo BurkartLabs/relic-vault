@@ -421,14 +421,26 @@ describe('no random rewards for minors / loot-box-free regions (Critic ITERATE #
     expect(s.freeChests).toBe(0);
     expect(s.satchel).toEqual([4, 4]);
   });
-  it('minors are never pushed offers (jammed helper still shows)', () => {
+  /**
+   * The board-full sheet used to be the single exception to "minors are pushed nothing". The Board removed the
+   * sheet on 2026-09-20, so the exception is gone with it and a minor now sees no offer of any kind, ever.
+   */
+  it('minors are pushed nothing at all, with no exception', () => {
     const s = createState();
     s.age = 'minor';
     const d = new OfferDirector(() => s);
     s.board[0] = 1; s.board[1] = 1;
     d.onMerge(merge(s, 0, 1, rng()));
-    d.onBoardFull();
-    expect(d.queue.map((q) => q.id)).toEqual(['jammed']);
+    d.tick(Date.now(), Date.now() + 86400000);
+    expect(d.queue).toEqual([]);
+  });
+
+  it('a full board opens no offer: there is nothing to sell into that moment', () => {
+    const s = createState();
+    const d = new OfferDirector(() => s);
+    // whatever else happens, no code path can queue a board-full offer any more
+    expect(JSON.stringify(d.queue)).not.toContain('jammed');
+    expect('onBoardFull' in d).toBe(false);
   });
 });
 

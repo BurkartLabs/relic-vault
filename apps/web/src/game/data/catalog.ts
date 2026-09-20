@@ -167,7 +167,8 @@ export const COPY = {
   mergeHint: 'Drag one onto its twin',
   welcomeLine: 'A gift, keeper. Mostly a gift.',
   comebackLine: 'So close to the next tier. It would be a shame to stop now.',
-  jammedLine: 'The vault is full. The vault is never full for long.',
+  // A full board is a moment, not a crisis: one line that fades, no sheet, nothing to buy (Board, 2026-09-20).
+  boardFull: 'The dais is full. Merge two of a kind to make room.',
   piggyLine: 'The pig has eaten well. Break it, and eat better.',
   ordersHint: 'A patron up top wants a relic you already hold. Tap their card to trade it for gold, Rush points and Pass XP. Patrons are the only way to fill your Pass.',
   ordersHintShort: 'A patron wants a relic you hold: tap their card to trade.',

@@ -4,7 +4,7 @@ import type { MergeResult } from './MergeSystem';
 import { eventMilestoneIndex } from './Economy';
 import { welcomeOpen } from './Offers';
 
-export type OfferId = 'welcome' | 'comeback' | 'jammed' | 'shopBest' | 'doubleIt' | 'piggy' | 'passUpsell' | 'vip';
+export type OfferId = 'welcome' | 'comeback' | 'shopBest' | 'doubleIt' | 'piggy' | 'passUpsell' | 'vip';
 
 export interface OfferRequest { id: OfferId; trigger: string; delayMs: number }
 
@@ -27,7 +27,7 @@ export class OfferDirector {
     if (this.queue.some((q) => q.id === r.id)) return;
     // Soul: we do not ship to children as a growth hack. Under-16 profiles never get pushed offers;
     // the shop stays reachable, and the Vault Jammed helper (not an offer) still appears.
-    if (this.s().age === 'minor' && r.id !== 'jammed') return;
+    if (this.s().age === 'minor') return; // minors are sold nothing at all (the one exception, the board-full sheet, is gone)
     this.queue.push(r);
   }
 
@@ -47,10 +47,6 @@ export class OfferDirector {
     if (m >= 1 && !s.ent.passPremium && this.once('offer_pass')) {
       this.push({ id: 'passUpsell', trigger: 'event_milestone_1', delayMs: 1100 });
     }
-  }
-
-  onBoardFull() {
-    this.push({ id: 'jammed', trigger: 'board_full', delayMs: 0 });
   }
 
   onAdComplete() {
