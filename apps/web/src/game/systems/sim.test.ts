@@ -9,11 +9,11 @@ import { computeLuck } from './LuckSystem';
 import { OfferDirector } from './OfferDirector';
 import { mulberry32 } from './Rng';
 import { generateOrder, refillOrders, deliver, dismissOrder, tickOrders, matchOrder } from './OrderSystem';
-import { upgradeGenerator, unlockGenerators, genUpgradeCost, buyExact } from './Economy';
-import { BINDINGS, CHAINS, itemWork } from '../data/items';
+import { upgradeGenerator, unlockGenerators, genUpgradeCost, buyExact, exactRelicCost, exactRelicOffer } from './Economy';
+import { BINDINGS, CHAINS, itemWork, buildGold } from '../data/items';
 import { grantReward, claimVipCrate, enforceChestRules } from './Economy';
 import { welcomeOpen, welcomeDeadline, WELCOME_WINDOW_MS } from './Offers';
-import { skuValuePct } from '../data/catalog';
+import { skuValuePct, GEMS_PER_DOLLAR_BASELINE } from '../data/catalog';
 import { ECON, SKUS, SkuId, CARDS, MAX_TIER } from '../data/catalog';
 
 const rng = () => mulberry32(1234);
@@ -167,9 +167,9 @@ describe('purchases', () => {
     const s = createState();
     const g = applyPurchase(s, 'welcome', rng());
     expect(g.gems).toBe(120);
-    expect(g.gold).toBe(10000); // Board, #330: 800 was ~100 early actions
+    expect(g.gold).toBe(100000);
     expect(s.board.filter((t) => t === 4).length).toBe(2);
-    expect(s.board.filter((t) => t === 3).length).toBe(1);
+    expect(s.board.filter((t) => t === 7).length).toBe(1); // Board RV-B1: a Ruby Crown, not a Silver Urn
     expect(s.freeChests).toBe(1);
     expect(applyPurchase(s, 'welcome', rng()).ok).toBe(false);
   });
@@ -236,9 +236,9 @@ describe('chests & pity', () => {
     expect(r.tier).toBeGreaterThanOrEqual(6);
     expect(s.pity).toBe(0);
   });
-  it('gem chest costs 5 gems and places a relic (Board, #332)', () => {
+  it('gem chest costs its listed price and places a relic (Board, #345)', () => {
     const s = createState();
-    s.gems = 5;
+    s.gems = ECON.chestGemCost;
     const r = openChest(s, rng(), 'gems');
     expect(r.ok).toBe(true);
     expect(s.gems).toBe(0);
@@ -248,14 +248,33 @@ describe('chests & pity', () => {
 });
 
 describe('exact relics', () => {
-  it('an exact Emerald Scarab costs 5 gems and places exactly a T5 (Board, #331)', () => {
+  it('an exact Emerald Scarab costs its anchor price and places exactly a T5 (Board, #331)', () => {
     const s = createState();
-    s.gems = 5;
+    s.gems = ECON.exactT5Gems;
     const i = buyExact(s, 5, rng());
     expect(i).not.toBeNull();
     expect(s.board[i!]).toBe(5);
     expect(s.gems).toBe(0);
     expect(buyExact(s, 5, rng())).toBeNull();
+  });
+  it('price follows what the relic is worth in merges, anchored on the Scarab (Board, RV-B4)', () => {
+    expect(exactRelicCost(5)).toBe(ECON.exactT5Gems);
+    // work doubles per tier, so the price does too, and a cheaper relic costs less
+    expect(exactRelicCost(6)).toBe(ECON.exactT5Gems * 2);
+    // a Ruby Crown also consumes a Crypt binding, so its work (and price) is more than a straight doubling
+      expect(exactRelicCost(7)).toBeGreaterThan(ECON.exactT5Gems * 4);
+    expect(exactRelicCost(4)).toBeLessThan(ECON.exactT5Gems);
+    for (let t = 3; t < MAX_TIER; t++) expect(exactRelicCost(t + 1)).toBeGreaterThan(exactRelicCost(t));
+  });
+  it('the offer rotates near the best tier the player has reached, never below T3 (Board, RV-B4)', () => {
+    const s = createState();
+    s.best = [7, 0, 0];
+    const seen = new Set<number>();
+    for (let d = 0; d < 30; d++) seen.add(exactRelicOffer(s, d * 86400000));
+    expect([...seen].every((t) => t >= 6 && t <= 8)).toBe(true);
+    expect(seen.size).toBeGreaterThan(1);
+    const fresh = createState();
+    expect(exactRelicOffer(fresh, 0)).toBeGreaterThanOrEqual(3);
   });
 });
 
@@ -393,10 +412,12 @@ describe('honest offers (Critic ITERATE #2)', () => {
     expect(welcomeOpen(s, d + 1)).toBe(false);
   });
   it('value ribbons are computed from one baseline', () => {
+    // the entry pack is the baseline by definition, and every bigger pack must beat it (Board RV-B2 re-priced them)
     expect(skuValuePct('gems200')).toBe(100);
-    expect(skuValuePct('gems500')).toBe(125);
-    expect(skuValuePct('gems1200')).toBe(150);
-    expect(skuValuePct('welcome')).toBe(Math.round((((120 + ECON.chestGemCost) / 1.99) / (200 / 4.99)) * 100));
+    expect(skuValuePct('gems500')).toBe(Math.round(((500 / SKUS.gems500.price) / GEMS_PER_DOLLAR_BASELINE) * 100));
+    expect(skuValuePct('gems500')).toBeGreaterThan(skuValuePct('gems200'));
+    expect(skuValuePct('gems1200')).toBeGreaterThan(skuValuePct('gems500'));
+    expect(skuValuePct('welcome')).toBe(Math.round((((120 + ECON.chestGemCost) / 1.99) / GEMS_PER_DOLLAR_BASELINE) * 100));
   });
 });
 
@@ -457,13 +478,13 @@ describe('deepen cycle 1: chains, bindings, generators (RV-D3)', () => {
 });
 
 describe('deepen cycle 1: patron orders (RV-D2)', () => {
-  it('orders ask for reachable relics and pay by work', () => {
+  it('orders ask for reachable relics and pay for what they consume', () => {
     const s = createState();
     for (let k = 0; k < 50; k++) {
       const o = generateOrder(s, mulberry32(k));
       expect(o.want.length).toBeGreaterThan(0);
       for (const id of o.want) { expect(Math.floor(id / 10)).toBe(0); expect(id % 10).toBeGreaterThanOrEqual(2); }
-      expect(o.gold).toBeGreaterThanOrEqual(Math.round(o.want.reduce((a, id) => a + itemWork(id), 0) * ECON.orders.goldPerWork));
+      expect(o.gold).toBeGreaterThanOrEqual(Math.round(o.want.reduce((a, id) => a + buildGold(id, ECON.mergeGold), 0) * ECON.orders.goldMultiplier));
     }
   });
   it('an order for a top relic pays more gold than keeping it for half an ascension (Bug #333)', () => {
@@ -479,6 +500,25 @@ describe('deepen cycle 1: patron orders (RV-D2)', () => {
       expect(o.gold, `order ${o.want}`).toBeGreaterThan(halfAscensions);
     }
     expect([...seen].sort()).toEqual([17, 27, 9]);
+  });
+  it('an order pays more than building the relics earned, so filling one is the better play (Board, RV-B9)', () => {
+    // gold the merges themselves pay while building one relic of this tier from T1s
+    const buildGold = (tier: number) => {
+      let total = 0;
+      for (let t = 2; t <= tier; t++) total += ECON.mergeGold[t] * Math.pow(2, tier - t);
+      return total;
+    };
+    const s = createState();
+    s.gens = [1, 1, 1]; s.best = [9, 7, 7]; s.rank = 20;
+    let checked = 0;
+    for (let k = 0; k < 200 && checked < 25; k++) {
+      const o = generateOrder(s, mulberry32(k));
+      if (o.want.some((id) => Math.floor(id / 10) !== 0)) continue; // Forge chain only: its tiers map to the table
+      const forgone = o.want.reduce((a, id) => a + buildGold(id % 10), 0);
+      expect(o.gold, `order ${o.want} paid ${o.gold} vs ${forgone} earned building it`).toBeGreaterThan(forgone * 2);
+      checked++;
+    }
+    expect(checked).toBeGreaterThan(0);
   });
   it('delivering consumes exactly the wanted relics, pays, and refills the slot', () => {
     const s = createState();

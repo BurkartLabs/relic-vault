@@ -34,7 +34,7 @@ export function applyPurchase(s: GameState, sku: SkuId, rng: Rng, now = Date.now
     case 'welcome':
       s.ent.welcome = true;
       s.gems += def.gems!; s.gold += def.gold!; g.gems = def.gems!; g.gold = def.gold!;
-      for (const t of [4, 4, 3]) g.relics.push({ tier: t, index: placeOrStash(s, t, rng) });
+      for (const t of [4, 4, 7]) g.relics.push({ tier: t, index: placeOrStash(s, t, rng) }); // Board RV-B1: a Ruby Crown, not a Silver Urn
       { const exact = grantChests(s, 1, rng); if (exact.length) g.relics.push(...exact); else g.freeChests = 1; }
       break;
     case 'gems200': case 'gems500': case 'gems1200':

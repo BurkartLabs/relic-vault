@@ -72,7 +72,7 @@
   "piggyMergesPerGem": 4,
   "piggyCap": 250,
   "piggyNagAt": 50,
-  "chestGemCost": 5,
+  "chestGemCost": 50,
   "pityEvery": 15,
   "exactT5Gems": 5,
   "fillCardGems": 80,
@@ -118,7 +118,7 @@
   "genLevelLuck": 0.02,
   "orders": {
     "slots": 3,
-    "goldPerWork": 10,
+    "goldMultiplier": 2.2,
     "topAscendShare": 0.6,
     "xpPerWork": 0.6,
     "ptsPerWork": 2.1,

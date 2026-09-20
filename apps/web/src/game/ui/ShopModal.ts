@@ -5,7 +5,7 @@ import { ctx } from '../GameCtx';
 import { SKUS, SkuId, COPY, ECON, CHEST_ODDS, CHEST_PITY_TIER, CHEST_TOP_TIER, RELICS, skuValuePct, GEMS_PER_DOLLAR_BASELINE } from '../data/catalog';
 import { skuAvailable } from '../systems/PurchaseService';
 import { computeLuck } from '../systems/LuckSystem';
-import { chestsAllowed, buyExact, buyMarket, openChest } from '../systems/Economy';
+import { chestsAllowed, buyExact, buyMarket, openChest, exactRelicOffer, exactRelicCost } from '../systems/Economy';
 import { empties } from '../systems/BoardSystem';
 import type { VaultScene } from '../scenes/VaultScene';
 import { OddsModal } from './Sheets';
@@ -149,10 +149,13 @@ export class ShopModal extends Modal {
       right.add(vs.add.nineslice(0, 0, 'panelBlue', undefined, 460, ch, 84, 84, 84, 84));
       right.add(txt(vs, 0, -214, 'EXACT RELIC', { size: 40, gold: true, weight: '900' }));
       right.add(txt(vs, 0, -170, 'You get exactly this', { size: 26, font: 'body', color: '#b9a9c6' }));
-      right.add(vs.add.image(0, -50, 'relicGlow').setDisplaySize(300, 300).setTint(RELICS[5].color).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.45));
-      right.add(vs.add.image(0, -50, 'relic256', 'R5').setDisplaySize(190, 190));
-      right.add(txt(vs, 0, 80, RELICS[5].name, { size: 34, weight: '900', gold: true }));
-      right.add(new Button(vs, 0, 170, 280, 96, `${ECON.exactT5Gems}`, () => this.exactT5(), { color: 'blue', size: 40, icon: 'gem', iconScale: 0.5, guard }));
+      // Board RV-B4: the offer rotates near the player's best tier and is priced from what it is worth in merges
+      const offerTier = exactRelicOffer(s);
+      right.add(vs.add.image(0, -50, 'relicGlow').setDisplaySize(300, 300).setTint(RELICS[offerTier].color).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.45));
+      right.add(vs.add.image(0, -50, 'relic256', `R${offerTier}`).setDisplaySize(190, 190));
+      right.add(txt(vs, 0, 80, RELICS[offerTier].name, { size: 34, weight: '900', gold: true }));
+      right.add(txt(vs, 0, 118, 'today’s relic', { size: 22, font: 'body', color: '#b9a9c6' }));
+      right.add(new Button(vs, 0, 170, 280, 96, `${exactRelicCost(offerTier)}`, () => this.exactRelic(offerTier), { color: 'blue', size: 40, icon: 'gem', iconScale: 0.5, guard }));
       right.add(badge(vs, 196, -262, 'NO LUCK NEEDED', 'blue', 110));
       C.add(right);
       y += ch + 30;
@@ -247,15 +250,16 @@ export class ShopModal extends Modal {
     this.vs.openChest('gems', `shop:${this.trigger}`, r);
   }
 
-  private exactT5() {
+  private exactRelic(tier: number) {
     const s = ctx.state;
-    ctx.analytics.log('gem_spend_click', { item: 'exact_t5', cost: ECON.exactT5Gems, trigger: this.trigger });
-    if (s.gems < ECON.exactT5Gems) { ctx.sfx.play('error'); this.vs.toast('Not enough gems.'); this.sc.scrollTo(this.anchors.gems - 20); return; }
-    const i = buyExact(s, 5, ctx.rng);
+    const cost = exactRelicCost(tier);
+    ctx.analytics.log('gem_spend_click', { item: `exact_t${tier}`, cost, trigger: this.trigger });
+    if (s.gems < cost) { ctx.sfx.play('error'); this.vs.toast('Not enough gems.'); this.sc.scrollTo(this.anchors.gems - 20); return; }
+    const i = buyExact(s, tier, ctx.rng);
     if (i === null) return;
     ctx.sfx.play('purchase');
     this.vs.hud.tickGems();
-    if (i >= 0) this.vs.dropRelic(i, 5, 400); else this.vs.toast('Board full: the Scarab waits in your satchel.');
+    if (i >= 0) this.vs.dropRelic(i, tier, 400); else this.vs.toast('Board full: it waits in your satchel.');
     this.vs.refreshButtons();
     ctx.persist();
     this.close();

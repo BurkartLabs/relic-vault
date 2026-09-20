@@ -46,6 +46,10 @@ interface RelicView {
 }
 
 const RELIC_SIZE = 160;
+/** Board RV-B7: a denser ad load (was 90s). Rewarded ads stay optional and no ad ever gates play. */
+const AD_GAP_MS = 45000;
+/** Board RV-B8: how long after the last merge a streak still counts as live. */
+const STREAK_GRACE_MS = 2200;
 /** vertical layout in design space; fits a strict 9:16 1080x1920 screen above the dock */
 const BOARD_TOP = 574;
 const FORGE_Y = 1628;
@@ -1099,13 +1103,15 @@ export class VaultScene extends Phaser.Scene {
   // ------------------------------------------------------------------ offers
   pumpOffers(now = false) {
     if (this.pendingOffer || this.modal || this.tut.blocking || this.dragging) return;
+    // Board RV-B8: never sell into a streak. The offer waits rather than being dropped.
+    if (this.streaking) { this.time.delayedCall(600, () => this.pumpOffers()); return; }
     if (this.discoveries.length && this.busy === 0 && this.tut.step >= 3) { this.openModal(new DiscoveryCard(this, this.discoveries.shift()!)); return; }
     const req = ctx.director.queue[0];
     if (!req) return;
     this.pendingOffer = true;
     this.offerTimer = this.time.delayedCall(now ? 0 : req.delayMs, () => {
       this.pendingOffer = false;
-      if (this.modal || this.dragging || this.busy > 0 || this.tut.blocking) { this.time.delayedCall(400, () => this.pumpOffers()); return; }
+      if (this.modal || this.dragging || this.busy > 0 || this.tut.blocking || this.streaking) { this.time.delayedCall(400, () => this.pumpOffers()); return; }
       if (this.tut.step < 3 && ctx.director.queue[0]?.id !== 'jammed' && ctx.director.queue[0]?.id !== 'welcome') { this.time.delayedCall(800, () => this.pumpOffers()); return; }
       const r = ctx.director.next();
       if (r) this.showOffer(r);
@@ -1229,10 +1235,13 @@ export class VaultScene extends Phaser.Scene {
     void veil;
   }
 
+  /** Board RV-B8: a combo streak is the best part of the loop; nothing interrupts it, and not for a beat after. */
+  get streaking() { return this.combo >= 2 && Date.now() - this.lastMergeAt < STREAK_GRACE_MS; }
+
   maybeInterstitial(trigger: string) {
-    if (ctx.adsSuppressed || this.dragging) return;
+    if (ctx.adsSuppressed || this.dragging || this.streaking) return;
     const now = Date.now();
-    if (now - this.lastInterstitial < 90000) return;
+    if (now - this.lastInterstitial < AD_GAP_MS) return;
     this.lastInterstitial = now;
     ctx.analytics.log('ad_interstitial', { trigger });
     this.time.delayedCall(350, () => new AdVeil(this, false, () => {}));
