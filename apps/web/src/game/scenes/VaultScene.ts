@@ -18,6 +18,7 @@ import { txt, fmt } from '../ui/kit';
 import { ShopModal } from '../ui/ShopModal';
 import { WelcomePack } from '../ui/WelcomePack';
 import { ChestOpen } from '../ui/ChestOpen';
+import { VaultPanel } from '../ui/VaultPanel';
 import { AlbumBook } from '../ui/AlbumBook';
 import { PassRoad } from '../ui/PassRoad';
 import { EventPanel } from '../ui/EventPanel';
@@ -1081,7 +1082,13 @@ export class VaultScene extends Phaser.Scene {
   openTab(id: TabId) {
     this.dock.selectTab(id);
     this.dock.setDot(id, false);
-    if (id === 'vault') { if (this.modal) this.modal.close(); return; }
+    // Board: "Vault doesn't do anything?" - it did not. Tapping Vault closes whatever is open, and tapping it
+    // again (already on the board) opens the Vault itself: identity, rank landmarks and standings.
+    if (id === 'vault') {
+      if (this.modal) { this.modal.close(); return; }
+      this.openModal(new VaultPanel(this));
+      return;
+    }
     if (id === 'album') this.openModal(new AlbumBook(this));
     if (id === 'pass') this.openPass('dock');
     if (id === 'events') this.openEvents('dock');
