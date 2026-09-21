@@ -37,8 +37,12 @@ The next session reads this before it reads the code.
 
 ## Next session should
 
-1. RV-P2 (#274): make the probe honest before trusting any depth number. The probe lives in hq: `ops/probes/relic-vault-runway.ts`.
-2. RV-D6 (#275): prove a casual 12 min/day profile finishes Rush milestone ≥ 9 each cycle and pass tier ≥ 15 by day 14 without paying.
+1. RV-P2 (#274) is in review: probe v2 (hq `ops/probes/relic-vault-runway.ts`), report `probes/2026-09-21-probe-v2.md`.
+   It measures in actions, counts density against an order-aware greedy move (35%, not v1's 99%), and has casual and
+   focused players. Its findings: a focused player makes the Living Relic in ~1,155 actions (under an hour), and a
+   casual player misses the pass (1/12 runs) and the Rush top (0/12). No bot descends floors yet: that is the next
+   probe gap.
+2. RV-D6 (#275): the probe now has the casual profile this story needs, and on this build the answer is no (see above).
 3. RV-D4a (#276): `docs/ROOMS.md` design only, no code. Include prestige (leave a completed room for a new one,
    keep a permanent Keeper's Renown bonus): Board idea, see MONETIZATION.md.
 4. Then the Monetization cycle (MONETIZATION.md review #1, 2.5 / 5, REPRICE): RV-M1 value probe first, then power-ups,

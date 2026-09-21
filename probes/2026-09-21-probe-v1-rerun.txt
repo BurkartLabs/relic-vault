@@ -1,0 +1,26 @@
+
+=== GREEDY (median of 12 seeds, 14 days × 938 actions) ===
+first seen: 1@0 min  2@0 min  3@1 min  4@7 min  5@13 min  6@35 min  7@38 min  8@never  9@never  11@5 min  12@5 min  13@5 min  14@9 min  15@16 min  16@46 min  17@41 min  21@23 min  22@23 min  23@24 min  24@25 min  25@26 min  26@37 min  27@59 min  31@never  32@never  33@never  34@never  35@never  36@never  37@never  38@never  39@never  41@never  42@never  43@never  44@never  45@never  46@never  47@never  48@never  49@never  51@never  52@never  53@never  54@never  55@never  56@never  57@never  58@never  59@never  61@never  62@never  63@never  64@never  65@never  66@never  67@never  68@never  69@never  71@never  72@never  73@never  74@never  75@never  76@never  77@never  78@never  79@never  81@never  82@never  83@never  84@never  85@never  86@never  87@never  88@never  89@never  91@never  92@never  93@never  94@never  95@never  96@never  97@never  98@never  99@never  101@never  102@never  103@never  104@never  105@never  106@never  107@never  108@never  109@never  111@never  112@never  113@never  114@never  115@never  116@never  117@never  118@never  119@never
+distinct relics seen by day 14: 19/104; last new relic: 59 min
+rank 3 (Crypt): 5 min; rank 6 (Star Well): 23 min; rank at day 14: 16
+14-day pass completes: day -1.0 (target 10–12)
+4-day Rush top milestone: day -1.0 of the cycle (target ≥ 3)
+album page I complete: day 9.1 (target ~3); cards at day 14: 11/36
+orders/day: 7.4; gold banked/day: 11281
+decision density (turns with ≥2 distinct options): 83%
+raw: pass xp by day 14 409; Rush pts in first 4-day cycle 3701; cards by day 3 4
+actions (seed 1): deliver 100 merge 4280 forge 6718 sell 2034 dismiss 0
+keep-vs-merge tension (a mergeable pair is wanted by a patron): 2%
+
+=== PLANNER (median of 12 seeds, 14 days × 938 actions) ===
+first seen: 1@0 min  2@0 min  3@4 min  4@9 min  5@48 min  6@73 min  7@day 5.9  8@day 12.7  9@never  11@5 min  12@5 min  13@8 min  14@19 min  15@50 min  16@day 5.2  17@day 13.8  21@24 min  22@24 min  23@29 min  24@47 min  25@90 min  26@day 10.9  27@never  31@never  32@never  33@never  34@never  35@never  36@never  37@never  38@never  39@never  41@never  42@never  43@never  44@never  45@never  46@never  47@never  48@never  49@never  51@never  52@never  53@never  54@never  55@never  56@never  57@never  58@never  59@never  61@never  62@never  63@never  64@never  65@never  66@never  67@never  68@never  69@never  71@never  72@never  73@never  74@never  75@never  76@never  77@never  78@never  79@never  81@never  82@never  83@never  84@never  85@never  86@never  87@never  88@never  89@never  91@never  92@never  93@never  94@never  95@never  96@never  97@never  98@never  99@never  101@never  102@never  103@never  104@never  105@never  106@never  107@never  108@never  109@never  111@never  112@never  113@never  114@never  115@never  116@never  117@never  118@never  119@never
+distinct relics seen by day 14: 19/104; last new relic: day 10.9
+rank 3 (Crypt): 4 min; rank 6 (Star Well): 24 min; rank at day 14: 20
+14-day pass completes: day 11.4 (target 10–12)
+4-day Rush top milestone: day 3.8 of the cycle (target ≥ 3)
+album page I complete: day 5.5 (target ~3); cards at day 14: 28/36
+orders/day: 32.4; gold banked/day: 5668
+decision density (turns with ≥2 distinct options): 99%
+raw: pass xp by day 14 1929; Rush pts in first 4-day cycle 6301; cards by day 3 10
+actions (seed 1): deliver 481 merge 5810 forge 6841 sell 0 dismiss 143
+keep-vs-merge tension (a mergeable pair is wanted by a patron): 43%
