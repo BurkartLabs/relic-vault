@@ -97,16 +97,24 @@ Generator levels add on top of the cap (forge only).
 
 ## Lucky Chest (disclosed)
 
-| Result | Chance |
-|---|---|
-| T4 Gold Mask | 40% |
-| T5 Emerald Scarab | 30% |
-| T6 Sapphire Heart | 18% |
-| T7 Ruby Crown | 9% |
-| T8 Star-Metal Ark | 3% |
+Two tables since AB#380 (the code wins: `GEM_CHEST_ODDS` and `EARNED_CHEST_ODDS` in `data/catalog.ts`).
 
-50 gems; no longer sold for cash. Pity: the 15th chest in a row without ≥T6 is drawn from the ≥T6 rows only. Luck
-can upgrade any result by one tier (max T8).
+| Result | Bought for 50 gems | Earned or given |
+|---|---|---|
+| T4 Gold Mask | 10% | 40% |
+| T5 Emerald Scarab | — | 30% |
+| T6 Sapphire Heart | 10% | 18% |
+| T7 Ruby Crown | 25% | 9% |
+| T8 Star-Metal Ark | 55% | 3% |
+
+**Why the gem chest has its own table.** It is sold beside the exact relic, so it is priced against it: its expected
+relic, valued at `exactRelicCost` (T4 3 · T5 5 · T6 10 · T7 22 · T8 44 gems), must be at least 60% of its price with no
+luck at all (`chestEvGems`, asserted in `sim.test.ts`). On the old table it returned 7.8 gems for 50 (Critique #368);
+now 31.0 at no luck, 31.2 at the 3% base, 32.2 at the 18% cap. Earned chests keep the old table so the free economy
+and its progression are unchanged.
+
+Not sold for cash. Pity (one counter across both tables): the 15th chest in a row without ≥T6 is drawn from the ≥T6
+rows only. Luck can upgrade any result by one tier (max T8).
 20% chance of an album card per chest. Minors and `lootboxesAllowed=false` get an exact Gold Mask instead of any chest.
 
 ## Album

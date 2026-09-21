@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { Modal, keeperLine } from './Modal';
 import { Button, txt, money, fmt, dur, badge, Scroller } from './kit';
 import { ctx } from '../GameCtx';
-import { RELICS, ECON, COPY, SKUS, CHEST_ODDS, CHEST_PITY_TIER, MAX_TIER } from '../data/catalog';
+import { RELICS, ECON, COPY, SKUS, GEM_CHEST_ODDS, EARNED_CHEST_ODDS, CHEST_PITY_TIER, MAX_TIER } from '../data/catalog';
 import { lowest, sell, sellValue, findPair } from '../systems/BoardSystem';
 import { gemClear, adSalvage, QUESTS, questProgress, claimQuest, xpToNext, grantGold } from '../systems/Economy';
 import { computeLuck } from '../systems/LuckSystem';
@@ -214,19 +214,25 @@ export class OddsModal extends Modal {
     super(vs, { w: 920, h: 1320, title: 'CHEST ODDS', ribbon: 'ribbonBlue', panelKey: 'panelBlue' });
     this.kind = 'OddsModal';
     const B = this.box, top = this.top;
-    B.add(txt(vs, 0, top + 90, 'Lucky Chest · disclosed before you spend', { size: 30, font: 'body', color: '#b9a9c6' }));
-    CHEST_ODDS.forEach((o, i) => {
+    // The shop sells the gem chest, so this is its table (AB#380); earned chests are one line below and in full
+    // under Settings > Odds & Disclosures.
+    B.add(txt(vs, 0, top + 90, `Lucky Chest for ${ECON.chestGemCost} gems · disclosed before you spend`, { size: 30, font: 'body', color: '#b9a9c6' }));
+    GEM_CHEST_ODDS.forEach((o, i) => {
       const y = top + 210 + i * 150;
       B.add(vs.add.nineslice(0, y, 'panelDark', undefined, 820, 136, 60, 60, 56, 56));
       B.add(vs.add.image(-320, y, 'relic96', `i${o.tier}`).setDisplaySize(110, 110));
       B.add(txt(vs, -240, y, RELICS[o.tier].name, { size: 36, weight: '900', gold: true, origin: [0, 0.5] }));
       const g = vs.add.graphics();
       g.fillStyle(0x07050a).fillRoundedRect(110, y - 14, 200, 28, 14);
-      g.fillStyle(RELICS[o.tier].color).fillRoundedRect(110, y - 14, Math.max(20, 200 * o.chance / Math.max(...CHEST_ODDS.map((x) => x.chance))), 28, 14);
+      g.fillStyle(RELICS[o.tier].color).fillRoundedRect(110, y - 14, Math.max(20, 200 * o.chance / Math.max(...GEM_CHEST_ODDS.map((x) => x.chance))), 28, 14);
       B.add(g);
       B.add(txt(vs, 370, y, `${Math.round(o.chance * 100)}%`, { size: 44, font: 'num', weight: '700' }));
     });
-    B.add(txt(vs, 0, top + 1000, `Pity: every ${ECON.pityEvery}th chest without a ${RELICS[CHEST_PITY_TIER].name} or better guarantees one.\nYour counter: ${ctx.state.pity}/${ECON.pityEvery - 1}. Luck may upgrade any result by one tier.`, { size: 26, font: 'body', color: '#8CF08A', wrap: 820 }));
+    // Follows the rows, so a table of any length has no gap under it (a fixed top + 1000 left one under four rows).
+    const below = top + 210 + GEM_CHEST_ODDS.length * 150 + 40;
+    B.add(txt(vs, 0, below, `Pity: every ${ECON.pityEvery}th chest without a ${RELICS[CHEST_PITY_TIER].name} or better guarantees one.\nYour counter: ${ctx.state.pity}/${ECON.pityEvery - 1}. Luck may upgrade any result by one tier.`, { size: 26, font: 'body', color: '#8CF08A', wrap: 820 }));
+    const earned = EARNED_CHEST_ODDS.map((o) => `${RELICS[o.tier].name} ${Math.round(o.chance * 100)}%`).join(' · ');
+    B.add(txt(vs, 0, below + 100, `Chests you earn roll differently: ${earned}.`, { size: 22, font: 'body', color: '#b9a9c6', wrap: 820 }));
     if (back) B.add(new Button(vs, 0, this.bottom - 100, 360, 110, 'BACK', () => { this.close(); vs.time.delayedCall(220, back); }, { color: 'dark', size: 40 }));
   }
 }

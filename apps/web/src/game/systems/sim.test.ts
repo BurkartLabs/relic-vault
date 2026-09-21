@@ -16,6 +16,8 @@ import { grantReward, claimVipCrate, enforceChestRules } from './Economy';
 import { welcomeOpen, welcomeDeadline, WELCOME_WINDOW_MS } from './Offers';
 import { skuValuePct, GEMS_PER_DOLLAR_BASELINE, BASELINE_SKU } from '../data/catalog';
 import { ECON, SKUS, SkuId, CARDS, MAX_TIER } from '../data/catalog';
+import { EARNED_CHEST_ODDS, GEM_CHEST_ODDS, CHEST_MIN_VALUE_SHARE, RELICS, chestOddsDisclosure } from '../data/catalog';
+import { chestEvGems } from './Economy';
 import { standings, playerPlace, cyclePrize, keeperPoints } from './Standings';
 import { TITLES, earnedTitles, unclaimedRankRewards, defaultProfile, profileName, CRESTS } from './Profile';
 import { claimRankReward, claimCyclePrize } from './Economy';
@@ -277,6 +279,46 @@ describe('chests & pity', () => {
     expect(s.gems).toBe(0);
     expect(s.board[r.index]).toBe(r.tier);
     expect(openChest(s, rng(), 'gems').reason).toBe('gems');
+  });
+});
+
+describe('the gem chest against its exact alternative (AB#380, Critique #368 RV-M7)', () => {
+  it('measures the old table the way the Critique did: 7.8 gems for a 50-gem chest', () => {
+    // Pins the measure itself: if exactRelicCost moves, this names the change before the next assertion hides it.
+    expect(chestEvGems(EARNED_CHEST_ODDS)).toBeCloseTo(7.8, 1);
+  });
+  it('returns at least 60% of its price in exact-relic gems at every luck a player can have', () => {
+    // A sweep, not the identity value (P-IDENTITY-BLIND): no luck, the base, every step to the cap.
+    for (let luck = 0; luck <= ECON.luckCap + 1e-9; luck += 0.01) {
+      expect(chestEvGems(GEM_CHEST_ODDS, luck)).toBeGreaterThanOrEqual(CHEST_MIN_VALUE_SHARE * ECON.chestGemCost);
+    }
+  });
+  it('rolls a chest bought with gems on the gem table, and an earned chest on the earned table', () => {
+    const tally = (source: 'gems' | 'free') => {
+      const s = createState(); s.age = 'adult'; s.lootboxesAllowed = true;
+      const r = mulberry32(11); const counts: Record<number, number> = {};
+      for (let i = 0; i < 4000; i++) {
+        s.board.fill(0); s.satchel = []; s.pity = 0;
+        if (source === 'gems') s.gems = ECON.chestGemCost; else s.freeChests = 1;
+        const res = openChest(s, r, source);
+        expect(res.ok).toBe(true);
+        counts[res.tier] = (counts[res.tier] || 0) + 1;
+      }
+      return counts;
+    };
+    const paid = tally('gems'), earned = tally('free');
+    expect(paid[8] / 4000).toBeGreaterThan(0.45);
+    expect((paid[4] || 0) / 4000).toBeLessThan(0.15);
+    expect(earned[4] / 4000).toBeGreaterThan(0.3);
+    expect((earned[8] || 0) / 4000).toBeLessThan(0.1);
+  });
+  it('discloses the price it charges and every row of both tables (Bug #677)', () => {
+    const text = chestOddsDisclosure();
+    expect(text).toContain(`${ECON.chestGemCost} gems`);
+    expect(text).not.toContain('$');
+    for (const o of [...GEM_CHEST_ODDS, ...EARNED_CHEST_ODDS]) {
+      expect(text).toContain(`${RELICS[o.tier].name} — ${Math.round(o.chance * 100)}%`);
+    }
   });
 });
 

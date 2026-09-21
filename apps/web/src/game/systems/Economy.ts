@@ -1,5 +1,6 @@
 import {
-  ECON, CARDS, CARDS_PER_PAGE, ALBUM_PAGES, CHEST_ODDS, CHEST_PITY_TIER, CHEST_TOP_TIER, EVENT_MILESTONES, PASS_FREE, PASS_PREMIUM,
+  ECON, CARDS, CARDS_PER_PAGE, ALBUM_PAGES, EARNED_CHEST_ODDS, GEM_CHEST_ODDS, type ChestOdds, CHEST_PITY_TIER, CHEST_TOP_TIER,
+  EVENT_MILESTONES, PASS_FREE, PASS_PREMIUM,
   WHEEL, Reward, MAX_TIER,
 } from '../data/catalog';
 import type { GameState } from './State';
@@ -154,12 +155,15 @@ export function enforceChestRules(s: GameState, rng: Rng) {
   void rng;
 }
 
-/** Roll a chest tier: disclosed odds, pity every N dry chests, luck upgrade. Pure. */
-export function rollChest(s: GameState, rng: Rng): { tier: number; pityHit: boolean; upgraded: boolean } {
+/**
+ * Roll a chest tier: disclosed odds, pity every N dry chests, luck upgrade. Pure. `table` is the earned chests'
+ * unless the caller says otherwise; only a chest bought with gems rolls on GEM_CHEST_ODDS (AB#380).
+ */
+export function rollChest(s: GameState, rng: Rng, table: ChestOdds = EARNED_CHEST_ODDS): { tier: number; pityHit: boolean; upgraded: boolean } {
   let pityHit = false;
-  let pool = CHEST_ODDS;
+  let pool = table;
   if (s.pity >= ECON.pityEvery - 1) {
-    pool = CHEST_ODDS.filter((o) => o.tier >= CHEST_PITY_TIER);
+    pool = table.filter((o) => o.tier >= CHEST_PITY_TIER);
     pityHit = true;
   }
   const idx = pickWeighted(pool.map((o) => ({ weight: o.chance })), rng);
@@ -182,7 +186,7 @@ export function openChest(s: GameState, rng: Rng, source: 'free' | 'gems'): Ches
     if (s.freeChests <= 0) return { ok: false, reason: 'gems', tier: 0, index: -1 };
     s.freeChests--;
   }
-  const roll = rollChest(s, rng);
+  const roll = rollChest(s, rng, source === 'gems' ? GEM_CHEST_ODDS : EARNED_CHEST_ODDS);
   const index = placeOrStash(s, roll.tier, rng);
   s.stats.chests++;
   s.quests.chest++;
@@ -199,6 +203,18 @@ export function openChest(s: GameState, rng: Rng, source: 'free' | 'gems'): Ches
  */
 export function exactRelicCost(tier: number): number {
   return Math.max(1, Math.round(ECON.exactT5Gems * (itemWork(tier) / itemWork(5))));
+}
+
+/**
+ * What a chest returns on average, in the shop's own exact-relic gems: each row valued at exactRelicCost, with a
+ * `luck` chance of the one-tier upgrade. Pity is left out, so this is a floor: pity only ever raises a result.
+ * The measure Critique #368 used; AB#380 holds the gem chest to CHEST_MIN_VALUE_SHARE of its price with it.
+ */
+export function chestEvGems(table: ChestOdds, luck = 0): number {
+  return table.reduce((ev, o) => {
+    const up = o.tier < CHEST_TOP_TIER ? exactRelicCost(o.tier + 1) : exactRelicCost(o.tier);
+    return ev + o.chance * ((1 - luck) * exactRelicCost(o.tier) + luck * up);
+  }, 0);
 }
 
 /** Which relic the shop offers today: near the player's best Forge tier, so it is always worth having. */

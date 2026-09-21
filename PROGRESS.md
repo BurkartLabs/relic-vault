@@ -26,14 +26,16 @@ The next session reads this before it reads the code.
 
 ## Last session
 
-- Did (Board session, 2026-09-19): cleanup after the Deepen cycle 1 merge. The Rush Boost's dead push path and
-  "ends soon" sales copy are gone, and the boost is on sale for the whole Rush instead of only the last 48h (RV-D6).
-  KeeperDialog no longer throws (and freezes the game loop) when it is closed within 250 ms of opening; that crash
-  had been failing the e2e "first verb by touch" test on main.
-  SKU `gems80` renamed `gems200` (it always granted 200 gems; old saves are migrated). docs/ECONOMY.md re-synced to the code.
-- Tests: `npm test` 45/45 · `npm run typecheck` · `npm run test:e2e` 13/13.
-- Screenshots: `screenshots/deepen/*.png` (cycle 1 playthrough), `screenshots/qa/*.png`.
-- Probe: `probes/2026-09-19-deepen1.txt`. The Depth Critic calls it flattering (strawman greedy bot); RV-P2 fixes that first.
+- Did (Builder tab, 2026-09-21, AB#380 RV-M7, dispatched by OPS): **the gem chest now has its own odds table**,
+  priced against the exact relic sold beside it. Board chose "keep 50 gems, change the odds"; the Builder chose, and
+  the Board has not yet confirmed, (a) paid chest only (earned chests keep 40/30/18/9/3) and (b) the table
+  T4 10 / T6 10 / T7 25 / T8 55. EV in exact-relic gems: 7.8 before, 31.0 now at no luck (62%). `chestEvGems` and a
+  luck sweep in `sim.test.ts` hold it at ≥ 60%. The odds disclosure is derived from the tables (fixes Bug #677, which
+  said "40 gems or $2.99"), and the shop footer and odds sheet were re-laid out after screenshots showed overlap.
+- Open, filed: Bug #678, the Welcome ribbon counts its free chest at the 50-gem paid price (predates this change).
+- Tests: `npm test` 127/127 · `npm run typecheck` · `npm run test:e2e` 16/16. `play.mjs` gained an `odds` scenario
+  (also runs inside `full`).
+- Screenshots: `screenshots/ab380/*.png`.
 
 ## Next session should
 
@@ -45,9 +47,11 @@ The next session reads this before it reads the code.
 2. RV-D6 (#275): the probe now has the casual profile this story needs, and on this build the answer is no (see above).
 3. RV-D4a (#276): `docs/ROOMS.md` design only, no code. Include prestige (leave a completed room for a new one,
    keep a permanent Keeper's Renown bonus): Board idea, see MONETIZATION.md.
-4. Monetization cycle 2 (Critique #368): RV-M1 (#379) is in review — hq `ops/probes/relic-vault-value.ts`, report
-   `probes/2026-09-21-value-probe.md`. It reproduces the Critique's chest EV (7.80) and Welcome (531.3, 399%), and
-   prices every SKU in actions per profile; $52.91 buys everything once. RV-M3 (#304, packs worth ≥ 60 min) should
-   start from its table. When AB#380 merges, the gem chest's figure in it moves from 7.8 to 31.0.
+4. Monetization cycle 2 (Critique #368, COERCIVE, Feature #661): RV-M7 (AB#380) has merged (!121) and waits on QA.
+   RV-M1 (#379) is in review — hq `ops/probes/relic-vault-value.ts`, report `probes/2026-09-21-value-probe.md`. It
+   reproduces the Critique's chest EV (7.80) and Welcome (531.3, 399%), and prices every SKU in actions per profile;
+   $52.91 buys everything once. RV-M3 (#304, packs worth ≥ 60 min) should start from its table. The gem chest now rolls
+   its own table, worth 31.0; the 7.8 in that report is the earned table the Welcome chest still rolls on.
+   Bug #678 needs a PM call.
 
 Do not write a diary. Write a handoff.

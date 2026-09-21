@@ -189,7 +189,8 @@ test('chest odds are visible before spend', async ({ page }) => {
     walk((window as any).__vault.modal);
     return out.join(' | ');
   });
-  expect(texts).toMatch(/40%/);
+  // The shop sells the gem chest, so its own table must be on screen before the spend (AB#380): 55% Star-Metal Ark.
+  expect(texts).toMatch(/Star-Metal Ark 55%/);
   expect(texts).toMatch(/ODDS/);
 });
 
