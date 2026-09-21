@@ -115,6 +115,34 @@ if (scenario === 'full') {
   await closeModal(); await wait(400);
 }
 
+// Every screen that discloses chest odds, and a chest bought with gems (AB#380). Buttons are found by their label
+// in the open modal and tapped where they are drawn, the way a player would, rather than called through a handle.
+async function tapLabel(label) {
+  const p = await vs((label) => {
+    let hit = null;
+    const walk = (o) => { if (hit) return; if (o.text === label && o.parentContainer) hit = o.parentContainer; (o.list || []).forEach(walk); };
+    walk(window.__vault.modal);
+    if (!hit) return null;
+    const b = hit.getBounds();
+    return { x: b.centerX, y: b.centerY };
+  }, label);
+  if (!p) throw new Error(`no button labelled ${label} in the open modal`);
+  await tap(p.x, p.y);
+}
+if (scenario === 'odds' || scenario === 'full') {
+  await vs(() => { window.__rv.state.gems += 400; window.__vault.hud.refresh(true); window.__vault.openShop('qa', 'chest'); });
+  await wait(900); await shot('odds-shop-chest-card');
+  await tapLabel('ODDS'); await wait(900); await shot('odds-sheet');
+  await closeModal(); await wait(500);
+  await vs(() => { window.__vault.openShop('qa'); window.__vault.modal.sc?.scrollTo(99999); }); await wait(700); await shot('odds-shop-footer');
+  await closeModal(); await wait(400);
+  await vs(() => window.__vault.openChest('gems', 'qa')); await wait(2600); await shot('odds-gem-chest-open');
+  await closeModal(); await wait(400);
+  await vs(() => window.__vault.openSettings()); await wait(800);
+  await tapLabel('ODDS & DISCLOSURES'); await wait(900); await shot('odds-settings-disclosure');
+  await closeModal(); await wait(400);
+}
+
 const tele = await vs(() => window.__rv.telemetry.buf.map((e) => e.event));
 const counts = tele.reduce((a, e) => ((a[e] = (a[e] || 0) + 1), a), {});
 console.log(JSON.stringify({ errors, telemetry: counts, analytics: await vs(() => window.__rv.analytics.buf.length) }, null, 1));
