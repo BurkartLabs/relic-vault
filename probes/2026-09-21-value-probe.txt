@@ -1,0 +1,64 @@
+relic-vault value probe — 12 seeds × 14 days; medians. Pace: 1.18 s/action, the Board's measured upper bound (Bug #307).
+A relic by hand (forge T1s and merge; bindings included): Gold Mask 15 · Emerald Scarab 31 · Sapphire Heart 63 · Ruby Crown 134 · Star-Metal Ark 284 · Living Relic 677 actions.
+A free chest's relic: 47 actions by hand; a gem chest's: 47 actions.
+
+=== What each SKU grants (from applyPurchase and the reward tables) ===
+Keeper’s Welcome $1.99: 120 gems + 100,000 gold + Gold Mask, Gold Mask, Ruby Crown + 1 chest
+So Close Bundle $2.99: 120 gems + 15,000 gold + Emerald Scarab
+Pouch of Gems $2.99: 200 gems
+Chest of Gems $4.99: 500 gems
+Hoard of Gems $8.99: 1,200 gems
+Smash the Pig $2.99: 250 gems
+Keeper’s Pass $9.99: 400 gems + Emerald Scarab, Emerald Scarab, Emerald Scarab + 3 chests + card + skin + +4% luck
+Vault VIP $9.99: 150 gems + 30 chests + +2% luck + a crown + no ads
+Silence the Criers $7.99: no interstitials or banner
+$ to buy everything once (one month of VIP, a full piggy, each gem pack once): $52.91
+
+=== ENGAGED · planner — income 79.2 gems/day and 42,054 gold/day over 14 days (day 1: 225.0 gems, 22,008 gold, which includes one-off rank rewards and so overstates a steady rate) ===
+Keeper’s Welcome $1.99: 5,159 actions (≈101 min at the Board's pace) at 14-day income; 6,664 actions (≈2.2 h at the Board's pace) at day-1 income
+So Close Bundle $2.99: 2,410 actions (≈47 min at the Board's pace) at 14-day income; 1,575 actions (≈31 min at the Board's pace) at day-1 income
+Pouch of Gems $2.99: 3,209 actions (≈63 min at the Board's pace) at 14-day income; 1,130 actions (≈22 min at the Board's pace) at day-1 income
+Chest of Gems $4.99: 8,023 actions (≈2.6 h at the Board's pace) at 14-day income; 2,824 actions (≈56 min at the Board's pace) at day-1 income
+Hoard of Gems $8.99: 19,254 actions (≈6.3 h at the Board's pace) at 14-day income; 6,779 actions (≈2.2 h at the Board's pace) at day-1 income
+Smash the Pig $2.99: 4,011 actions (≈79 min at the Board's pace) at 14-day income; 1,412 actions (≈28 min at the Board's pace) at day-1 income
+Keeper’s Pass $9.99: 6,653 actions (≈2.2 h at the Board's pace) at 14-day income; 2,494 actions (≈49 min at the Board's pace) at day-1 income; not converted: card, skin, +4% luck
+Vault VIP $9.99: 3,823 actions (≈75 min at the Board's pace) at 14-day income; 2,264 actions (≈45 min at the Board's pace) at day-1 income; not converted: +2% luck, a crown, no ads
+Silence the Criers $7.99: nothing play can earn to compare with (no interstitials or banner)
+
+=== CASUAL · planner — income 51.1 gems/day and 18,102 gold/day over 14 days (day 1: 171.0 gems, 6,898 gold, which includes one-off rank rewards and so overstates a steady rate) ===
+Keeper’s Welcome $1.99: 5,012 actions (≈99 min at the Board's pace) at 14-day income; 9,482 actions (≈3.1 h at the Board's pace) at day-1 income
+So Close Bundle $2.99: 1,968 actions (≈39 min at the Board's pace) at 14-day income; 1,786 actions (≈35 min at the Board's pace) at day-1 income
+Pouch of Gems $2.99: 2,385 actions (≈47 min at the Board's pace) at 14-day income; 713 actions (≈14 min at the Board's pace) at day-1 income
+Chest of Gems $4.99: 5,964 actions (≈117 min at the Board's pace) at 14-day income; 1,784 actions (≈35 min at the Board's pace) at day-1 income
+Hoard of Gems $8.99: 14,313 actions (≈4.7 h at the Board's pace) at 14-day income; 4,281 actions (≈84 min at the Board's pace) at day-1 income
+Smash the Pig $2.99: 2,982 actions (≈59 min at the Board's pace) at 14-day income; 892 actions (≈18 min at the Board's pace) at day-1 income
+Keeper’s Pass $9.99: 5,006 actions (≈98 min at the Board's pace) at 14-day income; 1,662 actions (≈33 min at the Board's pace) at day-1 income; not converted: card, skin, +4% luck
+Vault VIP $9.99: 3,206 actions (≈63 min at the Board's pace) at 14-day income; 1,952 actions (≈38 min at the Board's pace) at day-1 income; not converted: +2% luck, a crown, no ads
+Silence the Criers $7.99: nothing play can earn to compare with (no interstitials or banner)
+
+=== ENGAGED · focused — income 121.3 gems/day and 29,899 gold/day over 14 days (day 1: 113.0 gems, 30,915 gold, which includes one-off rank rewards and so overstates a steady rate) ===
+Keeper’s Welcome $1.99: 5,720 actions (≈112 min at the Board's pace) at 14-day income; 5,672 actions (≈112 min at the Board's pace) at day-1 income
+So Close Bundle $2.99: 1,926 actions (≈38 min at the Board's pace) at 14-day income; 1,997 actions (≈39 min at the Board's pace) at day-1 income
+Pouch of Gems $2.99: 2,096 actions (≈41 min at the Board's pace) at 14-day income; 2,250 actions (≈44 min at the Board's pace) at day-1 income
+Chest of Gems $4.99: 5,240 actions (≈103 min at the Board's pace) at 14-day income; 5,624 actions (≈111 min at the Board's pace) at day-1 income
+Hoard of Gems $8.99: 12,575 actions (≈4.1 h at the Board's pace) at 14-day income; 13,497 actions (≈4.4 h at the Board's pace) at day-1 income
+Smash the Pig $2.99: 2,620 actions (≈52 min at the Board's pace) at 14-day income; 2,812 actions (≈55 min at the Board's pace) at day-1 income
+Keeper’s Pass $9.99: 4,426 actions (≈87 min at the Board's pace) at 14-day income; 4,734 actions (≈93 min at the Board's pace) at day-1 income; not converted: card, skin, +4% luck
+Vault VIP $9.99: 2,989 actions (≈59 min at the Board's pace) at 14-day income; 3,104 actions (≈61 min at the Board's pace) at day-1 income; not converted: +2% luck, a crown, no ads
+Silence the Criers $7.99: nothing play can earn to compare with (no interstitials or banner)
+
+=== CASUAL · focused — income 56.1 gems/day and 13,723 gold/day over 14 days (day 1: 14.0 gems, 7,741 gold, which includes one-off rank rewards and so overstates a steady rate) ===
+Keeper’s Welcome $1.99: 5,962 actions (≈117 min at the Board's pace) at 14-day income; 13,320 actions (≈4.4 h at the Board's pace) at day-1 income
+So Close Bundle $2.99: 2,003 actions (≈39 min at the Board's pace) at 14-day income; 6,442 actions (≈2.1 h at the Board's pace) at day-1 income
+Pouch of Gems $2.99: 2,176 actions (≈43 min at the Board's pace) at 14-day income; 8,714 actions (≈2.9 h at the Board's pace) at day-1 income
+Chest of Gems $4.99: 5,439 actions (≈107 min at the Board's pace) at 14-day income; 21,786 actions (≈7.1 h at the Board's pace) at day-1 income
+Hoard of Gems $8.99: 13,055 actions (≈4.3 h at the Board's pace) at 14-day income; 52,286 actions (≈17.1 h at the Board's pace) at day-1 income
+Smash the Pig $2.99: 2,720 actions (≈53 min at the Board's pace) at 14-day income; 10,893 actions (≈3.6 h at the Board's pace) at day-1 income
+Keeper’s Pass $9.99: 4,586 actions (≈90 min at the Board's pace) at 14-day income; 17,663 actions (≈5.8 h at the Board's pace) at day-1 income; not converted: card, skin, +4% luck
+Vault VIP $9.99: 3,048 actions (≈60 min at the Board's pace) at 14-day income; 7,952 actions (≈2.6 h at the Board's pace) at day-1 income; not converted: +2% luck, a crown, no ads
+Silence the Criers $7.99: nothing play can earn to compare with (no interstitials or banner)
+
+=== Reproducing Monetization review #2 (Critique AB#368) ===
+Chest EV in exact-relic gems, earned table: 7.80 (Critique: 7.8). Gem table on this build: 7.80 for 50 gems.
+Welcome in gem-equivalents at the shop's cross-rate (300 gold/gem), the Critique's method, chest at its 50-gem price: 531.3 = 399% of the entry baseline (Critique: ~531, 399%).
+The same with the chest at what it returns (7.8 gems) rather than its price: 489.1 = 367%. The gap is the chest: a free chest rolls on the earned table, so counting it at the paid price overstates the pack (Bug #678).
