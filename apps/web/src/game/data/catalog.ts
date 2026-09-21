@@ -29,17 +29,37 @@ export const BOARD_ROWS = econ.boardRows;
 export const BOARD_SIZE = BOARD_COLS * BOARD_ROWS;
 
 // ---- Chest odds (disclosed) ----
-// Board, #332: a 5-gem chest whose best prize is worth having (a Gold Mask is 14 actions of play).
-export const CHEST_ODDS: { tier: number; chance: number }[] = [
+export type ChestOdds = { tier: number; chance: number }[];
+
+/**
+ * Two tables, both disclosed (AB#380, Critique #368 RV-M7, Board 2026-09-21: keep the price, change the odds).
+ *
+ * EARNED_CHEST_ODDS: every chest the game gives you, from ranks, quests, the pass, the Chronicle and standings.
+ * Unchanged since Board #332, so the free economy and its progression are untouched.
+ */
+export const EARNED_CHEST_ODDS: ChestOdds = [
   { tier: 4, chance: 0.40 },
   { tier: 5, chance: 0.30 },
   { tier: 6, chance: 0.18 },
   { tier: 7, chance: 0.09 },
   { tier: 8, chance: 0.03 },
 ];
-/** Pity: a dry streak of chests below this tier ends in one at or above it. */
+/**
+ * GEM_CHEST_ODDS: the chest bought for `chestGemCost` gems. It is sold beside the exact relic, so it is priced
+ * against it: its expected relic, valued at `exactRelicCost`, is at least CHEST_MIN_VALUE_SHARE of the price with
+ * no luck at all (sim.test.ts asserts it). Buying the random box over the exact card is then a fair bet rather
+ * than one that only pays for a player who misreads the odds. On the old table it returned 7.8 gems for 50.
+ */
+export const GEM_CHEST_ODDS: ChestOdds = [
+  { tier: 4, chance: 0.10 },
+  { tier: 6, chance: 0.10 },
+  { tier: 7, chance: 0.25 },
+  { tier: 8, chance: 0.55 },
+];
+export const CHEST_MIN_VALUE_SHARE = 0.6;
+/** Pity: a dry streak of chests below this tier ends in one at or above it. One counter across both tables. */
 export const CHEST_PITY_TIER = 6;
-export const CHEST_TOP_TIER = CHEST_ODDS[CHEST_ODDS.length - 1].tier;
+export const CHEST_TOP_TIER = Math.max(...EARNED_CHEST_ODDS.map((o) => o.tier), ...GEM_CHEST_ODDS.map((o) => o.tier));
 
 // ---- SKUs ----
 export type SkuId =
@@ -80,12 +100,28 @@ export const SKUS: Record<SkuId, Sku> = {
 export const BASELINE_SKU = SKUS.gems200;
 export const GEMS_PER_DOLLAR_BASELINE = BASELINE_SKU.gems! / BASELINE_SKU.price;
 
-/** Computed, never hardcoded: gem-equivalent per dollar vs the baseline. Welcome counts its chest at 40 gems. */
+/**
+ * Computed, never hardcoded: gem-equivalent per dollar vs the baseline. Welcome counts its chest at `chestGemCost`,
+ * which overstates it: that chest rolls on the earned table (Bug #678, open).
+ */
 export function skuValuePct(id: SkuId): number {
   const s = SKUS[id];
   if (!s.gems) return 0;
   const gemEq = s.gems + (id === 'welcome' ? econ.chestGemCost : 0);
   return Math.round(((gemEq / s.price) / GEMS_PER_DOLLAR_BASELINE) * 100);
+}
+
+/**
+ * The chest disclosure, derived from the tables and the price rather than typed (Bug #677: it once said "40 gems
+ * or $2.99" for a 50-gem chest with no dollar price). Settings shows it; sim.test.ts checks it names both.
+ */
+export function chestOddsDisclosure(): string {
+  const rows = (t: ChestOdds) => t.map((o) => `  ${RELICS[o.tier].name} — ${Math.round(o.chance * 100)}%`).join('\n');
+  return `Lucky Chest, bought for ${econ.chestGemCost} gems:\n${rows(GEM_CHEST_ODDS)}\n\n` +
+    'Chests you earn or are given (ranks, quests, the pass, the Chronicle, standings, the Welcome pack):\n' +
+    `${rows(EARNED_CHEST_ODDS)}\n\n` +
+    `Pity: every ${econ.pityEvery}th chest without a ${RELICS[CHEST_PITY_TIER].name} or better is guaranteed one.\n` +
+    `Luck (${(econ.luckBase * 100).toFixed(0)}%–${econ.luckCap * 100}%) can upgrade a chest result by one tier.`;
 }
 
 // ---- Album ----
