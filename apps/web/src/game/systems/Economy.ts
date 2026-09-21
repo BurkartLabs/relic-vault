@@ -363,6 +363,11 @@ export function claimQuest(s: GameState, q: number, now: number): boolean {
   s.quests.claimed.push(q);
   grantGold(s, ECON.questGold);
   s.gems += ECON.questGems;
+  // RV-D6 (AB#275): the season's casual promise is pass tier 15 by day 14 without paying, and 12 minutes a day fell
+  // up to one tier short. Showing up is what a casual player gives, so it is paid per day rather than per action,
+  // which helps the 12-minute player more than the 25-minute one. The value is the smallest that leaves every casual
+  // probe run a tier of margin (docs/ECONOMY.md has the sweep).
+  s.pass.xp += ECON.questPassXp;
   return true;
 }
 

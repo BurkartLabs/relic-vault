@@ -1,6 +1,6 @@
 relic-vault depth probe v2 — 12 seeds × 14 days; medians unless stated.
 Pace: 1.18 s/action, the Board's measured upper bound (Bug #307). engaged = 1271 actions/day (25 min), casual = 610 actions/day (12 min).
-Not measured: floors 2-10 (bots never descend), anything bought, any human but one.
+Not measured: floors 2-10 (bots never descend), anything bought, daily quests / wheel / VIP crate (need a real clock), opening free chests, any human but one.
 
 === ENGAGED · greedy ===
 Antechamber relics seen by day 14: 9/23
@@ -9,39 +9,39 @@ Star-Metal Ark (T8): never — reached in 0/12 runs
 Living Relic (T9): never — reached in 0/12 runs
 last new relic: 381 actions (day 0.3; ≈7 min at the Board's pace)
 longest gap without a new relic: 17,430 actions (≈343 min at the Board's pace), ending at 17,794 actions (day 14.0; ≈350 min at the Board's pace)
-rank 3 (Crypt): 164 actions (day 0.1; ≈3 min at the Board's pace); rank 6 (Star Well): 1,028 actions (day 0.8; ≈20 min at the Board's pace); rank at day 14: 8
+rank 3 (Crypt): 164 actions (day 0.1; ≈3 min at the Board's pace); rank 6 (Star Well): 1,015 actions (day 0.8; ≈20 min at the Board's pace); rank at day 14: 8
 time-box: 14-day pass completes at never in 0/12 runs (target day 10-12)
 time-box: Rush top milestone in the first 4-day cycle at never in 0/12 runs; album page I at never
-gold: banked at day 14 24,441; earned over 14 days 24,291; orders filled 59; cards 4/36
-moves (seed 7000): deliver 63 merge 1,025 forge 8,917 sell 7,789 dismiss 0 stuck 0
+gold: banked at day 14 33,417; earned over 14 days 33,267; orders filled 58; cards 7/36
+moves (seed 7000): deliver 63 merge 1,003 forge 8,917 sell 7,811 dismiss 0 stuck 0
 
 === ENGAGED · planner ===
-Antechamber relics seen by day 14: 20/23
-Ruby Crown (T7): 7,910 actions (day 6.2; ≈156 min at the Board's pace) — reached in 12/12 runs
-Star-Metal Ark (T8): 15,895 actions (day 12.5; ≈313 min at the Board's pace) — reached in 5/12 runs
-Living Relic (T9): never — reached in 0/12 runs
-last new relic: 16,534 actions (day 13.0; ≈325 min at the Board's pace)
-longest gap without a new relic: 6,025 actions (≈118 min at the Board's pace), ending at 17,379 actions (day 13.7; ≈342 min at the Board's pace)
-rank 3 (Crypt): 164 actions (day 0.1; ≈3 min at the Board's pace); rank 6 (Star Well): 888 actions (day 0.7; ≈17 min at the Board's pace); rank at day 14: 23
-time-box: 14-day pass completes at 10,439 actions (day 8.2; ≈205 min at the Board's pace) in 12/12 runs (target day 10-12)
-time-box: Rush top milestone in the first 4-day cycle at 3,567 actions (day 2.8; ≈70 min at the Board's pace) in 12/12 runs; album page I at 4,426 actions (day 3.5; ≈87 min at the Board's pace)
-gold: banked at day 14 117,154; earned over 14 days 466,195; orders filled 519; cards 34/36
+Antechamber relics seen by day 14: 22/23
+Ruby Crown (T7): 2,400 actions (day 1.9; ≈47 min at the Board's pace) — reached in 12/12 runs
+Star-Metal Ark (T8): 3,400 actions (day 2.7; ≈67 min at the Board's pace) — reached in 12/12 runs
+Living Relic (T9): 12,000 actions (day 9.4; ≈236 min at the Board's pace) — reached in 1/12 runs
+last new relic: 12,761 actions (day 10.0; ≈251 min at the Board's pace)
+longest gap without a new relic: 8,623 actions (≈170 min at the Board's pace), ending at 17,794 actions (day 14.0; ≈350 min at the Board's pace)
+rank 3 (Crypt): 164 actions (day 0.1; ≈3 min at the Board's pace); rank 6 (Star Well): 867 actions (day 0.7; ≈17 min at the Board's pace); rank at day 14: 23
+time-box: 14-day pass completes at 12,768 actions (day 10.0; ≈251 min at the Board's pace) in 12/12 runs (target day 10-12)
+time-box: Rush top milestone in the first 4-day cycle at 3,353 actions (day 2.6; ≈66 min at the Board's pace) in 12/12 runs; album page I at 3,909 actions (day 3.1; ≈77 min at the Board's pace)
+gold: banked at day 14 137,810; earned over 14 days 588,760; orders filled 414; cards 36/36
 decision density (turns where this policy's move differs from the order-aware greedy move): 35% — v1's measure, turns with ≥2 legal options, would say 100%
-moves (seed 7000): deliver 553 merge 8,009 forge 9,232 sell 0 dismiss 191 stuck 0
+moves (seed 7000): deliver 397 merge 8,179 forge 9,218 sell 0 dismiss 215 stuck 0
 
 === ENGAGED · focused ===
 Antechamber relics seen by day 14: 19/23
 Ruby Crown (T7): 193 actions (day 0.2; ≈4 min at the Board's pace) — reached in 12/12 runs
-Star-Metal Ark (T8): 1,028 actions (day 0.8; ≈20 min at the Board's pace) — reached in 12/12 runs
-Living Relic (T9): 1,155 actions (day 0.9; ≈23 min at the Board's pace) — reached in 12/12 runs
-last new relic: 1,155 actions (day 0.9; ≈23 min at the Board's pace)
-longest gap without a new relic: 16,645 actions (≈327 min at the Board's pace), ending at 17,794 actions (day 14.0; ≈350 min at the Board's pace)
-rank 3 (Crypt): 185 actions (day 0.1; ≈4 min at the Board's pace); rank 6 (Star Well): 1,012 actions (day 0.8; ≈20 min at the Board's pace); rank at day 14: 20
+Star-Metal Ark (T8): 1,019 actions (day 0.8; ≈20 min at the Board's pace) — reached in 12/12 runs
+Living Relic (T9): 1,138 actions (day 0.9; ≈22 min at the Board's pace) — reached in 12/12 runs
+last new relic: 1,138 actions (day 0.9; ≈22 min at the Board's pace)
+longest gap without a new relic: 16,659 actions (≈328 min at the Board's pace), ending at 17,794 actions (day 14.0; ≈350 min at the Board's pace)
+rank 3 (Crypt): 185 actions (day 0.1; ≈4 min at the Board's pace); rank 6 (Star Well): 1,004 actions (day 0.8; ≈20 min at the Board's pace); rank at day 14: 20
 time-box: 14-day pass completes at never in 0/12 runs (target day 10-12)
-time-box: Rush top milestone in the first 4-day cycle at never in 0/12 runs; album page I at 7,207 actions (day 5.7; ≈142 min at the Board's pace)
-gold: banked at day 14 76,151; earned over 14 days 371,429; orders filled 0; cards 34/36
+time-box: Rush top milestone in the first 4-day cycle at never in 0/12 runs; album page I at 6,184 actions (day 4.9; ≈122 min at the Board's pace)
+gold: banked at day 14 97,600; earned over 14 days 418,591; orders filled 0; cards 35/36
 decision density (turns where this policy's move differs from the order-aware greedy move): 52% — v1's measure, turns with ≥2 legal options, would say 100%
-moves (seed 7000): deliver 0 merge 8,699 forge 9,095 sell 0 dismiss 0 stuck 0
+moves (seed 7000): deliver 0 merge 8,698 forge 9,096 sell 0 dismiss 0 stuck 0
 
 === CASUAL · greedy ===
 Antechamber relics seen by day 14: 9/23
@@ -50,38 +50,38 @@ Star-Metal Ark (T8): never — reached in 0/12 runs
 Living Relic (T9): never — reached in 0/12 runs
 last new relic: 381 actions (day 0.6; ≈7 min at the Board's pace)
 longest gap without a new relic: 8,176 actions (≈161 min at the Board's pace), ending at 8,540 actions (day 14.0; ≈168 min at the Board's pace)
-rank 3 (Crypt): 164 actions (day 0.3; ≈3 min at the Board's pace); rank 6 (Star Well): 1,028 actions (day 1.7; ≈20 min at the Board's pace); rank at day 14: 8
+rank 3 (Crypt): 164 actions (day 0.3; ≈3 min at the Board's pace); rank 6 (Star Well): 1,015 actions (day 1.7; ≈20 min at the Board's pace); rank at day 14: 8
 time-box: 14-day pass completes at never in 0/12 runs (target day 10-12)
 time-box: Rush top milestone in the first 4-day cycle at never in 0/12 runs; album page I at never
-gold: banked at day 14 19,182; earned over 14 days 19,032; orders filled 59; cards 4/36
-moves (seed 7000): deliver 63 merge 1,025 forge 4,290 sell 3,162 dismiss 0 stuck 0
+gold: banked at day 14 27,875; earned over 14 days 27,725; orders filled 58; cards 7/36
+moves (seed 7000): deliver 63 merge 1,003 forge 4,290 sell 3,184 dismiss 0 stuck 0
 
 === CASUAL · planner ===
-Antechamber relics seen by day 14: 18/23
-Ruby Crown (T7): 5,497 actions (day 9.0; ≈108 min at the Board's pace) — reached in 7/12 runs
-Star-Metal Ark (T8): 6,472 actions (day 10.6; ≈127 min at the Board's pace) — reached in 1/12 runs
+Antechamber relics seen by day 14: 20/23
+Ruby Crown (T7): 2,400 actions (day 3.9; ≈47 min at the Board's pace) — reached in 12/12 runs
+Star-Metal Ark (T8): 3,400 actions (day 5.6; ≈67 min at the Board's pace) — reached in 12/12 runs
 Living Relic (T9): never — reached in 0/12 runs
-last new relic: 7,355 actions (day 12.1; ≈145 min at the Board's pace)
-longest gap without a new relic: 3,254 actions (≈64 min at the Board's pace), ending at 6,830 actions (day 11.2; ≈134 min at the Board's pace)
-rank 3 (Crypt): 164 actions (day 0.3; ≈3 min at the Board's pace); rank 6 (Star Well): 888 actions (day 1.5; ≈17 min at the Board's pace); rank at day 14: 17
-time-box: 14-day pass completes at 8,447 actions (day 13.8; ≈166 min at the Board's pace) in 1/12 runs (target day 10-12)
-time-box: Rush top milestone in the first 4-day cycle at never in 0/12 runs; album page I at 4,426 actions (day 7.3; ≈87 min at the Board's pace)
-gold: banked at day 14 40,736; earned over 14 days 182,086; orders filled 376; cards 21/36
+last new relic: 5,433 actions (day 8.9; ≈107 min at the Board's pace)
+longest gap without a new relic: 3,575 actions (≈70 min at the Board's pace), ending at 8,540 actions (day 14.0; ≈168 min at the Board's pace)
+rank 3 (Crypt): 164 actions (day 0.3; ≈3 min at the Board's pace); rank 6 (Star Well): 867 actions (day 1.4; ≈17 min at the Board's pace); rank at day 14: 17
+time-box: 14-day pass completes at never in 0/12 runs (target day 10-12)
+time-box: Rush top milestone in the first 4-day cycle at never in 0/12 runs; album page I at 3,909 actions (day 6.4; ≈77 min at the Board's pace)
+gold: banked at day 14 57,575; earned over 14 days 253,433; orders filled 304; cards 23/36
 decision density (turns where this policy's move differs from the order-aware greedy move): 34% — v1's measure, turns with ≥2 legal options, would say 99%
-moves (seed 7000): deliver 366 merge 3,728 forge 4,446 sell 0 dismiss 84 stuck 0
+moves (seed 7000): deliver 295 merge 3,822 forge 4,423 sell 0 dismiss 88 stuck 0
 
 === CASUAL · focused ===
 Antechamber relics seen by day 14: 19/23
 Ruby Crown (T7): 193 actions (day 0.3; ≈4 min at the Board's pace) — reached in 12/12 runs
-Star-Metal Ark (T8): 1,028 actions (day 1.7; ≈20 min at the Board's pace) — reached in 12/12 runs
-Living Relic (T9): 1,155 actions (day 1.9; ≈23 min at the Board's pace) — reached in 12/12 runs
-last new relic: 1,155 actions (day 1.9; ≈23 min at the Board's pace)
-longest gap without a new relic: 7,391 actions (≈145 min at the Board's pace), ending at 8,540 actions (day 14.0; ≈168 min at the Board's pace)
-rank 3 (Crypt): 185 actions (day 0.3; ≈4 min at the Board's pace); rank 6 (Star Well): 1,012 actions (day 1.7; ≈20 min at the Board's pace); rank at day 14: 15
+Star-Metal Ark (T8): 1,019 actions (day 1.7; ≈20 min at the Board's pace) — reached in 12/12 runs
+Living Relic (T9): 1,138 actions (day 1.9; ≈22 min at the Board's pace) — reached in 12/12 runs
+last new relic: 1,138 actions (day 1.9; ≈22 min at the Board's pace)
+longest gap without a new relic: 7,405 actions (≈146 min at the Board's pace), ending at 8,540 actions (day 14.0; ≈168 min at the Board's pace)
+rank 3 (Crypt): 185 actions (day 0.3; ≈4 min at the Board's pace); rank 6 (Star Well): 1,004 actions (day 1.6; ≈20 min at the Board's pace); rank at day 14: 15
 time-box: 14-day pass completes at never in 0/12 runs (target day 10-12)
-time-box: Rush top milestone in the first 4-day cycle at never in 0/12 runs; album page I at 6,552 actions (day 10.7; ≈129 min at the Board's pace)
-gold: banked at day 14 52,339; earned over 14 days 159,103; orders filled 0; cards 16/36
+time-box: Rush top milestone in the first 4-day cycle at never in 0/12 runs; album page I at 5,967 actions (day 9.8; ≈117 min at the Board's pace)
+gold: banked at day 14 35,252; earned over 14 days 192,119; orders filled 0; cards 17/36
 decision density (turns where this policy's move differs from the order-aware greedy move): 52% — v1's measure, turns with ≥2 legal options, would say 99%
-moves (seed 7000): deliver 0 merge 4,178 forge 4,362 sell 0 dismiss 0 stuck 0
+moves (seed 7000): deliver 0 merge 4,179 forge 4,361 sell 0 dismiss 0 stuck 0
 
 Determinism control: the greedy baseline named the same move twice on every turn of every run (the probe throws otherwise).

@@ -362,6 +362,19 @@ describe('meta', () => {
     expect(claimQuest(s, 0, now)).toBe(false);
     expect(claimQuest(s, 1, now)).toBe(false);
   });
+  it('a daily quest pays pass XP as well as gold and gems (RV-D6, AB#275)', () => {
+    const s = createState();
+    const now = Date.now();
+    s.quests.forge = 10;
+    const before = { xp: s.pass.xp, gems: s.gems, gold: s.gold };
+    expect(claimQuest(s, 0, now)).toBe(true);
+    expect(ECON.questPassXp).toBeGreaterThan(0);
+    expect(s.pass.xp - before.xp).toBe(ECON.questPassXp);
+    expect(s.gems - before.gems).toBe(ECON.questGems);
+    expect(s.gold).toBeGreaterThan(before.gold);
+    expect(claimQuest(s, 0, now)).toBe(false); // and only once
+    expect(s.pass.xp - before.xp).toBe(ECON.questPassXp);
+  });
   it('wheel costs gems or an ad', () => {
     const s = createState();
     s.gems = 15;
@@ -484,6 +497,30 @@ describe('no random rewards for minors / loot-box-free regions (Critic ITERATE #
     // whatever else happens, no code path can queue a board-full offer any more
     expect(JSON.stringify(d.queue)).not.toContain('jammed');
     expect('onBoardFull' in d).toBe(false);
+  });
+
+  it('the Rush Boost is never pushed, and nothing it pushes depends on the Rush deadline (RV-D6, AB#275)', () => {
+    // Drive the director through every hook a session reaches, once with the Rush ending in a minute and once with
+    // it ending in two days. A deadline pop-up is FOMO (RUBRIC: coercion), so the two runs must queue the same.
+    const session = (untilEnd: number) => {
+      const s = createState();
+      s.age = 'adult';
+      const d = new OfferDirector(() => s);
+      const now = Date.now();
+      for (let i = 0; i < 80; i++) {
+        s.board[0] = 1; s.board[1] = 1;
+        d.onMerge(merge(s, 0, 1, rng()));
+        s.event.points += 60; // well past milestone 1 and on toward the top
+        s.piggy += 5;
+        d.tick(now + i * 1000, now + i * 1000 + untilEnd);
+      }
+      d.onAdComplete();
+      return d.queue.map((q) => `${q.id}:${q.trigger}`);
+    };
+    const lastMinute = session(60_000), farOff = session(2 * 86_400_000);
+    expect(lastMinute).toEqual(farOff);
+    expect(lastMinute.length).toBeGreaterThan(0); // the director did run: this is not an empty comparison
+    expect(lastMinute.join(' ')).not.toMatch(/boost|rush|deadline|ends/i);
   });
 });
 

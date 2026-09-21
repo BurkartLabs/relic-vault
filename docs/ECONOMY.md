@@ -78,8 +78,12 @@ Combo: the 3rd+ merge within 1.8 s of the previous one adds `combo × 2 + tier �
 - Gold sinks: generator upgrades (above); Relic Market (T2 60 · T3 180 · T4 520 · T5 1,500).
 - Gem sinks: Lucky Chest 50 · exact relic 1–97 by tier (see below) · fill album card 80 · gem-clear 10 · wheel 15 ·
   x2 Rush Boost 60 (30 min).
-- Gem faucets: rank-ups (3 each), orders, daily quests (2 gems + 120 gold each), duplicate cards (3), pass, Rush,
-  wheel, VIP crate, ascension.
+- Gem faucets: rank-ups (3 each), orders, daily quests (2 gems + 120 gold + 3 pass XP each), duplicate cards (3), pass,
+  Rush, wheel, VIP crate, ascension.
+- Pass XP from daily quests (AB#275): 9 a day for all three. It keeps the 12 min/day player at pass tier ≥ 15 by day 14
+  in every probe run (lowest 16), and it is the smallest value that leaves a tier of margin: 2 left two runs at
+  exactly 15; 3, 4 and 5 moved the 25 min/day player's pass from day 9.6 to 8.7, 8.6 and 8.5 (probe:
+  `probes/2026-09-21-probe-v2.md`).
 
 ## Rank
 

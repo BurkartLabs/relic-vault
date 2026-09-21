@@ -86,6 +86,7 @@
   "duplicateCardGems": 3,
   "questGold": 120,
   "questGems": 2,
+  "questPassXp": 3,
   "luckBase": 0.03,
   "luckCap": 0.18,
   "passTiers": 20,

@@ -41,13 +41,17 @@ The next session reads this before it reads the code.
 
 1. RV-P2 (#274) is in review: probe v2 (hq `ops/probes/relic-vault-runway.ts`), report `probes/2026-09-21-probe-v2.md`.
    It measures in actions, counts density against an order-aware greedy move (35%, not v1's 99%), and has casual and
-   focused players. Its findings: a focused player makes the Living Relic in ~1,155 actions (under an hour), and a
-   casual player misses the pass (1/12 runs) and the Rush top (0/12). No bot descends floors yet: that is the next
-   probe gap.
+   focused players, and (corrected by AB#379) collects rank, pass and Rush rewards. Its findings: a focused player
+   makes the Living Relic in ~1,138 actions (under an hour); an engaged planner is on time for the pass (day 10.0);
+   a casual player misses the pass and the Rush top in every run. No bot descends floors yet: the next probe gap.
 2. RV-D6 (#275): the probe now has the casual profile this story needs, and on this build the answer is no (see above).
 3. RV-D4a (#276): `docs/ROOMS.md` design only, no code. Include prestige (leave a completed room for a new one,
    keep a permanent Keeper's Renown bonus): Board idea, see MONETIZATION.md.
-4. Monetization cycle 2 (Critique #368, COERCIVE, Feature #661): RV-M7 is in review (AB#380). RV-M1 (#379), the value
-   probe, is next: when it lands, move the chest-EV check into it and have it reproduce 31.0. Bug #678 needs a PM call.
+4. Monetization cycle 2 (Critique #368, COERCIVE, Feature #661): RV-M7 (AB#380) has merged (!121) and waits on QA.
+   RV-M1 (#379) is in review — hq `ops/probes/relic-vault-value.ts`, report `probes/2026-09-21-value-probe.md`. It
+   reproduces the Critique's chest EV (7.80) and Welcome (531.3, 399%), and prices every SKU in actions per profile;
+   $52.91 buys everything once. RV-M3 (#304, packs worth ≥ 60 min) should start from its table. The gem chest now rolls
+   its own table, worth 31.0; the 7.8 in that report is the earned table the Welcome chest still rolls on.
+   Bug #678 needs a PM call.
 
 Do not write a diary. Write a handoff.
