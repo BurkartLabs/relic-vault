@@ -115,6 +115,13 @@ if (scenario === 'full') {
   await closeModal(); await wait(400);
 }
 
+// The daily quests and what they pay, pass XP included (AB#275).
+if (scenario === 'quests' || scenario === 'full') {
+  await vs(() => { const q = window.__rv.state.quests; q.forge = Math.max(q.forge, 10); q.orders = Math.max(q.orders, 1); window.__vault.openQuests(); });
+  await wait(900); await shot('quests');
+  await closeModal(); await wait(400);
+}
+
 const tele = await vs(() => window.__rv.telemetry.buf.map((e) => e.event));
 const counts = tele.reduce((a, e) => ((a[e] = (a[e] || 0) + 1), a), {});
 console.log(JSON.stringify({ errors, telemetry: counts, analytics: await vs(() => window.__rv.analytics.buf.length) }, null, 1));

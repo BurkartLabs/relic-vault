@@ -75,7 +75,7 @@ export class QuestsModal extends Modal {
       g.fillStyle(0x07050a).fillRoundedRect(-260, y - 10, 340, 28, 14);
       g.fillStyle(done ? 0x8cf08a : 0xf4c45a).fillRoundedRect(-260, y - 10, Math.max(28, 340 * prog / q.goal), 28, 14);
       B.add(g);
-      B.add(txt(vs, -90, y + 50, `${prog}/${q.goal} · ${ECON.questGold} gold + ${ECON.questGems} gems`, { size: 26, font: 'num', weight: '500', color: '#b9a9c6' }));
+      B.add(txt(vs, -90, y + 50, `${prog}/${q.goal} · ${ECON.questGold} gold + ${ECON.questGems} gems + ${ECON.questPassXp} pass XP`, { size: 26, font: 'num', weight: '500', color: '#b9a9c6' }));
       if (claimed) B.add(txt(vs, 290, y, 'DONE', { size: 40, font: 'num', weight: '700', color: '#8CF08A' }));
       else {
         const b: Button = new Button(vs, 290, y, 220, 100, 'CLAIM', () => {
