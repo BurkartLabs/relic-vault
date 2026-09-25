@@ -26,16 +26,18 @@ The next session reads this before it reads the code.
 
 ## Last session
 
-- Did (Builder tab, 2026-09-21, AB#380 RV-M7, dispatched by OPS): **the gem chest now has its own odds table**,
-  priced against the exact relic sold beside it. Board chose "keep 50 gems, change the odds"; the Builder chose, and
-  the Board has not yet confirmed, (a) paid chest only (earned chests keep 40/30/18/9/3) and (b) the table
-  T4 10 / T6 10 / T7 25 / T8 55. EV in exact-relic gems: 7.8 before, 31.0 now at no luck (62%). `chestEvGems` and a
-  luck sweep in `sim.test.ts` hold it at ≥ 60%. The odds disclosure is derived from the tables (fixes Bug #677, which
-  said "40 gems or $2.99"), and the shop footer and odds sheet were re-laid out after screenshots showed overlap.
-- Open, filed: Bug #678, the Welcome ribbon counts its free chest at the 50-gem paid price (predates this change).
-- Tests: `npm test` 127/127 · `npm run typecheck` · `npm run test:e2e` 16/16. `play.mjs` gained an `odds` scenario
-  (also runs inside `full`).
-- Screenshots: `screenshots/ab380/*.png`.
+- Did (Builder tab, 2026-09-25, Bug #678 + #751, dispatched by OPS): **the Keeper's Welcome chest rolls the paid
+  odds, and its ribbon counts what that chest returns** (Board Decision #683, option B). The purchase opens the chest
+  at once (`openChest(s, rng, 'paid')`, GEM_CHEST_ODDS) instead of leaving a `freeChests` token that rolled the
+  earned odds. `welcomeChestGems(s)` in `systems/Economy.ts` owns the counted value: 31 gems (paid-table EV, no luck),
+  or 3 for the exact Gold Mask minors and loot-box-free regions get. `skuValuePct(id, s)` moved beside it. Ribbon:
+  **113%** (92% for minors), was 128%. `welcomeValueBasis(s)` is the one sentence the Shop footer and the Welcome
+  modal both show (the modal used to say "chest at 40 gems, vs the $4.99 pack", Bug #751).
+- Filed, not fixed: #1814 (the modal draws and names a Silver Urn; the pack grants a Ruby Crown), #1819 (the Chronicle
+  e2e failed once in three full runs, cause not captured). Seen, not filed: an interstitial ad can fire when the
+  Welcome chest ceremony closes, straight after the $1.99 purchase (`maybeInterstitial('chest_close')`, predates this).
+- Tests: `npm test` 136/136 · typecheck clean · `npx playwright test` 18/18 (the new e2e reads the rendered modal and
+  shop text and checks ribbon and sentence agree). `play.mjs welcome` is the look; screenshots `screenshots/ab678/`.
 
 ## Next session should
 
@@ -50,8 +52,8 @@ The next session reads this before it reads the code.
 4. Monetization cycle 2 (Critique #368, COERCIVE, Feature #661): RV-M7 (AB#380) has merged (!121) and waits on QA.
    RV-M1 (#379) is in review — hq `ops/probes/relic-vault-value.ts`, report `probes/2026-09-21-value-probe.md`. It
    reproduces the Critique's chest EV (7.80) and Welcome (531.3, 399%), and prices every SKU in actions per profile;
-   $52.91 buys everything once. RV-M3 (#304, packs worth ≥ 60 min) should start from its table. The gem chest now rolls
-   its own table, worth 31.0; the 7.8 in that report is the earned table the Welcome chest still rolls on.
-   Bug #678 needs a PM call.
+   $52.91 buys everything once. RV-M3 (#304, packs worth ≥ 60 min) should start from its table. The gem chest and the
+   Welcome chest both roll the paid table, worth 31.0; the 7.8 in that report is the earned table. Its Welcome figure
+   (531.3, 399%) predates Bug #678 and is not what the ribbon claims (113%).
 
 Do not write a diary. Write a handoff.
