@@ -225,6 +225,43 @@ test('minor buying every SKU receives zero random rolls', async ({ page }) => {
   expect(auto).toBe(0);
 });
 
+/** Every string drawn in the open modal, from the Phaser text objects themselves. */
+const modalTexts = (page: Page) => page.evaluate(() => {
+  const out: string[] = [];
+  const walk = (o: any) => { if (o?.type === 'Text') out.push(o.text); for (const c of o?.list ?? []) walk(c); };
+  walk((window as any).__vault.modal.box);
+  return out.join('\n');
+});
+
+for (const age of ['adult', 'minor'] as const) {
+  test(`the Welcome ribbon and the sentence explaining it agree, in the modal and the shop: ${age} (Bug #678, #751)`, async ({ page }) => {
+    const errors = await boot(page, age);
+    await page.evaluate(() => (window as any).__vault.showOffer({ id: 'welcome', trigger: 'qa', delayMs: 0 }));
+    await page.waitForFunction(() => (window as any).__vault.modal?.kind === 'WelcomePack', null, { timeout: 6000 });
+    const modal = await modalTexts(page);
+    await page.evaluate(() => (window as any).__vault.modal.close());
+    await page.waitForTimeout(300);
+    await page.evaluate(() => (window as any).__vault.openShop('qa'));
+    await page.waitForFunction(() => (window as any).__vault.modal?.kind === 'ShopModal', null, { timeout: 6000 });
+    const shop = await modalTexts(page);
+
+    const pct = Number(modal.match(/(\d+)% VALUE/)![1]);
+    const counted = modal.match(/counts its [A-Za-z ]+ at (\d+) gems/);
+    expect(counted, 'the modal says what the chest was counted as').not.toBeNull();
+    expect(shop).toContain(`${pct}% VALUE`);
+    expect(shop).toContain(counted![0]); // one sentence, one number, both screens
+    expect(modal).not.toMatch(/at 40 gems|\$4\.99 pack/);
+    // The ribbon reproduces from what the two screens state: the pack's gems and price, the baseline's rate.
+    const gems = Number(modal.match(/^(\d+)$/m)![1]);
+    const price = Number(modal.match(/^\$(\d+\.\d\d)$/m)![1]);
+    const rate = Number(shop.match(/\((\d+\.\d) gems\/\$\)/)![1]);
+    const baseline = modal.match(/against the (\$\d+\.\d\d) pack/)![1];
+    expect(shop).toContain(`against the ${baseline} pack`);
+    expect(Math.abs(Math.round(((gems + Number(counted![1])) / price / rate) * 100) - pct)).toBeLessThanOrEqual(1);
+    expect(errors).toEqual([]);
+  });
+}
+
 test('patron order: tapping a complete card delivers the relics and pays', async ({ page }) => {
   const errors = await boot(page);
   await page.evaluate(() => { const rv = (window as any).__rv; rv.state.flags.tut = 3; const o = rv.state.orders[0]; rv.state.board = rv.state.board.map(() => 0); o.want.forEach((id: number, i: number) => { rv.state.board[i] = id; }); (window as any).__vault.syncBoard(); });
