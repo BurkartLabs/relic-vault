@@ -55,20 +55,22 @@ export class WelcomePack extends Modal {
       row.add([plate, img, t]);
     });
     B.add(row);
-    B.add(txt(vs, 0, top + 900, '+ two Gold Masks and a Silver Urn dropped straight onto your board.\n' +
-      `Value = gems per $ against the ${money(BASELINE_SKU.price)} pack; ${welcomeValueBasis(ctx.state)}. Gold and relics are extra.`, { size: 24, font: 'body', color: '#e8dcf0', wrap: 840 }));
+    // Anchored by its top edge below the plates: centred, the derived sentence's third line grew up into them (Bug #678).
+    B.add(txt(vs, 0, top + 882, '+ two Gold Masks and a Silver Urn dropped straight onto your board.\n' +
+      `Value = gems per $ against the ${money(BASELINE_SKU.price)} pack; ${welcomeValueBasis(ctx.state)}. Gold and relics are extra.`,
+      { size: 24, font: 'body', color: '#e8dcf0', wrap: 840, origin: [0.5, 0] }));
 
     // price + real countdown (starts at first sight, never resets)
-    this.timerText = txt(vs, 0, top + 990, '', { size: 36, font: 'num', weight: '700', color: '#FF5D6C' });
+    this.timerText = txt(vs, 0, top + 1020, '', { size: 36, font: 'num', weight: '700', color: '#FF5D6C' });
     B.add(this.timerText);
-    const buy = new Button(vs, 0, top + 1110, 520, 140, money(SKUS.welcome.price), () => {
+    const buy = new Button(vs, 0, top + 1140, 520, 140, money(SKUS.welcome.price), () => {
       vs.buy('welcome', `welcome:${trigger}`);
       this.close();
     }, { color: 'green', size: 64 });
     B.add(buy);
     vs.tweens.add({ targets: buy, scale: 1.05, duration: 500, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
-    B.add(badge(vs, 330, top + 1080, 'ONE PER KEEPER', 'gold', 150));
-    const no = txt(vs, 0, top + 1240, 'Not today', { size: 26, font: 'body', color: '#8a7a98', strokeW: 0 });
+    B.add(badge(vs, 330, top + 1110, 'ONE PER KEEPER', 'gold', 150));
+    const no = txt(vs, 0, top + 1265, 'Not today', { size: 26, font: 'body', color: '#8a7a98', strokeW: 0 });
     no.setInteractive({ useHandCursor: true }).on('pointerup', () => { ctx.analytics.log('offer_decline', { offer: 'welcome' }); this.close(); });
     B.add(no);
 
