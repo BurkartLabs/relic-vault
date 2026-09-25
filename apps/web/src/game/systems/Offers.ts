@@ -23,5 +23,5 @@ export function welcomeOpen(s: GameState, now: number): boolean {
 
 // Bug #367: a second, stale copy of the value baseline lived here (BASELINE, baselineRate, gemEquivalent,
 // valuePct) with no callers left. Two computations of one number is how the shop came to name the $4.99 pack
-// while quoting the $2.99 pack's rate. The one that ships is catalog.ts: BASELINE_SKU, GEMS_PER_DOLLAR_BASELINE
-// and skuValuePct().
+// while quoting the $2.99 pack's rate. The one that ships is catalog.ts: BASELINE_SKU, GEMS_PER_DOLLAR_BASELINE,
+// and Economy.ts: skuValuePct().

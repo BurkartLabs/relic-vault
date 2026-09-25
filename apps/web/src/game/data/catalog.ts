@@ -35,6 +35,7 @@ export type ChestOdds = { tier: number; chance: number }[];
  * Two tables, both disclosed (AB#380, Critique #368 RV-M7, Board 2026-09-21: keep the price, change the odds).
  *
  * EARNED_CHEST_ODDS: every chest the game gives you, from ranks, quests, the pass, the Chronicle and standings.
+ * Not the Welcome pack's: that one is paid for.
  * Unchanged since Board #332, so the free economy and its progression are untouched.
  */
 export const EARNED_CHEST_ODDS: ChestOdds = [
@@ -45,7 +46,8 @@ export const EARNED_CHEST_ODDS: ChestOdds = [
   { tier: 8, chance: 0.03 },
 ];
 /**
- * GEM_CHEST_ODDS: the chest bought for `chestGemCost` gems. It is sold beside the exact relic, so it is priced
+ * GEM_CHEST_ODDS: the chest bought for `chestGemCost` gems, and the one in the Keeper's Welcome, which is bought with
+ * money (Bug #678, Board Decision #683). It is sold beside the exact relic, so it is priced
  * against it: its expected relic, valued at `exactRelicCost`, is at least CHEST_MIN_VALUE_SHARE of the price with
  * no luck at all (sim.test.ts asserts it). Buying the random box over the exact card is then a fair bet rather
  * than one that only pays for a player who misreads the odds. On the old table it returned 7.8 gems for 50.
@@ -99,17 +101,8 @@ export const SKUS: Record<SkuId, Sku> = {
  */
 export const BASELINE_SKU = SKUS.gems200;
 export const GEMS_PER_DOLLAR_BASELINE = BASELINE_SKU.gems! / BASELINE_SKU.price;
-
-/**
- * Computed, never hardcoded: gem-equivalent per dollar vs the baseline. Welcome counts its chest at `chestGemCost`,
- * which overstates it: that chest rolls on the earned table (Bug #678, open).
- */
-export function skuValuePct(id: SkuId): number {
-  const s = SKUS[id];
-  if (!s.gems) return 0;
-  const gemEq = s.gems + (id === 'welcome' ? econ.chestGemCost : 0);
-  return Math.round(((gemEq / s.price) / GEMS_PER_DOLLAR_BASELINE) * 100);
-}
+// The value ribbons themselves are skuValuePct() in systems/Economy.ts: the Welcome figure counts its chest at what
+// that chest returns, which needs the chest's expected value, and that lives beside exactRelicCost (Bug #678).
 
 /**
  * The chest disclosure, derived from the tables and the price rather than typed (Bug #677: it once said "40 gems
@@ -117,8 +110,8 @@ export function skuValuePct(id: SkuId): number {
  */
 export function chestOddsDisclosure(): string {
   const rows = (t: ChestOdds) => t.map((o) => `  ${RELICS[o.tier].name} — ${Math.round(o.chance * 100)}%`).join('\n');
-  return `Lucky Chest, bought for ${econ.chestGemCost} gems:\n${rows(GEM_CHEST_ODDS)}\n\n` +
-    'Chests you earn or are given (ranks, quests, the pass, the Chronicle, standings, the Welcome pack):\n' +
+  return `Lucky Chest, bought for ${econ.chestGemCost} gems or in the ${SKUS.welcome.title}:\n${rows(GEM_CHEST_ODDS)}\n\n` +
+    'Chests you earn or are given (ranks, quests, the pass, the Chronicle, standings):\n' +
     `${rows(EARNED_CHEST_ODDS)}\n\n` +
     `Pity: every ${econ.pityEvery}th chest without a ${RELICS[CHEST_PITY_TIER].name} or better is guaranteed one.\n` +
     `Luck (${(econ.luckBase * 100).toFixed(0)}%–${econ.luckCap * 100}%) can upgrade a chest result by one tier.`;

@@ -14,7 +14,8 @@ import { upgradeGenerator, unlockGenerators, genUpgradeCost, buyExact, exactReli
 import { BINDINGS, CHAINS, itemWork, buildGold } from '../data/items';
 import { grantReward, claimVipCrate, enforceChestRules } from './Economy';
 import { welcomeOpen, welcomeDeadline, WELCOME_WINDOW_MS } from './Offers';
-import { skuValuePct, GEMS_PER_DOLLAR_BASELINE, BASELINE_SKU } from '../data/catalog';
+import { GEMS_PER_DOLLAR_BASELINE, BASELINE_SKU } from '../data/catalog';
+import { skuValuePct, welcomeChestGems, welcomeValueBasis, CHEST_EXACT_TIER } from './Economy';
 import { ECON, SKUS, SkuId, CARDS, MAX_TIER } from '../data/catalog';
 import { EARNED_CHEST_ODDS, GEM_CHEST_ODDS, CHEST_MIN_VALUE_SHARE, RELICS, chestOddsDisclosure } from '../data/catalog';
 import { chestEvGems } from './Economy';
@@ -196,16 +197,19 @@ describe('purchases', () => {
   it('the shop names the pack its value ribbons are measured against', () => {
     // Bug #367: the footer said "the $4.99 pack (66.9 gems/$)" — one pack's name beside another's rate
     expect(BASELINE_SKU.gems! / BASELINE_SKU.price).toBe(GEMS_PER_DOLLAR_BASELINE);
-    expect(skuValuePct(BASELINE_SKU.id)).toBe(100); // the baseline is by definition 100%
+    expect(skuValuePct(BASELINE_SKU.id, createState())).toBe(100); // the baseline is by definition 100%
   });
-  it('welcome pack: gems, gold, two T4 + one T3, free chest, one time only', () => {
+  it('welcome pack: gems, gold, two T4 + one T7, a chest opened on purchase, one time only', () => {
     const s = createState();
     const g = applyPurchase(s, 'welcome', rng());
     expect(g.gems).toBe(120);
     expect(g.gold).toBe(100000);
-    expect(s.board.filter((t) => t === 4).length).toBe(2);
-    expect(s.board.filter((t) => t === 7).length).toBe(1); // Board RV-B1: a Ruby Crown, not a Silver Urn
-    expect(s.freeChests).toBe(1);
+    expect(g.relics.map((r) => r.tier)).toEqual([4, 4, 7]); // Board RV-B1: a Ruby Crown, not a Silver Urn
+    // Bug #678: the chest is opened by the purchase, so no free-chest token is left to roll the earned odds later
+    expect(s.freeChests).toBe(0);
+    expect(g.chest?.ok).toBe(true);
+    expect(s.board[g.chest!.index]).toBe(g.chest!.tier);
+    expect(s.stats.chests).toBe(1);
     expect(applyPurchase(s, 'welcome', rng()).ok).toBe(false);
   });
   it('the pig fills with gems as you merge and the smash pays every whole gem (Board, #328)', () => {
@@ -312,12 +316,73 @@ describe('the gem chest against its exact alternative (AB#380, Critique #368 RV-
     expect(earned[4] / 4000).toBeGreaterThan(0.3);
     expect((earned[8] || 0) / 4000).toBeLessThan(0.1);
   });
+  it('discloses the Welcome pack chest under the paid odds, not the earned ones (Bug #678)', () => {
+    const text = chestOddsDisclosure();
+    const paid = text.slice(0, text.indexOf('Chests you earn'));
+    expect(paid).toContain(SKUS.welcome.title);
+    expect(text.slice(text.indexOf('Chests you earn'))).not.toMatch(/welcome/i);
+  });
   it('discloses the price it charges and every row of both tables (Bug #677)', () => {
     const text = chestOddsDisclosure();
     expect(text).toContain(`${ECON.chestGemCost} gems`);
     expect(text).not.toContain('$');
     for (const o of [...GEM_CHEST_ODDS, ...EARNED_CHEST_ODDS]) {
       expect(text).toContain(`${RELICS[o.tier].name} — ${Math.round(o.chance * 100)}%`);
+    }
+  });
+});
+
+describe('the Keeper’s Welcome ribbon counts its chest at what the chest returns (Bug #678, Decision #683)', () => {
+  const profiles: [string, (s: GameState) => void][] = [
+    ['adult', (s) => { s.age = 'adult'; s.lootboxesAllowed = true; }],
+    ['minor', (s) => { s.age = 'minor'; }],
+    ['loot-box-free region', (s) => { s.lootboxesAllowed = false; }],
+  ];
+  /** Buys the pack on many seeds and returns the mean exact-relic value of what stood in for the chest. */
+  const chestReturns = (setup: (s: GameState) => void, runs = 3000) => {
+    let total = 0; const tiers: Record<number, number> = {};
+    for (let seed = 1; seed <= runs; seed++) {
+      const s = createState(); setup(s);
+      const g = applyPurchase(s, 'welcome', mulberry32(seed));
+      // the chest, or the exact relic handed over in its place after the pack's own three
+      const tier = g.chest ? g.chest.tier : g.relics[3].tier;
+      tiers[tier] = (tiers[tier] || 0) + 1;
+      total += exactRelicCost(tier);
+    }
+    return { mean: total / runs, tiers };
+  };
+  /** The gems the ribbon's percentage implies it counted for the chest, back-solved from the number on screen. */
+  const impliedChestGems = (s: GameState) =>
+    (skuValuePct('welcome', s) / 100) * GEMS_PER_DOLLAR_BASELINE * SKUS.welcome.price - SKUS.welcome.gems!;
+  const roundingSlack = (0.5 / 100) * GEMS_PER_DOLLAR_BASELINE * SKUS.welcome.price; // the ribbon is a whole percent
+
+  for (const [name, setup] of profiles) {
+    it(`never counts the chest at more than it returns on average: ${name}`, () => {
+      // The join, not either side: the number on the ribbon against the relics the purchase actually hands over.
+      // On the bug the ribbon counted 50 gems and an adult's chest returned about 8.
+      const s = createState(); setup(s);
+      expect(impliedChestGems(s)).toBeLessThanOrEqual(chestReturns(setup).mean + roundingSlack);
+    });
+  }
+  it('rolls the pack’s chest on the paid table (option B), and gives minors the exact Gold Mask', () => {
+    const adult = chestReturns(profiles[0][1]).tiers;
+    expect(adult[8] / 3000).toBeGreaterThan(0.45);
+    expect((adult[4] || 0) / 3000).toBeLessThan(0.15);
+    expect(chestReturns(profiles[1][1]).tiers).toEqual({ [CHEST_EXACT_TIER]: 3000 });
+  });
+  it('pins the numbers the Decision was taken on: the chest counts 31 gems and the ribbon reads 113%', () => {
+    const adult = createState(); adult.age = 'adult'; adult.lootboxesAllowed = true;
+    expect(welcomeChestGems(adult)).toBe(31);
+    expect(skuValuePct('welcome', adult)).toBe(113);
+    const minor = createState(); minor.age = 'minor';
+    expect(welcomeChestGems(minor)).toBe(exactRelicCost(CHEST_EXACT_TIER));
+    expect(skuValuePct('welcome', minor)).toBe(92);
+  });
+  it('explains the figure with the same number it counts (Bug #751)', () => {
+    for (const [name, setup] of profiles) {
+      const s = createState(); setup(s);
+      expect(welcomeValueBasis(s), name).toContain(`at ${welcomeChestGems(s)} gems`);
+      expect(welcomeValueBasis(s), name).not.toContain(`${ECON.chestGemCost} gems`);
     }
   });
 });
@@ -537,11 +602,13 @@ describe('honest offers (Critic ITERATE #2)', () => {
   });
   it('value ribbons are computed from one baseline', () => {
     // the entry pack is the baseline by definition, and every bigger pack must beat it (Board RV-B2 re-priced them)
-    expect(skuValuePct('gems200')).toBe(100);
-    expect(skuValuePct('gems500')).toBe(Math.round(((500 / SKUS.gems500.price) / GEMS_PER_DOLLAR_BASELINE) * 100));
-    expect(skuValuePct('gems500')).toBeGreaterThan(skuValuePct('gems200'));
-    expect(skuValuePct('gems1200')).toBeGreaterThan(skuValuePct('gems500'));
-    expect(skuValuePct('welcome')).toBe(Math.round((((120 + ECON.chestGemCost) / 1.99) / GEMS_PER_DOLLAR_BASELINE) * 100));
+    const s = createState();
+    expect(skuValuePct('gems200', s)).toBe(100);
+    expect(skuValuePct('gems500', s)).toBe(Math.round(((500 / SKUS.gems500.price) / GEMS_PER_DOLLAR_BASELINE) * 100));
+    expect(skuValuePct('gems500', s)).toBeGreaterThan(skuValuePct('gems200', s));
+    expect(skuValuePct('gems1200', s)).toBeGreaterThan(skuValuePct('gems500', s));
+    // Bug #678: the Welcome chest counts at what it returns (welcomeChestGems), no longer at the 50-gem chest price
+    expect(skuValuePct('welcome', s)).toBe(Math.round((((120 + welcomeChestGems(s)) / 1.99) / GEMS_PER_DOLLAR_BASELINE) * 100));
   });
 });
 

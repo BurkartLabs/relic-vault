@@ -1119,7 +1119,7 @@ export class VaultScene extends Phaser.Scene {
     this.openShop('chest_button', 'chest');
   }
 
-  openChest(source: 'free' | 'gems', trigger: string, preRolled?: import('../systems/Economy').ChestResult) {
+  openChest(source: 'free' | 'gems' | 'paid', trigger: string, preRolled?: import('../systems/Economy').ChestResult) {
     if (!empties(ctx.state).length && !preRolled) {
       ctx.sfx.play('error');
       this.toast('No free socket. The chest will wait — merge or sell first.');
@@ -1248,11 +1248,14 @@ export class VaultScene extends Phaser.Scene {
       this.time.delayedCall(1300, () => this.cameras.main.zoomTo(1, 400, 'Sine.easeInOut'));
       g.relics.forEach((r, k) => this.dropRelic(r.index, r.tier, 250 + k * 220));
     }
-    if (sku === 'welcome' && s.freeChests > 0) this.time.delayedCall(1700, () => this.openChest('free', 'welcome_pack'));
+    // The pack's chest was opened by the purchase (Bug #678); play its ceremony, which drops the relic on COLLECT.
+    // No board sync then: it would draw the chest's relic on the board before the chest has opened.
+    const chest = g.chest;
+    if (chest?.ok) this.time.delayedCall(1700, () => this.openChest('paid', 'welcome_pack', chest));
     if (sku === 'piggy') this.hud.refresh();
     this.hud.refresh();
     this.refreshButtons();
-    this.syncBoardSoon();
+    if (!chest?.ok) this.syncBoardSoon();
     after?.();
   }
 

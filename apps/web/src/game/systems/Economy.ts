@@ -1,7 +1,7 @@
 import {
   ECON, CARDS, CARDS_PER_PAGE, ALBUM_PAGES, EARNED_CHEST_ODDS, GEM_CHEST_ODDS, type ChestOdds, CHEST_PITY_TIER, CHEST_TOP_TIER,
   EVENT_MILESTONES, PASS_FREE, PASS_PREMIUM,
-  WHEEL, Reward, MAX_TIER,
+  WHEEL, Reward, MAX_TIER, RELICS, SKUS, type SkuId, GEMS_PER_DOLLAR_BASELINE,
 } from '../data/catalog';
 import type { GameState } from './State';
 import { utcDay } from './State';
@@ -178,15 +178,18 @@ export interface ChestResult {
   ok: boolean; reason?: 'gems' | 'blocked'; tier: number; index: number; card?: CardResult; pityHit?: boolean; upgraded?: boolean;
 }
 
-/** Open a chest. `source` free = welcome/pass/event/vip grant, gems = paid with gems. */
-export function openChest(s: GameState, rng: Rng, source: 'free' | 'gems'): ChestResult {
+/**
+ * Open a chest. `source` free = pass/event/vip/reward grant, gems = paid with gems, paid = part of a pack bought with
+ * money (the Keeper's Welcome), already paid for. Anything bought rolls on GEM_CHEST_ODDS (AB#380, Bug #678).
+ */
+export function openChest(s: GameState, rng: Rng, source: 'free' | 'gems' | 'paid'): ChestResult {
   if (!chestsAllowed(s)) return { ok: false, reason: 'blocked', tier: 0, index: -1 };
   if (source === 'gems' && !spendGems(s, ECON.chestGemCost)) return { ok: false, reason: 'gems', tier: 0, index: -1 };
   if (source === 'free') {
     if (s.freeChests <= 0) return { ok: false, reason: 'gems', tier: 0, index: -1 };
     s.freeChests--;
   }
-  const roll = rollChest(s, rng, source === 'gems' ? GEM_CHEST_ODDS : EARNED_CHEST_ODDS);
+  const roll = rollChest(s, rng, source === 'free' ? EARNED_CHEST_ODDS : GEM_CHEST_ODDS);
   const index = placeOrStash(s, roll.tier, rng);
   s.stats.chests++;
   s.quests.chest++;
@@ -215,6 +218,31 @@ export function chestEvGems(table: ChestOdds, luck = 0): number {
     const up = o.tier < CHEST_TOP_TIER ? exactRelicCost(o.tier + 1) : exactRelicCost(o.tier);
     return ev + o.chance * ((1 - luck) * exactRelicCost(o.tier) + luck * up);
   }, 0);
+}
+
+/**
+ * What the Keeper's Welcome ribbon counts its chest as, in gems: what the chest this player is handed returns, not
+ * what a chest costs to buy (Bug #678, Board Decision #683, option B). The pack is bought with money, so its chest
+ * rolls on GEM_CHEST_ODDS and counts at that table's expected value with no luck, a floor. Where random rewards are
+ * off the chest is an exact Gold Mask, counted at the exact-relic price.
+ */
+export function welcomeChestGems(s: GameState): number {
+  return chestsAllowed(s) ? Math.round(chestEvGems(GEM_CHEST_ODDS)) : exactRelicCost(CHEST_EXACT_TIER);
+}
+
+/** How the Welcome figure was worked out, from the same number, for every screen that explains it. */
+export function welcomeValueBasis(s: GameState): string {
+  return chestsAllowed(s)
+    ? `the Welcome figure counts its Lucky Chest at ${welcomeChestGems(s)} gems, the average relic at its odds`
+    : `the Welcome figure counts its ${RELICS[CHEST_EXACT_TIER].name} at ${welcomeChestGems(s)} gems, the exact-relic price`;
+}
+
+/** Computed, never hardcoded: gem-equivalent per dollar vs the baseline pack. Welcome adds its chest (above). */
+export function skuValuePct(id: SkuId, s: GameState): number {
+  const sku = SKUS[id];
+  if (!sku.gems) return 0;
+  const gemEq = sku.gems + (id === 'welcome' ? welcomeChestGems(s) : 0);
+  return Math.round(((gemEq / sku.price) / GEMS_PER_DOLLAR_BASELINE) * 100);
 }
 
 /** Which relic the shop offers today: near the player's best Forge tier, so it is always worth having. */
