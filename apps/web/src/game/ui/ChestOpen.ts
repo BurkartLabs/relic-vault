@@ -8,7 +8,7 @@ import type { VaultScene } from '../scenes/VaultScene';
 
 /** Chest ceremony: drop, rattle, lid tilt, light shaft, relic fly-out, then onto the board. */
 export class ChestOpen extends Modal {
-  constructor(vs: VaultScene, source: 'free' | 'gems', private trigger: string, pre?: ChestResult) {
+  constructor(vs: VaultScene, source: 'free' | 'gems' | 'paid', private trigger: string, pre?: ChestResult) {
     super(vs, { w: 1000, h: 1300, closable: false, panelKey: 'panelDark', dim: 0.85 });
     this.kind = 'ChestOpen';
     (this.frame.list[0] as Phaser.GameObjects.NineSlice).setVisible(false); // no plaque: full-bleed ceremony

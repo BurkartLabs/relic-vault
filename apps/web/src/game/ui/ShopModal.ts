@@ -2,10 +2,10 @@ import Phaser from 'phaser';
 import { Modal, keeperLine } from './Modal';
 import { Button, txt, Scroller, badge, money, fmt, iconAmount } from './kit';
 import { ctx } from '../GameCtx';
-import { SKUS, SkuId, COPY, ECON, GEM_CHEST_ODDS, EARNED_CHEST_ODDS, CHEST_PITY_TIER, CHEST_TOP_TIER, RELICS, skuValuePct, GEMS_PER_DOLLAR_BASELINE, BASELINE_SKU } from '../data/catalog';
+import { SKUS, SkuId, COPY, ECON, GEM_CHEST_ODDS, EARNED_CHEST_ODDS, CHEST_PITY_TIER, CHEST_TOP_TIER, RELICS, GEMS_PER_DOLLAR_BASELINE, BASELINE_SKU } from '../data/catalog';
 import { skuAvailable } from '../systems/PurchaseService';
 import { computeLuck } from '../systems/LuckSystem';
-import { chestsAllowed, buyExact, buyMarket, openChest, exactRelicOffer, exactRelicCost } from '../systems/Economy';
+import { chestsAllowed, buyExact, buyMarket, openChest, exactRelicOffer, exactRelicCost, skuValuePct, welcomeValueBasis } from '../systems/Economy';
 import { empties } from '../systems/BoardSystem';
 import type { VaultScene } from '../scenes/VaultScene';
 import { OddsModal } from './Sheets';
@@ -68,7 +68,7 @@ export class ShopModal extends Modal {
         card.add(vs.add.image(-290, 90, 'gem').setDisplaySize(90, 90));
         card.add(vs.add.image(-190, 100, 'coin').setDisplaySize(80, 80));
         const rib = vs.add.image(160, -112, 'ribbon').setDisplaySize(560, 100);
-        const rt = txt(vs, 160, -122, `ONE TIME · ${skuValuePct('welcome')}% VALUE`, { size: 34, weight: '900', gold: true });
+        const rt = txt(vs, 160, -122, `ONE TIME · ${skuValuePct('welcome', s)}% VALUE`, { size: 34, weight: '900', gold: true });
         card.add([rib, rt]);
       } else if (heroSku === 'comeback') {
         card.add(vs.add.image(-290, 0, 'relic256', 'R5').setDisplaySize(220, 220));
@@ -107,7 +107,7 @@ export class ShopModal extends Modal {
         card.add(vs.add.image(gx, gy, 'gem').setDisplaySize(84 - row * 6, 84 - row * 6).setAngle((g * 37) % 30 - 15));
       }
       card.add(txt(vs, 0, 40, fmt(sku.gems!), { size: 60, font: 'num', weight: '700', color: '#7EE0FF' }));
-      const pct = skuValuePct(id);
+      const pct = skuValuePct(id, s);
       card.add(txt(vs, 0, 94, pct > 100 ? `+${pct - 100}% VALUE` : 'STANDARD', { size: 26, font: 'num', weight: '700', color: pct > 100 ? '#8CF08A' : '#b9a9c6' }));
       card.add(txt(vs, 0, 126, `${(sku.gems! / sku.price).toFixed(1)} gems per $`, { size: 22, font: 'body', color: '#b9a9c6', strokeW: 0 }));
       card.add(new Button(vs, 0, 182, 240, 92, money(sku.price), () => this.purchase(id), { color: 'green', size: 38, guard }));
@@ -211,7 +211,7 @@ export class ShopModal extends Modal {
     const legal = txt(vs, 490, y + 10,
       `Lucky Chest odds for ${ECON.chestGemCost} gems: ${odds(GEM_CHEST_ODDS)}. Chests you earn: ${odds(EARNED_CHEST_ODDS)}. Every ${ECON.pityEvery}th chest without a ${RELICS[CHEST_PITY_TIER].name} or better is guaranteed one. ` +
       `Luck may upgrade a result by one tier. Exact relics are always available for gems or gold.\n` +
-      `Value ribbons compare gems per dollar against the ${money(BASELINE_SKU.price)} pack (${GEMS_PER_DOLLAR_BASELINE.toFixed(1)} gems/$); the Welcome figure counts its chest at ${ECON.chestGemCost} gems, gold and relics are extra. ` +
+      `Value ribbons compare gems per dollar against the ${money(BASELINE_SKU.price)} pack (${GEMS_PER_DOLLAR_BASELINE.toFixed(1)} gems/$); ${welcomeValueBasis(s)}; gold and relics are extra. ` +
       `DEMO MODE: purchases are simulated. No real money is charged. Restore & manage purchases in Settings.`,
       { size: 22, font: 'body', color: '#9a8aa8', wrap: 900, strokeW: 0, shadow: false, lineSpacing: 4, origin: [0.5, 0] });
     C.add(legal);

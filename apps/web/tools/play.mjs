@@ -150,6 +150,47 @@ if (scenario === 'quests' || scenario === 'full') {
   await closeModal(); await wait(400);
 }
 
+// The Keeper's Welcome: its ribbon, the sentence that explains it, and the chest the purchase opens (Bug #678, #751).
+// Bought through the modal's own price button; the pack is reset between runs so the same save buys it again.
+if (scenario === 'welcome') {
+  const valueText = () => vs(() => {
+    const out = []; const walk = (o) => { if (o?.type === 'Text' && /VALUE|counts its/.test(o.text)) out.push(o.text); (o?.list || []).forEach(walk); };
+    walk(window.__vault.modal?.box); return out;
+  });
+  const boardNow = () => vs(() => ({ inState: window.__rv.state.board.filter(Boolean).length, drawn: window.__vault.relics.filter(Boolean).length,
+    satchel: window.__rv.state.satchel.length, freeChests: window.__rv.state.freeChests, chestsOpened: window.__rv.state.stats.chests, modal: window.__vault.modal?.kind ?? null }));
+  const offer = async () => { await vs(() => { window.__rv.state.ent.welcome = false; window.__vault.showOffer({ id: 'welcome', trigger: 'qa', delayMs: 0 }); }); await wait(1200); };
+  const buyAndOpen = async (tag) => {
+    await offer();
+    console.log(`${tag} before:`, JSON.stringify(await boardNow()));
+    await tapLabel('$1.99');
+    await wait(1300); await shot(`${tag}-relics-landing`);
+    console.log(`${tag} 1.3 s after buying:`, JSON.stringify(await boardNow()));
+    await page.waitForFunction(() => window.__vault.modal?.kind === 'ChestOpen', null, { timeout: 5000 });
+    await wait(3200); await shot(`${tag}-chest-revealed`);
+    await tapLabel('COLLECT'); await wait(1400); await shot(`${tag}-collected`);
+    console.log(`${tag} after COLLECT:`, JSON.stringify(await boardNow()));
+  };
+
+  await offer(); await shot('welcome-modal');
+  console.log('modal:', JSON.stringify(await valueText()));
+  await closeModal(); await wait(400);
+  await vs(() => window.__vault.openShop('qa')); await wait(900); await shot('welcome-shop-hero');
+  console.log('shop hero:', JSON.stringify(await valueText()));
+  await vs(() => window.__vault.modal.sc?.scrollTo(99999)); await wait(700); await shot('welcome-shop-footer');
+  console.log('shop footer:', JSON.stringify(await valueText()));
+  await closeModal(); await wait(400);
+
+  await buyAndOpen('welcome-buy');
+  await vs(() => window.__vault.debugFill()); await wait(500);
+  await buyAndOpen('welcome-buy-full-board');
+
+  await vs(() => { window.__rv.state.age = 'minor'; });
+  await offer(); await shot('welcome-modal-minor');
+  console.log('minor modal:', JSON.stringify(await valueText()));
+  await closeModal(); await wait(400);
+}
+
 const tele = await vs(() => window.__rv.telemetry.buf.map((e) => e.event));
 const counts = tele.reduce((a, e) => ((a[e] = (a[e] || 0) + 1), a), {});
 console.log(JSON.stringify({ errors, telemetry: counts, analytics: await vs(() => window.__rv.analytics.buf.length) }, null, 1));

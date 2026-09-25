@@ -2,7 +2,7 @@ import { SKUS, SkuId } from '../data/catalog';
 import type { GameState } from './State';
 import type { Rng } from './Rng';
 import { placeOrStash } from './BoardSystem';
-import { grantGold, grantChests, piggyGems } from './Economy';
+import { grantGold, grantChests, piggyGems, chestsAllowed, openChest, type ChestResult } from './Economy';
 import { welcomeOpen } from './Offers';
 
 export interface PurchaseGrant {
@@ -12,7 +12,8 @@ export interface PurchaseGrant {
   gems: number;
   gold: number;
   relics: { tier: number; index: number }[];
-  freeChests: number;
+  /** A chest the pack opened on purchase: its relic is already placed, the scene only plays the ceremony. */
+  chest?: ChestResult;
 }
 
 export function skuAvailable(s: GameState, sku: SkuId): boolean {
@@ -27,7 +28,7 @@ export function skuAvailable(s: GameState, sku: SkuId): boolean {
 
 /** Pure entitlement grant. Identical in demo and storekit modes. */
 export function applyPurchase(s: GameState, sku: SkuId, rng: Rng, now = Date.now()): PurchaseGrant {
-  const g: PurchaseGrant = { ok: true, sku, gems: 0, gold: 0, relics: [], freeChests: 0 };
+  const g: PurchaseGrant = { ok: true, sku, gems: 0, gold: 0, relics: [] };
   if (!skuAvailable(s, sku)) return { ...g, ok: false, reason: 'owned' };
   const def = SKUS[sku];
   switch (sku) {
@@ -35,7 +36,10 @@ export function applyPurchase(s: GameState, sku: SkuId, rng: Rng, now = Date.now
       s.ent.welcome = true;
       s.gems += def.gems!; s.gold += def.gold!; g.gems = def.gems!; g.gold = def.gold!;
       for (const t of [4, 4, 7]) g.relics.push({ tier: t, index: placeOrStash(s, t, rng) }); // Board RV-B1: a Ruby Crown, not a Silver Urn
-      { const exact = grantChests(s, 1, rng); if (exact.length) g.relics.push(...exact); else g.freeChests = 1; }
+      // Bug #678, Board Decision #683 (option B): the pack is bought with money, so its chest rolls the paid odds, and
+      // it opens now: a free-chest token would roll the earned odds whenever the player got round to it.
+      if (chestsAllowed(s)) g.chest = openChest(s, rng, 'paid');
+      else g.relics.push(...grantChests(s, 1, rng));
       break;
     case 'gems200': case 'gems500': case 'gems1200':
       s.gems += def.gems!; g.gems = def.gems!;
