@@ -18,6 +18,7 @@ import { GEMS_PER_DOLLAR_BASELINE, BASELINE_SKU } from '../data/catalog';
 import { skuValuePct, welcomeChestGems, welcomeValueBasis, CHEST_EXACT_TIER } from './Economy';
 import { ECON, SKUS, SkuId, CARDS, MAX_TIER } from '../data/catalog';
 import { EARNED_CHEST_ODDS, GEM_CHEST_ODDS, CHEST_MIN_VALUE_SHARE, RELICS, chestOddsDisclosure } from '../data/catalog';
+import { WELCOME_RELICS, relicListText } from '../data/catalog';
 import { chestEvGems } from './Economy';
 import { standings, playerPlace, cyclePrize, keeperPoints } from './Standings';
 import { TITLES, earnedTitles, unclaimedRankRewards, defaultProfile, profileName, CRESTS } from './Profile';
@@ -198,6 +199,21 @@ describe('purchases', () => {
     // Bug #367: the footer said "the $4.99 pack (66.9 gems/$)" — one pack's name beside another's rate
     expect(BASELINE_SKU.gems! / BASELINE_SKU.price).toBe(GEMS_PER_DOLLAR_BASELINE);
     expect(skuValuePct(BASELINE_SKU.id, createState())).toBe(100); // the baseline is by definition 100%
+  });
+  it('the Welcome modal, the Shop and the grant name the same relics (Bug #1814)', () => {
+    const g = applyPurchase(createState(), 'welcome', rng());
+    expect(g.relics.map((r) => r.tier)).toEqual([...WELCOME_RELICS]);
+    expect(relicListText(WELCOME_RELICS)).toBe('two Gold Masks and a Ruby Crown');
+    // The Shop's blurb was already right; it names each group the grant places, and no Silver Urn.
+    for (const part of relicListText(WELCOME_RELICS).split(' and ')) expect(SKUS.welcome.blurb).toContain(part);
+    expect(SKUS.welcome.blurb).not.toContain('Silver Urn');
+    // The modal's art and small print are checked in the running game: e2e/welcome-modal.spec.ts.
+  });
+  it('relicListText groups relics by tier in order, with counts and articles', () => {
+    expect(relicListText([3])).toBe('a Silver Urn');
+    expect(relicListText([4, 4, 4])).toBe('three Gold Masks');
+    expect(relicListText([4, 7, 3])).toBe('a Gold Mask, a Ruby Crown and a Silver Urn');
+    expect(relicListText([])).toBe('');
   });
   it('welcome pack: gems, gold, two T4 + one T7, a chest opened on purchase, one time only', () => {
     const s = createState();

@@ -1,4 +1,4 @@
-import { SKUS, SkuId } from '../data/catalog';
+import { SKUS, SkuId, WELCOME_RELICS } from '../data/catalog';
 import type { GameState } from './State';
 import type { Rng } from './Rng';
 import { placeOrStash } from './BoardSystem';
@@ -35,7 +35,7 @@ export function applyPurchase(s: GameState, sku: SkuId, rng: Rng, now = Date.now
     case 'welcome':
       s.ent.welcome = true;
       s.gems += def.gems!; s.gold += def.gold!; g.gems = def.gems!; g.gold = def.gold!;
-      for (const t of [4, 4, 7]) g.relics.push({ tier: t, index: placeOrStash(s, t, rng) }); // Board RV-B1: a Ruby Crown, not a Silver Urn
+      for (const t of WELCOME_RELICS) g.relics.push({ tier: t, index: placeOrStash(s, t, rng) }); // Board RV-B1: a Ruby Crown, not a Silver Urn
       // Bug #678, Board Decision #683 (option B): the pack is bought with money, so its chest rolls the paid odds, and
       // it opens now: a free-chest token would roll the earned odds whenever the player got round to it.
       if (chestsAllowed(s)) g.chest = openChest(s, rng, 'paid');

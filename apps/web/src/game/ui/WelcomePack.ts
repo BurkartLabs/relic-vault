@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { Modal, keeperLine } from './Modal';
 import { Button, txt, badge, money, dur } from './kit';
 import { ctx } from '../GameCtx';
-import { SKUS, COPY, BASELINE_SKU } from '../data/catalog';
+import { SKUS, COPY, BASELINE_SKU, WELCOME_RELICS, relicListText } from '../data/catalog';
 import { welcomeDeadline } from '../systems/Offers';
 import { chestsAllowed, skuValuePct, welcomeValueBasis } from '../systems/Economy';
 import type { VaultScene } from '../scenes/VaultScene';
@@ -35,13 +35,16 @@ export class WelcomePack extends Modal {
     B.add([rib, rt]);
     vs.tweens.add({ targets: [rib, rt], scale: { from: 1, to: 1.04 }, duration: 600, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
 
-    // loot arrangement
+    // loot arrangement: the relics the purchase places (WELCOME_RELICS), two either side and the last in front
+    // (Bug #1814: this drew a Silver Urn after RV-B1 made the third a Ruby Crown)
     const loot = vs.add.container(0, top + 520);
-    const m1 = vs.add.image(-150, -20, 'relic256', 'R4').setDisplaySize(230, 230);
-    const m2 = vs.add.image(150, -20, 'relic256', 'R4').setDisplaySize(230, 230);
-    const urn = vs.add.image(0, 30, 'relic256', 'R3').setDisplaySize(190, 190);
-    loot.add([m1, m2, urn]);
-    [m1, m2, urn].forEach((o, k) => vs.tweens.add({ targets: o, y: o.y - 10, duration: 1200 + k * 200, yoyo: true, repeat: -1, ease: 'Sine.InOut' }));
+    const spots = [{ x: -150, y: -20, size: 230 }, { x: 150, y: -20, size: 230 }, { x: 0, y: 30, size: 190 }];
+    const relics = WELCOME_RELICS.map((t, k) => {
+      const at = spots[k] ?? spots[spots.length - 1];
+      return vs.add.image(at.x, at.y, 'relic256', `R${t}`).setDisplaySize(at.size, at.size);
+    });
+    loot.add(relics);
+    relics.forEach((o, k) => vs.tweens.add({ targets: o, y: o.y - 10, duration: 1200 + k * 200, yoyo: true, repeat: -1, ease: 'Sine.InOut' }));
     B.add(loot);
 
     const row = vs.add.container(0, top + 790);
@@ -56,7 +59,7 @@ export class WelcomePack extends Modal {
     });
     B.add(row);
     // Anchored by its top edge below the plates: centred, the derived sentence's third line grew up into them (Bug #678).
-    B.add(txt(vs, 0, top + 882, '+ two Gold Masks and a Silver Urn dropped straight onto your board.\n' +
+    B.add(txt(vs, 0, top + 882, `+ ${relicListText(WELCOME_RELICS)} dropped straight onto your board.\n` +
       `Value = gems per $ against the ${money(BASELINE_SKU.price)} pack; ${welcomeValueBasis(ctx.state)}. Gold and relics are extra.`,
       { size: 24, font: 'body', color: '#e8dcf0', wrap: 840, origin: [0.5, 0] }));
 
