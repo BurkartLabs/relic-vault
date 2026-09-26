@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { Modal, keeperLine } from './Modal';
 import { Button, txt, money, fmt, dur, badge, Scroller } from './kit';
+import { keeperLayout } from './keeperLayout';
 import { ctx } from '../GameCtx';
 import { RELICS, ECON, COPY, SKUS, GEM_CHEST_ODDS, EARNED_CHEST_ODDS, CHEST_PITY_TIER, MAX_TIER } from '../data/catalog';
 import { lowest, sell, sellValue, findPair } from '../systems/BoardSystem';
@@ -181,6 +182,17 @@ export class KeeperDialog extends Modal {
     B.add(t);
     const cont = txt(vs, 110, 140, 'tap to continue', { size: 28, font: 'body', color: '#b9a9c6' });
     B.add(cont);
+    // Bug #2036: the hint goes below the line as it actually wrapped, not at a fixed y the line can run over; a line
+    // too long even for that is set smaller until it fits (setText re-applies the gold fill for the new height).
+    let size = 44;
+    let at = keeperLayout(t.height, cont.height);
+    while (!at.fits && size > 30) {
+      size -= 4;
+      t.setFontSize(size).setStroke('#2a1402', Math.round(size / 7)).setText(line);
+      at = keeperLayout(t.height, cont.height);
+    }
+    t.setY(at.msgY);
+    cont.setY(at.hintY);
     vs.tweens.add({ targets: cont, alpha: 0.4, duration: 600, yoyo: true, repeat: -1 });
     this.onClosed = onDone;
     // never block input for more than 1.2s: dismiss on any tap, auto-arm immediately
