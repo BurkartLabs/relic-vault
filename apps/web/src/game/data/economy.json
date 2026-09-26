@@ -87,6 +87,7 @@
   "questGold": 120,
   "questGems": 2,
   "questPassXp": 3,
+  "questAutoMerges": 1,
   "luckBase": 0.03,
   "luckCap": 0.18,
   "passTiers": 20,
