@@ -42,7 +42,11 @@ export class GameCtx {
     rank: this.state.rank, gems: this.state.gems, gold: this.state.gold,
   }), (e) => {
     const mapped = TELEMETRY_MAP[e.type];
-    if (mapped) this.telemetry.track(mapped, { sku: e.sku ?? e.offer, trigger: e.trigger, gems: e.gems, gold: e.gold, rank: e.rank });
+    if (!mapped) return;
+    // RV-M8 (AB#383): an offer event carries the offer and its trigger and nothing else (docs/ANALYTICS.md); the
+    // envelope adds the anonymous device id and the per-boot session id, which is what the per-session cap is read by.
+    if (mapped === 'offer_shown' || mapped === 'offer_dismiss') this.telemetry.track(mapped, { sku: e.sku ?? e.offer, trigger: e.trigger });
+    else this.telemetry.track(mapped, { sku: e.sku ?? e.offer, trigger: e.trigger, gems: e.gems, gold: e.gold, rank: e.rank });
   });
   director = new OfferDirector(() => this.state);
   private saveTimer: number | null = null;
