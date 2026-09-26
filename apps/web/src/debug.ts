@@ -1,18 +1,24 @@
 import { ctx } from './game/GameCtx';
+import { COPY } from './game/data/catalog';
+import type { OfferId } from './game/systems/OfferDirector';
 
 /** ?debug=1 only. DOM is allowed for this panel per spec. */
 export function mountDebug() {
   const el = document.createElement('div');
   el.id = 'rv-debug';
   const vs = () => (window as any).__vault;
+  // Bug #2025: typed, so an offer id the game no longer has fails tsc instead of making a button that does nothing.
+  const offer = (id: OfferId) => vs()?.showOffer({ id, trigger: 'debug', delayMs: 0 });
   const acts: [string, () => void][] = [
     ['+500 gems', () => { ctx.state.gems += 500; vs()?.hud.refresh(true); }],
     ['+10k gold', () => { ctx.state.gold += 10000; vs()?.hud.refresh(true); }],
     ['piggy $3', () => { ctx.state.piggy = 300; vs()?.hud.refresh(); }],
     ['fill board', () => vs()?.debugFill()],
     ['T8 pair', () => { const s = ctx.state; const e = s.board.map((t, i) => (t ? -1 : i)).filter((i) => i >= 0); if (e.length > 1) { s.board[e[0]] = 8; s.board[e[1]] = 8; vs()?.syncBoard(); } }],
-    ['welcome', () => vs()?.showOffer({ id: 'welcome', trigger: 'debug', delayMs: 0 })],
-    ['jammed', () => vs()?.showOffer({ id: 'jammed', trigger: 'debug', delayMs: 0 })],
+    ['welcome', () => offer('welcome')],
+    ['comeback', () => offer('comeback')],
+    // AB#441 replaced the Vault Jammed offer with a line that fades: this shows it without filling the board first.
+    ['board full', () => vs()?.toast(COPY.boardFull)],
     ['chest', () => { ctx.state.freeChests++; vs()?.openChest('free', 'debug'); }],
     ['event pts', () => { ctx.state.event.points += 500; }],
     ['pass xp', () => { ctx.state.pass.xp += 200; }],

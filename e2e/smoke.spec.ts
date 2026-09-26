@@ -473,3 +473,28 @@ test('the unreadable-save Keeper line and its "tap to continue" hint do not over
   expect(b.hint.bottom, 'the hint ends inside the dialog').toBeLessThanOrEqual(b.frame.bottom);
   expect(errors).toEqual([]);
 });
+
+// Bug #2025: the ?debug=1 panel's "jammed" button called an offer id AB#441 removed and did nothing. Its offer buttons
+// open what they name, and "board full" shows the line that replaced Vault Jammed.
+test("the debug panel's offer buttons open what they name (Bug #2025)", async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await page.goto('/?debug=1');
+  await page.locator('#age-gate button[data-a="adult"]').click({ timeout: 20_000 });
+  await page.waitForFunction(() => (window as any).__vault?.hud, null, { timeout: 30_000 });
+  await page.evaluate(() => { (window as any).__rv.state.flags.tut = 3; (window as any).__vault.modal?.close(); });
+  await page.waitForTimeout(400);
+  const panel = page.locator('#rv-debug');
+  await expect(panel.getByRole('button', { name: 'jammed' })).toHaveCount(0);
+  await panel.getByRole('button', { name: 'comeback', exact: true }).click();
+  await page.waitForFunction(() => (window as any).__vault.modal?.kind === 'OfferSheet', null, { timeout: 5000 });
+  await page.waitForTimeout(500); // the sheet's open tween
+  await page.screenshot({ path: 'screenshots/qa/debug-comeback.png' });
+  await page.evaluate(() => (window as any).__vault.modal.close());
+  await page.waitForTimeout(400);
+  await panel.getByRole('button', { name: 'board full', exact: true }).click();
+  expect(await page.evaluate(() => (window as any).__vault.lastToast)).toBe('The dais is full. Merge two of a kind to make room.');
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: 'screenshots/qa/debug-board-full.png' });
+  expect(errors).toEqual([]);
+});
