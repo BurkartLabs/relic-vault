@@ -508,3 +508,61 @@ test("the debug panel's offer buttons open what they name (Bug #2025)", async ({
   await page.screenshot({ path: 'screenshots/qa/debug-board-full.png' });
   expect(errors).toEqual([]);
 });
+
+// RV-M2a (AB#381): the shop's Power-ups section, an Auto-Merge bought and used, and a merge a Stand-in completes.
+test('power-ups: bought in the shop, Auto-Merge merges every pair, a Stand-in completes a merge (AB#381)', async ({ page }) => {
+  const errors = await boot(page);
+  await page.evaluate(() => {
+    const rv = (window as any).__rv, v = (window as any).__vault;
+    rv.state.flags.tut = 3; rv.state.gems = 200; v.modal?.close();
+  });
+  await page.waitForTimeout(400);
+  await page.evaluate(() => (window as any).__vault.openShop('qa'));
+  await page.waitForFunction(() => (window as any).__vault.modal?.kind === 'ShopModal', null, { timeout: 5000 });
+  const scrollToPowerUps = () => page.evaluate(() => { const m = (window as any).__vault.modal; m.sc.scrollTo(m.anchors.powerups - 20); });
+  await scrollToPowerUps();
+  await page.waitForTimeout(400);
+  const said = await page.evaluate(() => { const out: string[] = []; const walk = (o: any) => { if (o.text) out.push(o.text); (o.list || []).forEach(walk); }; walk((window as any).__vault.modal); return out.join(' | '); });
+  expect(said).toContain('POWER-UPS');
+  expect(said).toContain('AUTO-MERGE');
+  expect(said).toContain('CANDLE SKULL STAND-IN');
+  await page.screenshot({ path: 'screenshots/qa/powerups-shop.png' });
+
+  // buy one Auto-Merge and a Candle Skull Stand-in through the shop's own handlers
+  const before = (await state(page)).gems;
+  await page.evaluate(() => { const m = (window as any).__vault.modal; m.buyPowerUp('auto'); });
+  await page.evaluate(() => { const m = (window as any).__vault.modal; m.buyPowerUp(13); });
+  const after = await state(page);
+  expect(after.powerUps.autoMerge).toBe(1);
+  expect(after.powerUps.standIn['13']).toBe(1);
+  expect(before - after.gems).toBeGreaterThan(0);
+  await page.waitForTimeout(400);
+  await page.screenshot({ path: 'screenshots/qa/powerups-bought.png' });
+
+  // a board with pairs, then USE from the shop
+  await page.evaluate(() => { const rv = (window as any).__rv, v = (window as any).__vault; rv.state.board = rv.state.board.map(() => 0); [2, 2, 2, 2, 3, 3, 4].forEach((t: number, i: number) => { rv.state.board[i] = t; }); v.syncBoard(); });
+  await page.evaluate(() => (window as any).__vault.modal.useAutoMerge());
+  await page.waitForTimeout(900);
+  const merged = await state(page);
+  expect(merged.powerUps.autoMerge).toBe(0);
+  expect(merged.board.filter((t: number) => t).sort()).toEqual([3, 3, 4, 4]);
+  expect(await page.evaluate(() => (window as any).__vault.lastToast)).toBe('Auto-Merge: 3 merges.');
+  await page.screenshot({ path: 'screenshots/qa/powerups-auto-merge.png' });
+
+  // two Emerald Scarabs (T6) and no Candle Skull: dragging one onto the other merges through the Stand-in
+  await page.evaluate(() => { const rv = (window as any).__rv, v = (window as any).__vault; rv.state.board = rv.state.board.map(() => 0); rv.state.board[7] = 6; rv.state.board[8] = 6; v.syncBoard(); });
+  // the So Close offer answers two Scarabs on the board; it is not what this checks
+  await page.waitForTimeout(1500);
+  await page.evaluate(() => (window as any).__vault.modal?.close());
+  await page.waitForTimeout(500);
+  // every toast, since a card drop from the same merge can follow the Stand-in's and take lastToast
+  await page.evaluate(() => { const v = (window as any).__vault, t = v.toast.bind(v); (window as any).__toasts = []; v.toast = (m: string) => { (window as any).__toasts.push(m); return t(m); }; });
+  await dragCells(page, 7, 8);
+  await page.waitForTimeout(500);
+  const bound = await state(page);
+  expect(bound.board[8]).toBe(7);
+  expect(bound.powerUps.standIn['13']).toBeUndefined();
+  expect(await page.evaluate(() => (window as any).__toasts)).toContain("A Stand-in took the Candle Skull's place.");
+  await page.screenshot({ path: 'screenshots/qa/powerups-stand-in.png' });
+  expect(errors).toEqual([]);
+});
