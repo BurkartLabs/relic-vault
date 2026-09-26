@@ -108,6 +108,43 @@ export class VaultScene extends Phaser.Scene {
 
   constructor() { super('Vault'); }
 
+  /**
+   * Bug #341: the scene restarts itself (250 ms after a resize, and on every floor change), and Phaser's restart runs
+   * init() and create() again on this same object. Its clock and tweens are cleared, but fields set once at
+   * construction are not: gens kept the last run's destroyed generators (create only pushes), and the first rank-up
+   * that woke a chain wrote to a dead label ("this.data is null" in refreshGenerators -> setText). modal, pendingOffer
+   * and toasts held the same kind of dead reference, which would block taps, stop offers, or tween destroyed toasts.
+   * So every field that belongs to one run starts empty here. What belongs to the session stays: lastInterstitial
+   * (ad pacing), lastActionAt, and discoveries (item ids still owed a card, which pumpOffers shows).
+   */
+  init() {
+    this.relics = [];
+    this.modal = null;
+    this.selected = -1;
+    this.keeperBtn = undefined;
+    this.bubbleWasReady = false;
+    this.gens = [];
+    this.knownGens = [];
+    this.eyes = [];
+    this.decor = [];
+    this.fogs = [];
+    this.busy = 0;
+    this.press = null;
+    this.dragging = false;
+    this.offerTimer = undefined;
+    this.pendingOffer = false;
+    this.matchPulse = [];
+    this.combo = 0;
+    this.lastMergeAt = 0;
+    this.idleHinted = false;
+    this.parallax = { x: 0, y: 0, tx: 0, ty: 0 };
+    this.para = [];
+    this.toasts = [];
+    this.lastToast = '';
+    // A resize's restart still waiting when the scene goes away for another reason must not fire into the next run.
+    this.events.once('shutdown', () => { clearTimeout(this.resizeTimer); this.resizeTimer = undefined; });
+  }
+
   // ------------------------------------------------------------------ layout helpers
   cellPos(i: number) {
     const c = i % BOARD_COLS, r = Math.floor(i / BOARD_COLS);
