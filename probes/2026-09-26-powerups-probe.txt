@@ -1,0 +1,14 @@
+# relic-vault power-up probe (AB#381), 2026-09-26, hq ops/probes/relic-vault-powerups.ts on branch agent/381-power-ups
+Prices: Auto-Merge 3 gems; Stand-ins #4 3, #6 10, #13 2, #14 3, #16 17, #24 4.
+
+=== ENGAGED planner (25 min/day, 1271 actions/day, 12 seeds x 14 days) ===
+without power-ups: 106.8 gems/day earned and banked; 404.7 orders filled; rank 23.0 at day 14
+with power-ups, plain (buys power-ups as it plays): 110.0 gems/day earned, 73.3 spent on them (67%), 36.7 banked (66% fewer); 21.3 Stand-ins and 0.0 Auto-Merges a day; 402.2 orders filled; rank 24.0; AB#381 target not met
+with power-ups, batch (also lets pairs gather for an Auto-Merge): 104.6 gems/day earned, 106.7 spent on them (102%), -2.0 banked (102% fewer); 4.2 Stand-ins and 29.5 Auto-Merges a day; 330.2 orders filled; rank 24.0; AB#381 target met
+
+=== CASUAL planner (12 min/day, 610 actions/day, 12 seeds x 14 days) ===
+without power-ups: 78.7 gems/day earned and banked; 304.3 orders filled; rank 17.0 at day 14
+with power-ups, plain (buys power-ups as it plays): 79.2 gems/day earned, 16.6 spent on them (21%), 62.6 banked (20% fewer); 5.0 Stand-ins and 0.0 Auto-Merges a day; 314.4 orders filled; rank 17.3; AB#381 target not met
+with power-ups, batch (also lets pairs gather for an Auto-Merge): 75.9 gems/day earned, 77.4 spent on them (102%), -1.5 banked (102% fewer); 2.7 Stand-ins and 21.9 Auto-Merges a day; 241.3 orders filled; rank 18.0; AB#381 target met
+
+BOT NUMBERS (P-PROXY): a scripted planner, not players. AB#381 target (>= 70% of gem income spent, >= 50% fewer banked) met by at least one variant in every profile.

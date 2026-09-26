@@ -95,7 +95,8 @@ export function bindingReady(s: GameState, id: number, a: number, b: number) {
   if (isTop(id)) return true;
   const need = BINDINGS[id + 1];
   if (!need) return true;
-  return s.board.some((t, i) => t === need && i !== a && i !== b);
+  // AB#381: a Binding Stand-in held for it counts (read directly: importing PowerUps here would be a module cycle)
+  return s.board.some((t, i) => t === need && i !== a && i !== b) || (s.powerUps?.standIn?.[need] ?? 0) > 0;
 }
 
 /** Any pair on the board that could merge right now (bindings respected). */

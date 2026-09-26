@@ -1,6 +1,7 @@
 ﻿import { BOARD_SIZE, ECON, CARDS, ALBUM_PAGES } from '../data/catalog';
 import { defaultProfile, type Profile } from './Profile';
 import { FLOOR_COUNT } from '../data/floors';
+import { BINDINGS } from '../data/items';
 
 export const SAVE_VERSION = 6;
 
@@ -78,6 +79,35 @@ export interface GameState {
   settings: { muted: boolean; music: boolean; haptics: boolean };
   createdAt: number;
   purchases: { sku: string; t: number }[];
+  /** RV-M2a (AB#381): power-ups bought with gems and not yet used. See sanitizePowerUps for how a save is read. */
+  powerUps: PowerUps;
+}
+
+/** How many of each power-up the player holds: Auto-Merge charges, and Binding Stand-ins by the binding they replace. */
+export interface PowerUps { autoMerge: number; standIn: Record<number, number> }
+
+/** Every relic that is some merge's binding: the only things a Stand-in can stand in for. */
+export const STAND_IN_ITEMS: readonly number[] = [...new Set(Object.values(BINDINGS))].sort((a, b) => a - b);
+
+/**
+ * AB#381: power-ups read from a save, failing closed. Anything missing, malformed, negative, fractional or naming a
+ * relic that is not a binding counts as none held: an ambiguous save is never read as owning something.
+ */
+export function sanitizePowerUps(raw: unknown): PowerUps {
+  const count = (v: unknown) => (typeof v === 'number' && Number.isInteger(v) && v > 0 && v <= 1e6 ? v : 0);
+  const out: PowerUps = { autoMerge: 0, standIn: {} };
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  const r = raw as Record<string, unknown>;
+  out.autoMerge = count(r.autoMerge);
+  const si = r.standIn;
+  if (si && typeof si === 'object' && !Array.isArray(si)) {
+    for (const [k, v] of Object.entries(si as Record<string, unknown>)) {
+      const id = Number(k);
+      const n = count(v);
+      if (STAND_IN_ITEMS.includes(id) && n > 0) out.standIn[id] = n;
+    }
+  }
+  return out;
 }
 
 export function createState(now = Date.now()): GameState {
@@ -122,6 +152,7 @@ export function createState(now = Date.now()): GameState {
     settings: { muted: false, music: true, haptics: true },
     createdAt: now,
     purchases: [],
+    powerUps: { autoMerge: 0, standIn: {} },
   };
 }
 
@@ -243,6 +274,7 @@ export function migrate(raw: Raw, now = Date.now()): GameState {
   }
   const s = fill(createState(now), r);
   s.v = SAVE_VERSION;
+  s.powerUps = sanitizePowerUps(r.powerUps); // AB#381: fill() keeps a record's unknown keys unchecked; this does not
   if (s.board.length !== BOARD_SIZE) {
     const b = new Array(BOARD_SIZE).fill(0);
     s.board.slice(0, BOARD_SIZE).forEach((t, i) => (b[i] = t | 0));

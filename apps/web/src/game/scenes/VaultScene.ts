@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { ctx } from '../GameCtx';
 import { BOARD_SIZE, BOARD_COLS, ECON, SKUS, SkuId, COPY, CARDS, ALBUM_PAGES } from '../data/catalog';
-import { merge, canMerge, MergeResult } from '../systems/MergeSystem';
+import { merge, canMerge, MergeResult, autoMerge } from '../systems/MergeSystem';
 import { forge } from '../systems/ForgeSystem';
 import { sell, move, fillRatio, canForge, findPair, empties } from '../systems/BoardSystem';
 import { applyPurchase, skuAvailable } from '../systems/PurchaseService';
@@ -782,6 +782,23 @@ export class VaultScene extends Phaser.Scene {
   }
 
   /** Every core action advances order refills (action-based, never wall-clock) and saves. */
+  /** AB#381: use one Auto-Merge from the shop. Every pair merges at once, so the board is redrawn rather than animated. */
+  useAutoMerge() {
+    const s = ctx.state;
+    const res = autoMerge(s, ctx.rng);
+    if (!res) { ctx.sfx.play('error'); this.toast(s.powerUps.autoMerge > 0 ? 'No pair can merge right now.' : 'You hold no Auto-Merge.'); return; }
+    for (const r of res) ctx.director.onMerge(r);
+    ctx.telemetry.verb();
+    ctx.telemetry.track('power_up_use', { kind: 'auto_merge', merges: res.length });
+    ctx.sfx.play('forge');
+    this.syncBoard();
+    this.hud.refresh(true);
+    this.toast(`Auto-Merge: ${res.length} merge${res.length === 1 ? '' : 's'}.`);
+    this.lastActionAt = Date.now();
+    this.afterAction();
+    this.updateVaultMood();
+  }
+
   afterAction() {
     tickOrders(ctx.state, ctx.rng);
     this.orders?.poll();
@@ -873,6 +890,10 @@ export class VaultScene extends Phaser.Scene {
     if (!res.ok) {
       if (res.reason === 'binding' && res.binding) this.bindingHint(b, res.item, res.binding);
       return false;
+    }
+    if (res.standIn) { // AB#381: say where the binding came from, since no relic left the board for it
+      this.toast(`A Stand-in took the ${ITEMS[res.standIn].name}'s place.`);
+      ctx.telemetry.track('power_up_use', { kind: 'stand_in', binding: res.standIn });
     }
     ctx.telemetry.verb();
     const now = Date.now();

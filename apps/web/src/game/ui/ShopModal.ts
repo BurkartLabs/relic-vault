@@ -9,6 +9,18 @@ import { chestsAllowed, buyExact, buyMarket, openChest, exactRelicOffer, exactRe
 import { empties } from '../systems/BoardSystem';
 import type { VaultScene } from '../scenes/VaultScene';
 import { OddsModal } from './Sheets';
+import { autoMergeCost, standInCost, buyAutoMerge, buyStandIn, standInsHeld } from '../systems/PowerUps';
+import { liveChains } from '../systems/Floors';
+import { BINDINGS, CHAINS, ITEMS } from '../data/items';
+
+/** AB#381: the Stand-ins this floor can use: the bindings the top tiers of its live chains need. */
+function standInsForFloor(s: Parameters<typeof liveChains>[0]): number[] {
+  const out = new Set<number>();
+  for (const ch of liveChains(s)) {
+    for (let t = 1; t <= CHAINS[ch].maxTier; t++) { const b = BINDINGS[ch === 0 ? t : ch * 10 + t]; if (b) out.add(b); }
+  }
+  return [...out].sort((a, b) => a - b);
+}
 
 type Focus = 'gems' | 'best' | 'chest' | 'exact' | 'offers' | undefined;
 
@@ -161,6 +173,42 @@ export class ShopModal extends Modal {
       y += ch + 30;
     }
 
+    // ---------------------------------------------------------- power-ups (RV-M2a, AB#381): gems for the middle horizon
+    header('POWER-UPS', 'powerups');
+    {
+      const items: ({ kind: 'auto' } | { kind: 'stand'; b: number })[] = [{ kind: 'auto' }, ...standInsForFloor(s).map((b) => ({ kind: 'stand' as const, b }))];
+      items.forEach((it, k) => {
+        const col = k % 3, row = Math.floor(k / 3);
+        const cw = 300, ch = 380, cx = 170 + col * 320, cy = y + row * (ch + 24) + ch / 2;
+        const card = vs.add.container(cx, cy);
+        card.add(vs.add.nineslice(0, 0, 'panelDark', undefined, cw, ch, 84, 84, 84, 84));
+        const held = it.kind === 'auto' ? s.powerUps.autoMerge : standInsHeld(s, it.b);
+        const cost = it.kind === 'auto' ? autoMergeCost() : standInCost(it.b);
+        if (it.kind === 'auto') {
+          card.add(vs.add.image(0, -110, 'ic_boost').setDisplaySize(110, 110));
+          card.add(txt(vs, 0, -34, 'AUTO-MERGE', { size: 32, gold: true, weight: '900' }));
+          card.add(txt(vs, 0, 20, 'Every pair on the board merges once. Never a top tier.', { size: 21, font: 'body', color: '#d8cce4', wrap: 260, strokeW: 0 }));
+        } else {
+          card.add(vs.add.image(-34, -110, 'relic96', `i${it.b}`).setDisplaySize(100, 100));
+          card.add(vs.add.image(40, -104, 'ic_link').setDisplaySize(56, 56));
+          const title = txt(vs, 0, -34, `${ITEMS[it.b].name.toUpperCase()} STAND-IN`, { size: 26, gold: true, weight: '900' });
+          if (title.width > 270) title.setScale(270 / title.width);
+          card.add(title);
+          card.add(txt(vs, 0, 20, `Counts as one ${ITEMS[it.b].name} in a merge, without a socket.`, { size: 21, font: 'body', color: '#d8cce4', wrap: 260, strokeW: 0 }));
+        }
+        card.add(txt(vs, 0, 76, `You hold ${held}`, { size: 24, font: 'num', weight: '700', color: held ? '#8CF08A' : '#b9a9c6' }));
+        const buy = () => this.buyPowerUp(it.kind === 'auto' ? 'auto' : it.b);
+        if (it.kind === 'auto' && held) {
+          card.add(new Button(vs, -66, 140, 150, 80, `${cost}`, buy, { color: 'blue', size: 32, icon: 'gem', iconScale: 0.4, guard }));
+          card.add(new Button(vs, 72, 140, 120, 80, 'USE', () => this.useAutoMerge(), { color: 'green', size: 30, guard }));
+        } else {
+          card.add(new Button(vs, 0, 140, 220, 84, `${cost}`, buy, { color: 'blue', size: 36, icon: 'gem', iconScale: 0.45, guard }));
+        }
+        C.add(card);
+      });
+      y += Math.ceil(items.length / 3) * 404 + 10;
+    }
+
     // ---------------------------------------------------------- offers
     header('KEEPER’S OFFERS', 'offers');
     const offerList: { id: SkuId; icon: string; frame?: string; color: 'green' | 'purple' | 'red' }[] = [
@@ -264,6 +312,28 @@ export class ShopModal extends Modal {
     this.vs.refreshButtons();
     ctx.persist();
     this.close();
+  }
+
+  /** AB#381: buy one power-up; the card updates in place, the shop stays open. */
+  private buyPowerUp(what: 'auto' | number) {
+    const s = ctx.state;
+    const cost = what === 'auto' ? autoMergeCost() : standInCost(what);
+    ctx.analytics.log('gem_spend_click', { item: what === 'auto' ? 'auto_merge' : `stand_in_${what}`, cost, trigger: this.trigger });
+    if (s.gems < cost) { ctx.sfx.play('error'); this.vs.toast('Not enough gems.'); this.sc.scrollTo(this.anchors.gems - 20); return; }
+    const ok = what === 'auto' ? buyAutoMerge(s) : buyStandIn(s, what);
+    if (!ok) { ctx.sfx.play('error'); return; }
+    ctx.sfx.play('purchase');
+    ctx.telemetry.track('power_up_buy', { kind: what === 'auto' ? 'auto_merge' : 'stand_in', binding: what === 'auto' ? undefined : what, cost });
+    this.vs.hud.tickGems();
+    ctx.persist();
+    const at = this.anchors.powerups;
+    this.rebuild();
+    this.sc.scrollTo(Math.max(0, at - 20));
+  }
+
+  private useAutoMerge() {
+    this.close();
+    this.vs.time.delayedCall(260, () => this.vs.useAutoMerge());
   }
 
   private market(t: number) {
