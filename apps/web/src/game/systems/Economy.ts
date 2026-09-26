@@ -205,7 +205,15 @@ export function openChest(s: GameState, rng: Rng, source: 'free' | 'gems' | 'pai
  * to drift from the economy.
  */
 export function exactRelicCost(tier: number): number {
-  return Math.max(1, Math.round(ECON.exactT5Gems * (itemWork(tier) / itemWork(5))));
+  return ladderGems(tier);
+}
+
+/**
+ * Any relic at the exact-relic ladder's price: the Emerald Scarab's `exactT5Gems`, scaled by the relic's work. A Forge
+ * tier's id is its tier, so exactRelicCost is this; power-ups (PowerUps.ts, AB#381) are priced from it too.
+ */
+export function ladderGems(item: number): number {
+  return Math.max(1, Math.round(ECON.exactT5Gems * (itemWork(item) / itemWork(5))));
 }
 
 /**

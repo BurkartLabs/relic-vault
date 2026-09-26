@@ -27,6 +27,8 @@ export interface MergeResult {
   /** the binding relic this merge needs (on reason 'binding') or consumed (on success) */
   binding?: number;
   bindingIndex?: number;
+  /** AB#381: the binding a Stand-in replaced, when there was none on the board */
+  standIn?: number;
   card?: CardResult;
 }
 
@@ -59,14 +61,22 @@ export function merge(s: GameState, a: number, b: number, rng: Rng, now = Date.n
   const next = ascended ? 0 : ia + 1;
   const need = ascended ? undefined : BINDINGS[next];
   let bindingIndex = -1;
+  let standIn: number | undefined;
   if (need) {
     bindingIndex = findBinding(s, next, a, b);
-    if (bindingIndex < 0) return { ...base, chain, item: next, tier: tierOf(next), reason: 'binding', binding: need };
+    // AB#381: a relic on the board is used first; a Stand-in only stands in for one that is not there
+    if (bindingIndex < 0 && (s.powerUps?.standIn?.[need] ?? 0) > 0) standIn = need;
+    if (bindingIndex < 0 && standIn === undefined) return { ...base, chain, item: next, tier: tierOf(next), reason: 'binding', binding: need };
   }
 
   s.board[a] = 0;
   s.board[b] = next;
   if (bindingIndex >= 0) { s.board[bindingIndex] = 0; s.stats.bindings++; noteFloorAction(s, 'bindings'); }
+  if (standIn !== undefined) {
+    s.powerUps.standIn[standIn] -= 1;
+    if (s.powerUps.standIn[standIn] <= 0) delete s.powerUps.standIn[standIn];
+    s.stats.bindings++; noteFloorAction(s, 'bindings');
+  }
 
   const value = CHAINS[chain].value;
   const tier = ascended ? tierOf(ia) + 1 : tierOf(next);
@@ -99,6 +109,50 @@ export function merge(s: GameState, a: number, b: number, rng: Rng, now = Date.n
   return {
     ok: true, from: a, to: b, item: next, tier: ascended ? CHAINS[chain].maxTier + 1 : tier, chain,
     ascended, clearedFloor, gold, gems, xp, rankUps, eventPts, card,
-    binding: need, bindingIndex: bindingIndex >= 0 ? bindingIndex : undefined,
+    binding: need, bindingIndex: bindingIndex >= 0 ? bindingIndex : undefined, standIn,
   };
+}
+
+/**
+ * The pairs one Auto-Merge makes (AB#381): for every relic with a partner, pairs in board order, as many as its count
+ * allows, each needing a binding on the board that no earlier pair in this use has taken. Stand-ins are not spent by
+ * it (a player chooses where those go), and a chain's top tier is never ascended by it: that is the player's moment.
+ */
+export function autoMergePairs(s: GameState): [number, number][] {
+  const pairs: [number, number][] = [];
+  const taken = new Set<number>();
+  const byItem = new Map<number, number[]>();
+  s.board.forEach((t, i) => { if (t) byItem.set(t, [...(byItem.get(t) ?? []), i]); });
+  for (const [item, cells] of [...byItem].sort((x, y) => x[0] - y[0])) {
+    if (isTop(item)) continue;
+    const need = BINDINGS[item + 1];
+    for (let k = 0; k + 1 < cells.length; k += 2) {
+      const a = cells[k], b = cells[k + 1];
+      if (need) {
+        const bi = s.board.findIndex((t, i) => t === need && i !== a && i !== b && !taken.has(i));
+        if (bi < 0) break;
+        taken.add(bi);
+      }
+      pairs.push([a, b]);
+      taken.add(a); taken.add(b);
+    }
+  }
+  return pairs;
+}
+
+/** Use one Auto-Merge: every pair autoMergePairs finds, merged. Refused, and nothing spent, when there is none. */
+export function autoMerge(s: GameState, rng: Rng, now = Date.now()): MergeResult[] | null {
+  if ((s.powerUps?.autoMerge ?? 0) <= 0) return null;
+  const pairs = autoMergePairs(s);
+  if (!pairs.length) return null;
+  s.powerUps.autoMerge -= 1;
+  const results: MergeResult[] = [];
+  for (const [a, b] of pairs) {
+    // an earlier merge in this use may have taken the binding it was counting on: skip it rather than spend a Stand-in
+    const next = s.board[a] + 1;
+    if (s.board[a] !== s.board[b] || !s.board[a] || (BINDINGS[next] && findBinding(s, next, a, b) < 0)) continue;
+    const r = merge(s, a, b, rng, now);
+    if (r.ok) results.push(r);
+  }
+  return results;
 }
