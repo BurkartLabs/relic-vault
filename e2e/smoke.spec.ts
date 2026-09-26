@@ -450,3 +450,26 @@ test('clearing a floor opens two doors, and descending changes the ladder', asyn
   await page.screenshot({ path: 'screenshots/qa/floor-2.png' });
   expect(errors).toEqual([]);
 });
+
+// Bug #2036: an unreadable save's Keeper line (about 180 characters, six lines) ran over "tap to continue". The repro is
+// the Bug's: a save that migrate() cannot read, in a fresh browser (no IndexedDB copy), through the age gate.
+test('the unreadable-save Keeper line and its "tap to continue" hint do not overlap (Bug #2036)', async ({ page }) => {
+  await page.addInitScript(() => { if (!sessionStorage.getItem('seeded')) { localStorage.setItem('relic-vault-save', '{"v":1,"board":12345}'); sessionStorage.setItem('seeded', '1'); } });
+  // Not boot(): on this path the age gate shows after the save has been read, later than boot() looks for it.
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await page.goto('/');
+  await page.locator('#age-gate button[data-a="adult"]').click({ timeout: 20_000 });
+  await page.waitForFunction(() => { const m = (window as any).__vault?.modal; return m?.kind === 'KeeperDialog' && JSON.stringify((m.box.list || []).map((o: any) => o.text)).includes('cannot read'); }, null, { timeout: 30_000 });
+  await page.waitForTimeout(400); // the dialog's open tween
+  const b = await page.evaluate(() => {
+    const list = (window as any).__vault.modal.box.list as any[];
+    const box = (o: any) => { const r = o.getBounds(); return { top: r.top, bottom: r.bottom }; };
+    return { line: box(list.find((o) => String(o.text || '').includes('cannot read'))), hint: box(list.find((o) => o.text === 'tap to continue')), frame: box((window as any).__vault.modal.frame.list[0]) };
+  });
+  await page.screenshot({ path: 'screenshots/qa/keeper-unreadable.png' });
+  expect(b.hint.top, 'the hint starts below the line').toBeGreaterThanOrEqual(b.line.bottom);
+  expect(b.line.top, 'the line starts inside the dialog').toBeGreaterThanOrEqual(b.frame.top);
+  expect(b.hint.bottom, 'the hint ends inside the dialog').toBeLessThanOrEqual(b.frame.bottom);
+  expect(errors).toEqual([]);
+});
