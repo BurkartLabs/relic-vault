@@ -80,6 +80,26 @@ export interface Sku {
   random?: boolean; // contains randomized contents (loot box)
 }
 
+/**
+ * The relics the Keeper's Welcome places on the board, by tier (Board RV-B1: a Ruby Crown, not a Silver Urn). The one
+ * list the purchase grants from and the Welcome modal draws and names (Bug #1814: the modal still drew and named the
+ * Silver Urn after the grant changed).
+ */
+export const WELCOME_RELICS: readonly number[] = [4, 4, 7];
+
+const COUNT_WORDS = ['no', 'a', 'two', 'three', 'four', 'five'];
+/** "two Gold Masks and a Ruby Crown": relics by tier, grouped in order of first appearance, from RELICS' names. */
+export function relicListText(tiers: readonly number[]): string {
+  const counts = new Map<number, number>();
+  for (const t of tiers) counts.set(t, (counts.get(t) ?? 0) + 1);
+  const parts = [...counts].map(([t, n]) => {
+    const name = RELICS[t].name;
+    if (n === 1) return `${/^[AEIOU]/.test(name) ? 'an' : 'a'} ${name}`;
+    return `${COUNT_WORDS[n] ?? n} ${name}s`;
+  });
+  return parts.length > 1 ? `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}` : parts[0] ?? '';
+}
+
 export const SKUS: Record<SkuId, Sku> = {
   welcome: { id: 'welcome', title: 'Keeper’s Welcome', price: 1.99, gems: 120, gold: 100000, badge: 'ONE TIME', oneTime: true,
     blurb: '120 gems, 100,000 gold, two Gold Masks, a Ruby Crown and a Lucky Chest on the house.' },
