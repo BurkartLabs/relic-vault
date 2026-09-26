@@ -47,6 +47,8 @@ export interface GameState {
   stats: {
     merges: number; forges: number; chests: number; sells: number; ads: number;
     maxTier: number; sessions: number; playSeconds: number; t4Merges: number; orders: number; bindings: number;
+    /** AB#382: power-ups earned free (the day's first quest claim), for the probe's per-day count. */
+    freePowerUps: number;
   };
   ent: {
     welcome: boolean; comeback: boolean; passPremium: boolean; vip: boolean; vipUntil: number;
@@ -132,7 +134,7 @@ export function createState(now = Date.now()): GameState {
     album: new Array(CARDS.length).fill(0),
     pagesDone: ALBUM_PAGES.map(() => false),
     crumbs: 0,
-    stats: { merges: 0, forges: 0, chests: 0, sells: 0, ads: 0, maxTier: 1, sessions: 0, playSeconds: 0, t4Merges: 0, orders: 0, bindings: 0 },
+    stats: { merges: 0, forges: 0, chests: 0, sells: 0, ads: 0, maxTier: 1, sessions: 0, playSeconds: 0, t4Merges: 0, orders: 0, bindings: 0, freePowerUps: 0 },
     ent: { welcome: false, comeback: false, passPremium: false, vip: false, vipUntil: 0, removeAds: false, skin: false, skinOn: false },
     pass: { season: seasonId(now), xp: 0, free: [], prem: [] },
     event: { cycle: eventCycle(now), points: 0, claimed: [], boostUntil: 0 },

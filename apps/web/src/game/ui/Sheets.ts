@@ -5,7 +5,7 @@ import { keeperLayout } from './keeperLayout';
 import { ctx } from '../GameCtx';
 import { RELICS, ECON, COPY, SKUS, GEM_CHEST_ODDS, EARNED_CHEST_ODDS, CHEST_PITY_TIER, MAX_TIER } from '../data/catalog';
 import { lowest, sell, sellValue, findPair } from '../systems/BoardSystem';
-import { gemClear, adSalvage, QUESTS, questProgress, claimQuest, xpToNext, grantGold } from '../systems/Economy';
+import { gemClear, adSalvage, QUESTS, questProgress, claimQuest, questPowerUpDue, xpToNext, grantGold } from '../systems/Economy';
 import { computeLuck } from '../systems/LuckSystem';
 import { DAY } from '../systems/State';
 import type { VaultScene } from '../scenes/VaultScene';
@@ -64,8 +64,10 @@ export class QuestsModal extends Modal {
     const now = Date.now();
     const reset = (Math.floor(now / DAY) + 1) * DAY - now;
     B.add(txt(vs, 0, top + 90, `New quests in ${dur(reset)} · never required to play`, { size: 28, font: 'body', color: '#b9a9c6' }));
+    // AB#382: the day's first claim also gives an Auto-Merge, said up front and only while it is still to come
+    if (questPowerUpDue(s, now)) B.add(txt(vs, 0, top + 140, 'The first quest you claim today also gives a free Auto-Merge.', { size: 26, font: 'body', color: '#8CF08A' }));
     QUESTS.forEach((q, i) => {
-      const y = top + 250 + i * 250;
+      const y = top + 290 + i * 250; // AB#382: 40 lower, so the free Auto-Merge line above the first card is not under it
       const prog = questProgress(s, i);
       const done = prog >= q.goal, claimed = s.quests.claimed.includes(i);
       B.add(vs.add.nineslice(0, y, done && !claimed ? 'panel' : 'panelDark', undefined, 880, 220, 70, 70, 70, 70));
@@ -80,7 +82,9 @@ export class QuestsModal extends Modal {
       if (claimed) B.add(txt(vs, 290, y, 'DONE', { size: 40, font: 'num', weight: '700', color: '#8CF08A' }));
       else {
         const b: Button = new Button(vs, 290, y, 220, 100, 'CLAIM', () => {
+          const powerUp = questPowerUpDue(s, Date.now());
           if (!claimQuest(s, i, Date.now())) return;
+          if (powerUp) vs.toast(`+${ECON.questAutoMerges} Auto-Merge: use it from the Shop's Power-ups.`);
           ctx.sfx.play('purchase');
           const m = b.getWorldTransformMatrix();
           vs.fx.flyTo('coin', m.tx, m.ty, vs.hud.anchor('gold'), 8, (k) => { if (k === 7) vs.hud.tickGold(); });

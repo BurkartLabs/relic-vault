@@ -1,0 +1,30 @@
+# relic-vault free power-ups (AB#382), 2026-09-26: hq ops/probes/relic-vault-runway.ts and relic-vault-powerups.ts (hq branch board/382-probe-free-powerups) on branch feat/382-free-powerups. BOT NUMBERS (P-PROXY): scripted policies, not players.
+
+## runway: free power-ups per profile and policy (12 seeds x 14 days)
+=== ENGAGED · greedy ===
+free power-ups (AB#382): 14 by day 14 (median); ≥ 1 on every day in 12/12 runs; fewest in one day 1
+=== ENGAGED · planner ===
+free power-ups (AB#382): 14 by day 14 (median); ≥ 1 on every day in 12/12 runs; fewest in one day 1
+=== ENGAGED · focused ===
+free power-ups (AB#382): 14 by day 14 (median); ≥ 1 on every day in 12/12 runs; fewest in one day 1
+=== CASUAL · greedy ===
+free power-ups (AB#382): 14 by day 14 (median); ≥ 1 on every day in 12/12 runs; fewest in one day 1
+=== CASUAL · planner ===
+free power-ups (AB#382): 14 by day 14 (median); ≥ 1 on every day in 12/12 runs; fewest in one day 1
+=== CASUAL · focused ===
+free power-ups (AB#382): 14 by day 14 (median); ≥ 1 on every day in 12/12 runs; fewest in one day 1
+
+## power-ups probe (compare probes/2026-09-26-powerups-probe.txt, AB#381: the free Auto-Merge is about one more used a day in batch; gem spend unchanged)
+Prices: Auto-Merge 3 gems; Stand-ins #4 3, #6 10, #13 2, #14 3, #16 17, #24 4.
+
+=== ENGAGED planner (25 min/day, 1271 actions/day, 12 seeds x 14 days) ===
+without power-ups: 106.8 gems/day earned and banked; 404.7 orders filled; rank 23.0 at day 14
+with power-ups, plain (buys power-ups as it plays): 110.0 gems/day earned, 73.3 spent on them (67%), 36.7 banked (66% fewer); 21.3 Stand-ins and 0.0 Auto-Merges a day; 402.2 orders filled; rank 24.0; AB#381 target not met
+with power-ups, batch (also lets pairs gather for an Auto-Merge): 105.6 gems/day earned, 106.8 spent on them (101%), -1.2 banked (101% fewer); 4.4 Stand-ins and 30.3 Auto-Merges a day; 327.0 orders filled; rank 24.0; AB#381 target met
+
+=== CASUAL planner (12 min/day, 610 actions/day, 12 seeds x 14 days) ===
+without power-ups: 78.7 gems/day earned and banked; 304.3 orders filled; rank 17.0 at day 14
+with power-ups, plain (buys power-ups as it plays): 79.2 gems/day earned, 16.6 spent on them (21%), 62.6 banked (20% fewer); 5.0 Stand-ins and 0.0 Auto-Merges a day; 314.4 orders filled; rank 17.3; AB#381 target not met
+with power-ups, batch (also lets pairs gather for an Auto-Merge): 77.1 gems/day earned, 77.7 spent on them (101%), -0.6 banked (101% fewer); 2.7 Stand-ins and 22.9 Auto-Merges a day; 239.3 orders filled; rank 18.0; AB#381 target met
+
+BOT NUMBERS (P-PROXY): a scripted planner, not players. AB#381 target (>= 70% of gem income spent, >= 50% fewer banked) met by at least one variant in every profile.

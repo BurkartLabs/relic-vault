@@ -393,10 +393,23 @@ export function questProgress(s: GameState, q: number) {
   const d = QUESTS[q];
   return Math.min(d.goal, s.quests[d.key]);
 }
+/**
+ * RV-M2b (AB#382): the free path to power-ups. The first daily quest a player claims each day also gives an Auto-Merge,
+ * so a sink the shop sells for gems (AB#381) is one a player who never pays still reaches every day they play: the
+ * 12-minute casual profile forges ten relics every day. It is the same fixed grant for every profile, with no roll, so
+ * under-16 and loot-box-off players get exactly what everyone gets (MONETIZATION.md, Board 2026-09-19: features are
+ * made safe for all ages, not restricted by age).
+ */
+export function questPowerUpDue(s: GameState, now: number): boolean {
+  return s.quests.day === utcDay(now) && s.quests.claimed.length === 0;
+}
+
 export function claimQuest(s: GameState, q: number, now: number): boolean {
   if (s.quests.day !== utcDay(now)) return false;
   if (s.quests.claimed.includes(q) || questProgress(s, q) < QUESTS[q].goal) return false;
+  const firstToday = questPowerUpDue(s, now);
   s.quests.claimed.push(q);
+  if (firstToday) { s.powerUps.autoMerge += ECON.questAutoMerges; s.stats.freePowerUps = (s.stats.freePowerUps ?? 0) + ECON.questAutoMerges; }
   grantGold(s, ECON.questGold);
   s.gems += ECON.questGems;
   // RV-D6 (AB#275): the season's casual promise is pass tier 15 by day 14 without paying, and 12 minutes a day fell

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { createState, migrate, sanitizePowerUps, STAND_IN_ITEMS } from './State';
 import { merge, autoMerge, autoMergePairs } from './MergeSystem';
 import { bindingReady } from './BoardSystem';
-import { exactRelicCost, ladderGems } from './Economy';
+import { exactRelicCost, ladderGems, claimQuest, questPowerUpDue, QUESTS } from './Economy';
 import { autoMergeCost, standInCost, buyAutoMerge, buyStandIn, ANCHOR_ACTIONS, AUTO_MERGE_MAX } from './PowerUps';
 import { mulberry32 } from './Rng';
 import { BINDINGS, itemWork } from '../data/items';
@@ -138,5 +138,58 @@ describe('power-ups in the save fail closed', () => {
     const s = createState();
     s.powerUps = { autoMerge: 3, standIn: { [CANDLE_SKULL]: 2 } };
     expect(migrate(JSON.parse(JSON.stringify(s))).powerUps).toEqual({ autoMerge: 3, standIn: { [CANDLE_SKULL]: 2 } });
+  });
+});
+
+describe('the free path to power-ups (RV-M2b, AB#382)', () => {
+  const DAY = 86_400_000;
+  /** A day on which the player finishes the forge quest (the one the 12-minute casual profile finishes every day). */
+  const playDay = (s: ReturnType<typeof createState>, now: number) => {
+    s.quests = { day: Math.floor(now / DAY), claimed: [], forge: 0, t4: 0, chest: 0, orders: 0 };
+    s.quests.forge = QUESTS[0].goal;
+  };
+
+  it("the day's first quest claim gives one Auto-Merge; later claims that day do not; the next day's first does", () => {
+    const s = createState();
+    const day1 = 20_000 * DAY + DAY / 2;
+    playDay(s, day1);
+    s.quests.orders = QUESTS[2].goal;
+    expect(questPowerUpDue(s, day1)).toBe(true);
+    expect(claimQuest(s, 0, day1)).toBe(true);
+    expect(s.powerUps.autoMerge).toBe(ECON.questAutoMerges);
+    expect(ECON.questAutoMerges).toBe(1);
+    expect(questPowerUpDue(s, day1)).toBe(false);
+    expect(claimQuest(s, 2, day1)).toBe(true);
+    expect(s.powerUps.autoMerge).toBe(1);
+    playDay(s, day1 + DAY);
+    expect(claimQuest(s, 0, day1 + DAY)).toBe(true);
+    expect(s.powerUps.autoMerge).toBe(2);
+    expect(s.stats.freePowerUps).toBe(2);
+  });
+
+  it("a refused claim gives nothing: an unfinished quest, or yesterday's", () => {
+    const s = createState();
+    const now = 20_000 * DAY + DAY / 2;
+    playDay(s, now);
+    s.quests.forge = QUESTS[0].goal - 1;
+    expect(claimQuest(s, 0, now)).toBe(false);
+    expect(claimQuest(s, 0, now + DAY)).toBe(false);
+    expect(s.powerUps.autoMerge).toBe(0);
+  });
+
+  it('is the same fixed grant for every profile: an under-16 player and a loot-box-off region get exactly what an adult gets', () => {
+    // MONETIZATION.md (Board, 2026-09-19): features are made safe for every age, not restricted by age. There is no
+    // roll to replace with a fixed item: claimQuest takes no random source, so the deterministic grant IS the grant.
+    const run = (setup: (s: ReturnType<typeof createState>) => void) => {
+      const s = createState();
+      setup(s);
+      for (let d = 0; d < 14; d++) { const now = (20_000 + d) * DAY + DAY / 2; playDay(s, now); claimQuest(s, 0, now); }
+      return s.powerUps;
+    };
+    const adult = run((s) => { s.age = 'adult'; s.lootboxesAllowed = true; });
+    expect(adult).toEqual({ autoMerge: 14, standIn: {} });
+    expect(run((s) => { s.age = 'minor'; })).toEqual(adult);
+    expect(run((s) => { s.age = 'adult'; s.lootboxesAllowed = false; })).toEqual(adult);
+    expect(claimQuest.length).toBe(3); // (s, q, now): no rng parameter to make it random
   });
 });
