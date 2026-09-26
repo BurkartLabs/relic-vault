@@ -339,15 +339,24 @@ test('the Crypt Brazier wakes at rank 3 and forges crypt relics', async ({ page 
 test('the Keeper asks, the seal turns green, and the Chronicle pays out', async ({ page }) => {
   // docs/STORY.md: the badge on the Keeper's portrait, and the main line behind it
   const errors = await boot(page);
-  await page.evaluate(() => { (window as any).__rv.state.flags.tut = 3; });
+  // Bug #1819: the first forge an order can take schedules the Keeper's orders hint 500 ms later, and if it opens
+  // before the tap below, the tap reaches the hint and the Chronicle never opens. Orders are random, so only some runs
+  // scheduled it, and only a loaded machine let it win (1 in 20 under load). The hint is not this test's subject: it
+  // is marked seen, and an order that wants the forged relic is set so the worst case runs every time.
+  await page.evaluate(() => {
+    const s = (window as any).__rv.state;
+    s.flags.tut = 3;
+    s.flags.hint_orders = 1;
+    s.orders[0].want = [1];
+  });
 
   // the first quest asks for 12 forges. Do them through the real generator button.
   const need = await page.evaluate(() => (window as any).__vault.currentQuestGoal());
   for (let i = 0; i < need; i++) {
     await page.evaluate(() => { const v = (window as any).__vault; v.debugClear(); v.doForge(); });
   }
-  await page.waitForTimeout(300);
-  expect(await page.evaluate(() => (window as any).__vault.bubbleState())).toBe('ready');
+  await page.waitForFunction(() => (window as any).__vault.bubbleState() === 'ready', null, { timeout: 4000 });
+  expect(await page.evaluate(() => (window as any).__vault.modal?.kind ?? null)).toBe(null); // nothing between the player and the Keeper
   await page.screenshot({ path: 'screenshots/qa/keeper-ready.png' });
 
   // tapping the Keeper opens the Chronicle
@@ -366,7 +375,8 @@ test('the Keeper asks, the seal turns green, and the Chronicle pays out', async 
   await page.waitForFunction(() => (window as any).__vault.modal?.kind === 'KeeperDialog', null, { timeout: 4000 });
   await page.screenshot({ path: 'screenshots/qa/chronicle-beat.png' });
   await page.evaluate(() => (window as any).__vault.modal?.close());
-  await page.waitForTimeout(900);
+  // the beat's close hands over to the reward fly-in; wait for the scene to be clear again, not for a fixed time
+  await page.waitForFunction(() => (window as any).__vault.modal === null, null, { timeout: 4000 });
 
   const s = await state(page);
   expect(s.chronicle.claimed).toContain(0);
