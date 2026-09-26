@@ -6,7 +6,7 @@ import { canForge, sell, empties, placeOrStash } from './BoardSystem';
 import { applyPurchase } from './PurchaseService';
 import { rollChest, openChest, gemClear, adSalvage, claimQuest, spinWheel, claimPass, claimEvent, fillCard, grantCard } from './Economy';
 import { computeLuck } from './LuckSystem';
-import { OfferDirector } from './OfferDirector';
+import { OfferDirector, PUSHED_OFFERS_PER_SESSION } from './OfferDirector';
 import { mulberry32 } from './Rng';
 import { Telemetry } from './Telemetry';
 import { generateOrder, refillOrders, deliver, dismissOrder, tickOrders, matchOrder } from './OrderSystem';
@@ -602,6 +602,68 @@ describe('no random rewards for minors / loot-box-free regions (Critic ITERATE #
     expect(lastMinute).toEqual(farOff);
     expect(lastMinute.length).toBeGreaterThan(0); // the director did run: this is not an empty comparison
     expect(lastMinute.join(' ')).not.toMatch(/boost|rush|deadline|ends/i);
+  });
+});
+
+describe('one pushed offer per session (RV-M8, AB#383)', () => {
+  const mergeOnce = (s: ReturnType<typeof createState>, d: OfferDirector) => { s.board[0] = 1; s.board[1] = 1; d.onMerge(merge(s, 0, 1, rng())); };
+
+  it('the cap is one', () => { expect(PUSHED_OFFERS_PER_SESSION).toBe(1); });
+
+  it('a session gets its first offer, and the next one waits for the next session instead of being lost', () => {
+    const s = createState();
+    s.stats.sessions = 1;
+    let d = new OfferDirector(() => s);
+    for (let i = 0; i < 10; i++) mergeOnce(s, d); // the welcome at the first merge, and merge 8 would ask for the comeback
+    expect(d.queue.map((q) => q.id)).toEqual(['welcome']);
+    expect(s.flags.offer_comeback).toBeFalsy(); // held back, not spent
+    s.stats.sessions = 2; // the next boot
+    d = new OfferDirector(() => s);
+    mergeOnce(s, d);
+    expect(d.queue.map((q) => q.id)).toEqual(['comeback']);
+  });
+
+  it('fails closed: a session counter that did not load means no pushed offer at all', () => {
+    for (const bad of [undefined, Number.NaN, -1, 1.5] as unknown as number[]) {
+      const s = createState();
+      s.stats.sessions = bad;
+      const d = new OfferDirector(() => s);
+      mergeOnce(s, d);
+      d.onAdComplete();
+      expect(d.queue, String(bad)).toEqual([]);
+      expect(s.flags.offer_welcome, String(bad)).toBeFalsy();
+    }
+  });
+
+  it('across a 14-day casual run, no session is pushed more than one offer, and every offer still reaches the player', () => {
+    // relic-vault-runway's casual profile plays 12 minutes a day; here, two boots a day of 15 merges each, an ad
+    // watched per boot, the piggy filling and the Rush's points rising, with a new director per boot as GameCtx makes.
+    const s = createState();
+    s.age = 'adult';
+    const shown: string[][] = [];
+    const now = Date.now();
+    for (let day = 0; day < 14; day++) {
+      for (let boot = 0; boot < 2; boot++) {
+        s.stats.sessions += 1;
+        const d = new OfferDirector(() => s);
+        const session: string[] = [];
+        for (let i = 0; i < 15; i++) {
+          mergeOnce(s, d);
+          s.piggy += 4;
+          s.event.points += 20;
+          d.tick(now + (day * 86_400 + i) * 1000, now + 3 * 86_400_000);
+          for (let r = d.next(); r; r = d.next()) session.push(`${r.id}:${r.trigger}`);
+        }
+        d.onAdComplete();
+        for (let r = d.next(); r; r = d.next()) session.push(`${r.id}:${r.trigger}`);
+        shown.push(session);
+      }
+    }
+    expect(shown).toHaveLength(28);
+    for (const [i, session] of shown.entries()) expect(session.length, `session ${i + 1}: ${session.join(', ')}`).toBeLessThanOrEqual(PUSHED_OFFERS_PER_SESSION);
+    // Deferred, not dropped: each of the seven offers the director can push was shown once over the fortnight.
+    const ids = shown.flat().map((x) => x.split(':')[0]);
+    expect([...ids].sort()).toEqual(['comeback', 'doubleIt', 'passUpsell', 'piggy', 'shopBest', 'vip', 'welcome']);
   });
 });
 
