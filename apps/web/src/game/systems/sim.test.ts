@@ -4,7 +4,7 @@ import { merge, canMerge } from './MergeSystem';
 import { forge, rollForgeTier } from './ForgeSystem';
 import { canForge, sell, empties, placeOrStash } from './BoardSystem';
 import { applyPurchase } from './PurchaseService';
-import { rollChest, openChest, gemClear, adSalvage, claimQuest, spinWheel, claimPass, claimEvent, fillCard, grantCard } from './Economy';
+import { rollChest, openChest, gemClear, claimQuest, spinWheel, claimPass, claimEvent, fillCard, grantCard } from './Economy';
 import { computeLuck } from './LuckSystem';
 import { OfferDirector, PUSHED_OFFERS_PER_SESSION } from './OfferDirector';
 import { mulberry32 } from './Rng';
@@ -141,13 +141,6 @@ describe('sell & board-full recovery', () => {
     s.gems = 100;
     const r = gemClear(s);
     expect(r.cleared.length).toBe(3);
-    expect(canForge(s)).toBe(true);
-  });
-  it('ad salvage removes one piece', () => {
-    const s = createState();
-    fullBoard(s);
-    const r = adSalvage(s);
-    expect(r.index).toBeGreaterThanOrEqual(0);
     expect(canForge(s)).toBe(true);
   });
   it('overflow goes to the satchel, never lost', () => {

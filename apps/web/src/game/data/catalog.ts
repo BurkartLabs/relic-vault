@@ -77,7 +77,6 @@ export interface Sku {
   badge?: 'POPULAR' | 'BEST VALUE' | 'ONE TIME' | 'SALE';
   blurb: string;
   oneTime?: boolean;
-  random?: boolean; // contains randomized contents (loot box)
 }
 
 /**
