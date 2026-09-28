@@ -6,7 +6,7 @@ web build's, unchanged. App id `com.orchestrata.relicvault`, name "Relic Vault" 
 
 ## Setup, once per machine
 
-- **JDK 21**, with `JAVA_HOME` set.
+- **JDK 21**, with `JAVA_HOME` set. Not Android Studio's bundled JDK 25: Gradle 8.14 does not run on it.
 - **Android SDK** (Android Studio, or the command-line tools) with `platforms;android-36`, `build-tools;36.0.0` and
   `platform-tools`; set `ANDROID_HOME` (or write `sdk.dir` in `android/local.properties`, which is not committed).
   Installing it means accepting Google's Android SDK licence.
@@ -33,7 +33,7 @@ The Board creates the key once and keeps it outside the repository, for example:
 `keytool -genkeypair -v -keystore <path outside the repo>/relic-vault-upload.jks -alias upload -keyalg RSA -keysize 2048 -validity 10000`.
 Google Play App Signing holds the app signing key; a lost upload key can be reset there.
 
-The version name is `package.json`'s; the Play version code is `RELIC_VAULT_VERSION_CODE` (1 when unset).
+The version is `package.json`'s: `npm run build` writes `android/version.properties` (versionName, and versionCode as major*10000 + minor*100 + patch), which the build reads. Cutting a release: docs/RELEASE.md.
 
 ## How the shell behaves
 

@@ -11,8 +11,12 @@ def signingEnv = [
 def signingValues = signingEnv.collectEntries { field, name -> [field, System.getenv(name) ?: ''] }
 def missingSigning = signingEnv.findAll { field, name -> !signingValues[field] }.collect { field, name -> name }
 
-// The version players see is package.json's; the Play version code is RELIC_VAULT_VERSION_CODE (1 when unset).
-def webPackage = new groovy.json.JsonSlurper().parse(file('../../package.json'))
+// AB#4732 (docs/RELEASE.md): one version, package.json's. scripts/version.mjs writes versionName and versionCode
+// (major*10000 + minor*100 + patch) to android/version.properties on every build and on `npm version`.
+def versionProps = new Properties()
+def versionFile = file('../version.properties')
+if (!versionFile.exists()) throw new GradleException('android/version.properties is missing: run `node scripts/version.mjs` (npm run build does).')
+versionFile.withInputStream { versionProps.load(it) }
 
 android {
     namespace = "com.orchestrata.relicvault"
@@ -21,8 +25,8 @@ android {
         applicationId "com.orchestrata.relicvault"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode((System.getenv('RELIC_VAULT_VERSION_CODE') ?: '1') as Integer)
-        versionName webPackage.version
+        versionCode(versionProps.getProperty('versionCode') as Integer)
+        versionName versionProps.getProperty('versionName')
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
