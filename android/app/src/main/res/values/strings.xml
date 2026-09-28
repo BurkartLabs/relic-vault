@@ -1,0 +1,12 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Relic Vault</string>
+    <string name="title_activity_main">Relic Vault</string>
+    <string name="package_name">com.orchestrata.relicvault</string>
+    <string name="custom_url_scheme">com.orchestrata.relicvault</string>
+    <!-- AB#4723: shown instead of the game when the Android System WebView is too old to run it -->
+    <string name="webview_update_title">Update Android System WebView</string>
+    <string name="webview_update_body">Relic Vault runs on Android System WebView, and the version on this phone is too old for it. Update it from Google Play, then open Relic Vault again.</string>
+    <string name="webview_update_found">This phone has version %1$d; Relic Vault needs %2$d or newer.</string>
+    <string name="webview_update_button">Update WebView</string>
+</resources>

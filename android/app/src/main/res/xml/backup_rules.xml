@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- AB#4723: Android 8 to 11's Auto Backup. The WebView's storage (app_webview/: IndexedDB, Local Storage, the
+     service worker's cache) holds the save and the record of purchases already consumed; restored onto a new phone,
+     it would bring those purchases back. Nothing else the app keeps needs a backup. -->
+<full-backup-content>
+    <exclude domain="root" path="app_webview/" />
+</full-backup-content>

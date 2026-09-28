@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- AB#4723: the adaptive icon's back layer matches the maskable PWA icon's own background (its corner pixel, as
+         apps/web/tools/make-android-icons.mjs reports it), so no seam shows where the front layer ends -->
+    <color name="ic_launcher_background">#0C0A12</color>
+</resources>

@@ -10,17 +10,7 @@ import { BootLoadScene } from './game/scenes/BootLoadScene';
 import { VaultScene } from './game/scenes/VaultScene';
 import { mountDebug } from './debug';
 import type { AgeBand } from './game/systems/State';
-
-// ---- safe areas (notches) measured from CSS env()
-function measureSafe() {
-  const probe = document.createElement('div');
-  probe.style.cssText = 'position:fixed;top:0;left:0;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);visibility:hidden;pointer-events:none';
-  document.body.appendChild(probe);
-  const cs = getComputedStyle(probe);
-  (window as any).__safeTop = parseFloat(cs.paddingTop) || 0;
-  (window as any).__safeBottom = parseFloat(cs.paddingBottom) || 0;
-  probe.remove();
-}
+import { measureSafe, watchSafeArea } from './safeArea';
 
 // ---- install prompt (PWA)
 window.addEventListener('beforeinstallprompt', (e) => {
@@ -57,7 +47,9 @@ function ageGate(): Promise<AgeBand> {
 
 async function start() {
   performance.mark('rv:start'); // AB#4737: the boot's own timings, as performance measures named rv:*
+  // safe areas (notches, system bars): env(), and in the Android app Capacitor's insets too (safeArea.ts, AB#4723)
   measureSafe();
+  watchSafeArea();
   const fonts = Promise.all([
     document.fonts.load('900 40px Cinzel'), document.fonts.load('700 40px Cinzel'),
     document.fonts.load('700 40px Oswald'), document.fonts.load('500 40px Oswald'),

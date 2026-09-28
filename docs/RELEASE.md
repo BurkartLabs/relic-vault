@@ -14,8 +14,8 @@ patch stay 0-99. `scripts/version.mjs` computes it and refuses anything Play cou
 5. Upload it in Play Console with release notes from the template below, and move the changelog link into the listing
    if it changed.
 
-The Android shell story (AB#4723) wires `android/app/build.gradle` to read `versionName` and `versionCode` from
-`android/version.properties` once `android/` exists. Until then the script computes the numbers and writes nothing.
+`android/app/build.gradle` reads `versionName` and `versionCode` from `android/version.properties` (AB#4723), which
+`npm run build` rewrites from package.json every time, so a build always carries package.json's version.
 
 ## Play release notes template
 

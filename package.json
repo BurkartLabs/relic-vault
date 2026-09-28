@@ -15,15 +15,22 @@
     "icons": "node apps/web/tools/make-icons.mjs",
     "playtest": "node apps/web/tools/play.mjs http://127.0.0.1:5173/ screenshots/playtest full",
     "test:plain": "vitest run",
+    "android:sync": "node scripts/android.mjs sync",
+    "android:bundle": "node scripts/android.mjs bundle",
+    "android:apk": "node scripts/android.mjs apk",
+    "android:icons": "node apps/web/tools/make-android-icons.mjs",
     "version": "node scripts/version.mjs --release && git add CHANGELOG.md"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/core": "^8.5.2",
     "@fontsource/cinzel": "^5.3.0",
     "@fontsource/oswald": "^5.3.0",
     "idb-keyval": "^6.3.0",
     "phaser": "^3.90.0"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.5.2",
     "@playwright/test": "^1.63.0",
     "@types/node": "^26.6.2",
     "typescript": "^7.0.2",

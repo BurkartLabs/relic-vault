@@ -1,0 +1,5 @@
+# AB#4723: gradlew is a shell script and must keep LF on any checkout (a CRLF first line fails on Linux CI);
+# the Windows launcher keeps CRLF; the wrapper jar is binary.
+gradlew text eol=lf
+*.bat text eol=crlf
+*.jar binary

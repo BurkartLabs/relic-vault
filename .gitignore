@@ -10,3 +10,9 @@ telemetry/events
 apps/web/dist-qa
 video/build
 video/raw
+
+# Android signing keys never live in the repository (AB#4723, docs/ANDROID.md)
+*.jks
+*.keystore
+*.p12
+*.pk8
