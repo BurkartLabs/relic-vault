@@ -54,6 +54,22 @@ which charges nothing, as every web and e2e build is:
   Manage Subscription (Play's subscription centre).
 - **Not yet done on a device**: this needs a phone or emulator and the key; `docs/DEVICE_QA.md`.
 
+## Ads (AB#4724)
+
+The game reaches ads through `AdService` (`apps/web/src/game/systems/ads/`). An Android build made with
+`VITE_ADS_MODE=admob` serves Google AdMob through `@capacitor-community/admob`; every other build, the web build and
+every e2e run included, shows the Criers' Guild demo veil and contacts no ad network.
+
+- **Ids:** `apps/web/src/game/config/ads.ts` holds the rewarded and interstitial ad unit ids, and the manifest's app id
+  comes from `RELIC_VAULT_ADMOB_APP_ID` (a Gradle property or the environment). Until the Board supplies real ones
+  (AB#4718), both are Google's published test ids, which show test ads and earn nothing.
+- **Consent:** the UMP form runs once the age gate is answered and before any ad is requested, and again from
+  Settings > Privacy options when UMP requires it. `VITE_ADMOB_DEBUG_GEOGRAPHY=EEA` makes the form appear as it does in
+  Europe, on test devices (an emulator is one).
+- **Under 16:** tagged under the age of consent, and every request is for non-personalised ads.
+- **Trying it:** `VITE_ADS_MODE=admob VITE_ADMOB_DEBUG_GEOGRAPHY=EEA npm run android:apk`, then `adb install`. The emulator
+  image needs Google Play services (a `google_apis` image has them).
+
 ## How the shell behaves
 
 - **SDK levels:** compile and target API 36, minimum API 26 (Android 8.0).
