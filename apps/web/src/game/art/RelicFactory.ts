@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
 import { CHAIN_PAINTERS } from './ChainArt';
-import { ITEM_IDS, ITEMS } from '../data/items';
+import { ITEM_IDS, ITEMS, chainOf } from '../data/items';
 import { floorDef } from '../data/floors';
 import {
   Ctx, makeCanvas, lin, rad, poly, smooth, star, glow, shade, MAT, metal, chrome, facets, sparkle, rrPath,
@@ -572,19 +572,35 @@ export function bakeBoardAtlas(scene: Phaser.Scene, ids: number[], masters: Reco
   ids.forEach((id, row) => { for (let f = 0; f < cols; f++) texB.add(`r${id}_${f}`, 0, f * F, row * F, F, F); });
 }
 
-/** Masters kept from the boot bake so a floor change can re-lay the board atlas without repainting. */
-let boardMasters: Record<number, HTMLCanvasElement> = {};
-export function rebakeBoardFor(scene: Phaser.Scene, floor: number) {
-  const ids = boardIds(floor).filter((id) => boardMasters[id]);
-  if (ids.length) bakeBoardAtlas(scene, ids, boardMasters);
+/**
+ * AB#4737: the relics a boot paints. On a low-end phone painting all 120 took most of the boot, for 70 relics that
+ * live on floors 3 to 9. A boot paints the Crypt and the Star Well (every floor's bindings come from them, and from
+ * the Antechamber) and each floor down to the deeper of floor 2 and the player's own; any other chain is painted the
+ * first time a screen asks for one of its relics (paintOnLookup), and then kept for the session.
+ */
+export function bootChains(floor: number): number[] {
+  const chains = new Set([1, 2]);
+  for (let f = 0; f <= Math.max(2, floor); f++) chains.add(floorDef(f).chain);
+  return [...chains].sort((a, b) => a - b);
 }
 
-export function bakeRelics(scene: Phaser.Scene, floor = 0) {
-  // masters for every item id; grid atlases keep every texture under 4096px for older phones
-  const ids = ITEM_IDS;
-  const masters: Record<number, HTMLCanvasElement> = {};
-  const mastersNoIris: Record<number, HTMLCanvasElement> = {};
-  for (const id of ids) {
+/** The item a frame name in an atlas stands for ('R53' in relic256, 'i53' in relic96), or null. */
+export function frameItem(name: unknown, prefix: string): number | null {
+  if (typeof name !== 'string' || !name.startsWith(prefix)) return null;
+  const rest = name.slice(prefix.length);
+  return /^\d+$/.test(rest) && ITEMS[Number(rest)] ? Number(rest) : null;
+}
+
+/** Masters painted so far, kept for the session: the atlases, the board re-lay and a floor change reuse them. */
+const masters: Record<number, HTMLCanvasElement> = {};
+const mastersNoIris: Record<number, HTMLCanvasElement> = {};
+const ATLAS_COLS = 8;
+let atlas: { x256: CanvasRenderingContext2D; x96: CanvasRenderingContext2D; tex256: Phaser.Textures.Texture; tex96: Phaser.Textures.Texture } | null = null;
+
+/** Paints the masters `ids` lack, into both atlases, and refreshes their GPU copies. How many it painted. */
+function paintIds(ids: number[]): number {
+  const fresh = ids.filter((id) => ITEMS[id] && !masters[id]);
+  for (const id of fresh) {
     const [c, ctx] = makeCanvas(256, 256);
     paintRelic(ctx, id, true);
     masters[id] = c;
@@ -593,23 +609,55 @@ export function bakeRelics(scene: Phaser.Scene, floor = 0) {
       paintRelic(ctx2, id, false);
       mastersNoIris[id] = c2;
     } else mastersNoIris[id] = c;
+    if (atlas) {
+      const k = ITEM_IDS.indexOf(id), x = k % ATLAS_COLS, y = Math.floor(k / ATLAS_COLS);
+      atlas.x256.drawImage(c, x * 256, y * 256);
+      atlas.x96.drawImage(c, x * 96, y * 96, 96, 96);
+    }
   }
-  const COLS = 8, rows = Math.ceil(ids.length / COLS);
-  const grid = (k: number, size: number) => ({ x: (k % COLS) * size, y: Math.floor(k / COLS) * size });
-  // 256 atlas
-  const [a256, x256] = makeCanvas(256 * COLS, 256 * rows);
-  ids.forEach((id, k) => { const p = grid(k, 256); x256.drawImage(masters[id], p.x, p.y); });
+  if (fresh.length && atlas) { atlas.tex256.source[0].update(); atlas.tex96.source[0].update(); }
+  return fresh.length;
+}
+
+/** Paints a whole chain (a screen that shows one of its relics will show its neighbours next). */
+export const paintChain = (chain: number) => paintIds(ITEM_IDS.filter((id) => chainOf(id) === chain));
+
+/** An atlas whose frames are all defined, painting a relic's chain the first time any of its frames is looked up. */
+function paintOnLookup(tex: Phaser.Textures.Texture, prefix: string) {
+  const get = tex.get.bind(tex);
+  tex.get = ((name?: string | number) => {
+    const id = frameItem(name, prefix);
+    if (id !== null && !masters[id]) paintChain(chainOf(id));
+    return get(name);
+  }) as typeof tex.get;
+}
+
+/** A floor change re-lays the board atlas, painting that floor's relics first if no screen has asked for them yet. */
+export function rebakeBoardFor(scene: Phaser.Scene, floor: number) {
+  const ids = boardIds(floor);
+  paintIds(ids);
+  if (ids.length) bakeBoardAtlas(scene, ids, mastersNoIris);
+}
+
+export function bakeRelics(scene: Phaser.Scene, floor = 0) {
+  // grid atlases keep every texture under 4096px for older phones; every frame is defined now, painted when needed
+  const ids = ITEM_IDS;
+  const rows = Math.ceil(ids.length / ATLAS_COLS);
+  const grid = (k: number, size: number) => ({ x: (k % ATLAS_COLS) * size, y: Math.floor(k / ATLAS_COLS) * size });
+  const [a256, x256] = makeCanvas(256 * ATLAS_COLS, 256 * rows);
   const tex256 = scene.textures.addCanvas('relic256', a256)!;
   ids.forEach((id, k) => { const p = grid(k, 256); tex256.add(`R${id}`, 0, p.x, p.y, 256, 256); });
-  // 96 icons
-  const [a96, x96] = makeCanvas(96 * COLS, 96 * rows);
-  ids.forEach((id, k) => { const p = grid(k, 96); x96.drawImage(masters[id], p.x, p.y, 96, 96); });
+  const [a96, x96] = makeCanvas(96 * ATLAS_COLS, 96 * rows);
   const tex96 = scene.textures.addCanvas('relic96', a96)!;
   ids.forEach((id, k) => { const p = grid(k, 96); tex96.add(`i${id}`, 0, p.x, p.y, 96, 96); });
+  atlas = { x256, x96, tex256, tex96 };
+  const first = bootChains(floor);
+  paintIds(ids.filter((id) => first.includes(chainOf(id))));
+  paintOnLookup(tex256, 'R');
+  paintOnLookup(tex96, 'i');
 
   // board atlas with sheen frames: one row per item, for this floor's relics only
-  boardMasters = mastersNoIris;
-  bakeBoardAtlas(scene, boardIds(floor), mastersNoIris);
+  rebakeBoardFor(scene, floor);
 
   // live iris for the Living Relic
   const [ic, ictx] = makeCanvas(64, 64);

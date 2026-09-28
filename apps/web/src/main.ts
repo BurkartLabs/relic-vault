@@ -56,6 +56,7 @@ function ageGate(): Promise<AgeBand> {
 }
 
 async function start() {
+  performance.mark('rv:start'); // AB#4737: the boot's own timings, as performance measures named rv:*
   measureSafe();
   const fonts = Promise.all([
     document.fonts.load('900 40px Cinzel'), document.fonts.load('700 40px Cinzel'),
@@ -73,6 +74,7 @@ async function start() {
     }
   })();
   await fonts; // text in the splash needs the display font
+  performance.measure('rv:fonts', 'rv:start');
   const game = new Phaser.Game({
     type: Phaser.WEBGL,
     parent: 'game',

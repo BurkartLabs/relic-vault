@@ -16,6 +16,8 @@ those notes as the new version (docs/RELEASE.md). The Google Play release notes 
 ### Changed
 
 - Settings shows the build's own version, not a fixed "v1.0" (AB#4732).
+- A faster start on a slow phone: the relics of floors 3 to 9, the shop's art and the album's cards are painted the
+  first time a screen shows them, not at boot, and kept for the session. No change to how anything looks (AB#4737).
 
 ## [1.0.0] - 2026-09-19
 

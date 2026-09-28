@@ -1,0 +1,532 @@
+{
+  "tag": "after",
+  "throttle": 4,
+  "renderer": "ANGLE (NVIDIA, NVIDIA GeForce GTX 1070 Ti (0x00001B82) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+  "runs": 5,
+  "summary": {
+    "cold": {
+      "ageGate": 2912,
+      "vaultReady": 6833,
+      "toInteractive": 5084,
+      "firstForge": 7111
+    },
+    "warm": {
+      "ageGate": null,
+      "vaultReady": 6344,
+      "toInteractive": 6344,
+      "firstForge": 6998
+    }
+  },
+  "fps": {
+    "relics": 36,
+    "particlesMean": 191,
+    "fps": 60.2,
+    "p95FrameMs": 16.8,
+    "frames": 301
+  },
+  "textures": {
+    "textures": 112,
+    "gpuMB": 81.3,
+    "canvasMB": 81.3,
+    "largest": [
+      [
+        "relic256",
+        2048,
+        3328,
+        26
+      ],
+      [
+        "relics",
+        1120,
+        3680,
+        15.7
+      ],
+      [
+        "splash",
+        1080,
+        1920,
+        7.9
+      ],
+      [
+        "bgFar",
+        1080,
+        1920,
+        7.9
+      ],
+      [
+        "dais",
+        984,
+        1034,
+        3.9
+      ],
+      [
+        "relic96",
+        768,
+        1248,
+        3.7
+      ],
+      [
+        "bgChains",
+        1080,
+        760,
+        3.1
+      ],
+      [
+        "fog",
+        1024,
+        400,
+        1.6
+      ]
+    ]
+  },
+  "bake": [
+    [
+      "rv:fonts",
+      323
+    ],
+    [
+      "rv:splash",
+      526
+    ],
+    [
+      "rv:bake:Waking the relics",
+      1166
+    ],
+    [
+      "rv:bake:Carving the vault",
+      934
+    ],
+    [
+      "rv:bake:Gilding the frames",
+      5
+    ],
+    [
+      "rv:bake:Shuffling the album",
+      1
+    ],
+    [
+      "rv:ready-wait",
+      4
+    ],
+    [
+      "rv:vault-create",
+      1599
+    ]
+  ],
+  "raw": {
+    "cold": [
+      {
+        "ageGate": 6479.200000047684,
+        "vaultReady": 11268,
+        "firstForge": 11517.100000023842,
+        "toInteractive": 9321.899999976158,
+        "bake": [
+          [
+            "rv:fonts",
+            476
+          ],
+          [
+            "rv:splash",
+            1258
+          ],
+          [
+            "rv:bake:Waking the relics",
+            2571
+          ],
+          [
+            "rv:bake:Carving the vault",
+            1471
+          ],
+          [
+            "rv:bake:Gilding the frames",
+            1
+          ],
+          [
+            "rv:bake:Shuffling the album",
+            1
+          ],
+          [
+            "rv:ready-wait",
+            198
+          ],
+          [
+            "rv:vault-create",
+            2061
+          ]
+        ],
+        "errors": []
+      },
+      {
+        "ageGate": 2912.100000023842,
+        "vaultReady": 5629,
+        "firstForge": 5783.899999976158,
+        "toInteractive": 4815.300000071526,
+        "bake": [
+          [
+            "rv:fonts",
+            282
+          ],
+          [
+            "rv:splash",
+            296
+          ],
+          [
+            "rv:bake:Waking the relics",
+            1033
+          ],
+          [
+            "rv:bake:Carving the vault",
+            633
+          ],
+          [
+            "rv:bake:Gilding the frames",
+            5
+          ],
+          [
+            "rv:bake:Shuffling the album",
+            1
+          ],
+          [
+            "rv:ready-wait",
+            171
+          ],
+          [
+            "rv:vault-create",
+            1268
+          ]
+        ],
+        "errors": []
+      },
+      {
+        "ageGate": 1803.4000000953674,
+        "vaultReady": 6876.600000023842,
+        "firstForge": 7110.5,
+        "toInteractive": 5083.600000023842,
+        "bake": [
+          [
+            "rv:fonts",
+            462
+          ],
+          [
+            "rv:splash",
+            383
+          ],
+          [
+            "rv:bake:Waking the relics",
+            829
+          ],
+          [
+            "rv:bake:Carving the vault",
+            795
+          ],
+          [
+            "rv:bake:Gilding the frames",
+            4
+          ],
+          [
+            "rv:bake:Shuffling the album",
+            1
+          ],
+          [
+            "rv:ready-wait",
+            156
+          ],
+          [
+            "rv:vault-create",
+            1784
+          ]
+        ],
+        "errors": []
+      },
+      {
+        "ageGate": 1358.8999999761581,
+        "vaultReady": 6524.5,
+        "firstForge": 6750,
+        "toInteractive": 3711.399999976158,
+        "bake": [
+          [
+            "rv:fonts",
+            426
+          ],
+          [
+            "rv:splash",
+            352
+          ],
+          [
+            "rv:bake:Waking the relics",
+            955
+          ],
+          [
+            "rv:bake:Carving the vault",
+            807
+          ],
+          [
+            "rv:bake:Gilding the frames",
+            4
+          ],
+          [
+            "rv:bake:Shuffling the album",
+            1
+          ],
+          [
+            "rv:ready-wait",
+            272
+          ],
+          [
+            "rv:vault-create",
+            1553
+          ]
+        ],
+        "errors": []
+      },
+      {
+        "ageGate": 3358.399999976158,
+        "vaultReady": 6832.899999976158,
+        "firstForge": 7469.699999928474,
+        "toInteractive": 5741.200000047684,
+        "bake": [
+          [
+            "rv:fonts",
+            399
+          ],
+          [
+            "rv:splash",
+            392
+          ],
+          [
+            "rv:bake:Waking the relics",
+            869
+          ],
+          [
+            "rv:bake:Carving the vault",
+            735
+          ],
+          [
+            "rv:bake:Gilding the frames",
+            9
+          ],
+          [
+            "rv:bake:Shuffling the album",
+            1
+          ],
+          [
+            "rv:ready-wait",
+            547
+          ],
+          [
+            "rv:vault-create",
+            1433
+          ]
+        ],
+        "errors": []
+      }
+    ],
+    "warm": [
+      {
+        "ageGate": null,
+        "vaultReady": 6810.200000047684,
+        "firstForge": 7165.899999976158,
+        "toInteractive": 6810.200000047684,
+        "bake": [
+          [
+            "rv:fonts",
+            323
+          ],
+          [
+            "rv:splash",
+            526
+          ],
+          [
+            "rv:bake:Waking the relics",
+            1166
+          ],
+          [
+            "rv:bake:Carving the vault",
+            934
+          ],
+          [
+            "rv:bake:Gilding the frames",
+            5
+          ],
+          [
+            "rv:bake:Shuffling the album",
+            1
+          ],
+          [
+            "rv:ready-wait",
+            4
+          ],
+          [
+            "rv:vault-create",
+            1599
+          ]
+        ],
+        "errors": []
+      },
+      {
+        "ageGate": null,
+        "vaultReady": 5467.100000023842,
+        "firstForge": 5918.600000023842,
+        "toInteractive": 5467.100000023842,
+        "bake": [
+          [
+            "rv:fonts",
+            316
+          ],
+          [
+            "rv:splash",
+            311
+          ],
+          [
+            "rv:bake:Waking the relics",
+            750
+          ],
+          [
+            "rv:bake:Carving the vault",
+            712
+          ],
+          [
+            "rv:bake:Gilding the frames",
+            4
+          ],
+          [
+            "rv:bake:Shuffling the album",
+            0
+          ],
+          [
+            "rv:ready-wait",
+            7
+          ],
+          [
+            "rv:vault-create",
+            1711
+          ]
+        ],
+        "errors": []
+      },
+      {
+        "ageGate": null,
+        "vaultReady": 6297.300000071526,
+        "firstForge": 6777.5,
+        "toInteractive": 6297.300000071526,
+        "bake": [
+          [
+            "rv:fonts",
+            443
+          ],
+          [
+            "rv:splash",
+            428
+          ],
+          [
+            "rv:bake:Waking the relics",
+            895
+          ],
+          [
+            "rv:bake:Carving the vault",
+            788
+          ],
+          [
+            "rv:bake:Gilding the frames",
+            1
+          ],
+          [
+            "rv:bake:Shuffling the album",
+            1
+          ],
+          [
+            "rv:ready-wait",
+            8
+          ],
+          [
+            "rv:vault-create",
+            1717
+          ]
+        ],
+        "errors": []
+      },
+      {
+        "ageGate": null,
+        "vaultReady": 6820.700000047684,
+        "firstForge": 7315.899999976158,
+        "toInteractive": 6820.700000047684,
+        "bake": [
+          [
+            "rv:fonts",
+            469
+          ],
+          [
+            "rv:splash",
+            515
+          ],
+          [
+            "rv:bake:Waking the relics",
+            1039
+          ],
+          [
+            "rv:bake:Carving the vault",
+            849
+          ],
+          [
+            "rv:bake:Gilding the frames",
+            4
+          ],
+          [
+            "rv:bake:Shuffling the album",
+            1
+          ],
+          [
+            "rv:ready-wait",
+            7
+          ],
+          [
+            "rv:vault-create",
+            1772
+          ]
+        ],
+        "errors": []
+      },
+      {
+        "ageGate": null,
+        "vaultReady": 6343.600000023842,
+        "firstForge": 6998,
+        "toInteractive": 6343.600000023842,
+        "bake": [
+          [
+            "rv:fonts",
+            488
+          ],
+          [
+            "rv:splash",
+            470
+          ],
+          [
+            "rv:bake:Waking the relics",
+            781
+          ],
+          [
+            "rv:bake:Carving the vault",
+            749
+          ],
+          [
+            "rv:bake:Gilding the frames",
+            1
+          ],
+          [
+            "rv:bake:Shuffling the album",
+            1
+          ],
+          [
+            "rv:ready-wait",
+            7
+          ],
+          [
+            "rv:vault-create",
+            1700
+          ]
+        ],
+        "errors": []
+      }
+    ]
+  }
+}
