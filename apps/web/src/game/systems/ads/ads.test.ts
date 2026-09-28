@@ -254,6 +254,29 @@ describe('the AdMob adapter (AB#4724)', () => {
     ads.dispose();
   });
 
+  it('the demo veil on the web and in an Android build without admob; AdMob only in the admob Android build', async () => {
+    const { createAdService } = await import('./createAdService');
+    expect(createAdService(CFG, 'demo', false).kind).toBe('demo');
+    expect(createAdService(CFG, 'admob', false).kind).toBe('demo'); // the web build of an admob release
+    expect(createAdService(CFG, 'demo', true).kind).toBe('demo');
+    expect(createAdService(CFG, 'admob', true).kind).toBe('admob');
+  });
+
+  it('starts with a plugin that answers every property, then() included, as Capacitor\'s does (Bug #4785)', async () => {
+    const { createAdService } = await import('./createAdService');
+    const fake = fakePlugin();
+    // Capacitor's plugin object: a Proxy with a method for every name; then() is "not implemented on android"
+    const capacitorLike = new Proxy(fake, {
+      get: (t, k) => (k === 'then' ? () => { throw new Error('"AdMob.then()" is not implemented on android'); } : (t as any)[k]),
+    });
+    const ads = createAdService(CFG, 'admob', true, async () => ({ AdMob: capacitorLike }));
+    await ads.init({ underAge: false });
+    await flush();
+    expect(fake.calls.slice(0, 2)).toEqual(['requestConsentInfo', 'initialize']);
+    expect(ads.rewardedReady()).toBe(true);
+    (ads as AdMobAdService).dispose();
+  });
+
   it('a failed load is retried', async () => {
     const plugin = fakePlugin({ loadFails: 1 });
     const ads = new AdMobAdService(plugin, { ...CFG, retryMs: 5 });
