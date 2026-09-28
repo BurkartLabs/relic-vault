@@ -49,7 +49,8 @@ export class Telemetry {
     if (this.endpoint) {
       this.pending.push(e);
       // the funnel's key events should not wait for the 10s batch
-      if (event === 'app_open' || event === 'verb_first' || event === 'purchase_demo' || event === 'error') setTimeout(() => this.flush(), 300);
+      // AB#4725, AB#4739: a Play build's purchase and its failures too
+      if (Telemetry.PROMPT.has(event)) setTimeout(() => this.flush(), 300);
     }
     return e;
   }
@@ -108,6 +109,9 @@ export class Telemetry {
       else void fetch(this.endpoint, { method: 'POST', body, headers: { 'content-type': 'text/plain' }, keepalive: true }).catch(() => {});
     } catch { /* never let telemetry break play */ }
   }
+
+  /** The events sent within a moment rather than with the 10 s batch. */
+  static readonly PROMPT = new Set(['app_open', 'verb_first', 'purchase_demo', 'purchase', 'purchase_failed', 'error']);
 
   count(event: string) { return this.buf.filter((e) => e.event === event).length; }
 }

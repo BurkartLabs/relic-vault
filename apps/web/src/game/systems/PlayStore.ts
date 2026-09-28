@@ -51,7 +51,7 @@ export interface StoreCustomer {
 
 export type BuyResult =
   | { ok: true; transaction: StoreTransaction; customer: StoreCustomer }
-  | { ok: false; reason: 'cancelled' | 'pending' | 'unavailable' | 'error'; message?: string };
+  | { ok: false; reason: 'cancelled' | 'pending' | 'unavailable' | 'error'; code?: string; message?: string };
 
 export interface StoreBackend {
   start(): Promise<void>;
@@ -128,9 +128,11 @@ export class RevenueCatBackend implements StoreBackend {
       const t = r.transaction;
       return { ok: true, transaction: { id: t?.transactionIdentifier ?? `${sku}-${t?.purchaseDate ?? Date.now()}`, sku, at: Date.parse(t?.purchaseDate) || Date.now() }, customer };
     } catch (e: any) {
-      if (e?.userCancelled || e?.code === CANCELLED) return { ok: false, reason: 'cancelled' };
-      if (e?.code === PENDING) return { ok: false, reason: 'pending' };
-      return { ok: false, reason: 'error', message: String(e?.message ?? e) };
+      // AB#4739: RevenueCat's error code travels with the result, for the purchase_failed event
+      const code = e?.code !== undefined && e?.code !== null ? String(e.code) : undefined;
+      if (e?.userCancelled || e?.code === CANCELLED) return { ok: false, reason: 'cancelled', code };
+      if (e?.code === PENDING) return { ok: false, reason: 'pending', code };
+      return { ok: false, reason: 'error', code, message: String(e?.message ?? e) };
     }
   }
 

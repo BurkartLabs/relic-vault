@@ -6,6 +6,7 @@ import { grantGold, grantChests, piggyGems, chestsAllowed, openChest, type Chest
 import { welcomeOpen } from './Offers';
 import { ENTITLEMENT, PLAY_PACKAGE, PLAY_PRODUCT, type StoreBackend, type StoreCustomer, type StoreTransaction } from './PlayStore'; // AB#4725
 import { setStorePrices } from './Prices';
+import { reportPluginError } from './NativeTelemetry'; // AB#4739
 
 export interface PurchaseGrant {
   ok: boolean;
@@ -118,7 +119,7 @@ export type StoreMode = 'demo' | 'play';
 
 export type PurchaseResult =
   | { ok: true; receipt: string; customer?: StoreCustomer }
-  | { ok: false; reason: 'cancelled' | 'pending' | 'unavailable' | 'error'; message?: string };
+  | { ok: false; reason: 'cancelled' | 'pending' | 'unavailable' | 'error'; code?: string; message?: string };
 
 /**
  * Store adapter. Demo mode (the web default and every e2e run): every purchase succeeds after a short "processing"
@@ -142,6 +143,7 @@ export class PurchaseService {
       this.backend.onChange((c) => { const changed = applyEntitlements(s, c.active); const grants = settlePending(s, c.transactions, rng); onChange?.(changed, grants); });
     } catch (e) {
       this.unavailable = String((e as Error)?.message ?? e);
+      reportPluginError('Purchases', 'start', e); // AB#4739: a store build whose store never answered is worth knowing
     }
   }
 
