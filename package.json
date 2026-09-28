@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "prebuild": "node scripts/version.mjs",
     "build": "vite build",
     "preview": "vite preview --port 4173",
     "test": "node scripts/test-strict.mjs",
@@ -13,7 +14,8 @@
     "test:e2e": "playwright test",
     "icons": "node apps/web/tools/make-icons.mjs",
     "playtest": "node apps/web/tools/play.mjs http://127.0.0.1:5173/ screenshots/playtest full",
-    "test:plain": "vitest run"
+    "test:plain": "vitest run",
+    "version": "node scripts/version.mjs --release && git add CHANGELOG.md"
   },
   "dependencies": {
     "@fontsource/cinzel": "^5.3.0",

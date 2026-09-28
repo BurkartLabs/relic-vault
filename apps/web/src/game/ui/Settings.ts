@@ -4,8 +4,11 @@ import { ctx } from '../GameCtx';
 import { chestOddsDisclosure, ECON, SKUS, SkuId } from '../data/catalog';
 import { InfoSheet } from './Sheets';
 import type { VaultScene } from '../scenes/VaultScene';
+import { adsSentence, openPublicPage } from '../buildMode'; // AB#4726
+import { deleteMyData } from '../systems/DataEraser'; // AB#4726
 
 export class SettingsModal extends Modal {
+  sc!: Scroller; // AB#4726: kept, so a test can bring a row into view as a player's drag would
   constructor(vs: VaultScene) {
     super(vs, { w: 980, h: 1640, title: 'SETTINGS', panelKey: 'panelDark' });
     this.kind = 'SettingsModal';
@@ -14,7 +17,7 @@ export class SettingsModal extends Modal {
 
   private build() {
     const vs = this.vs, s = ctx.state, top = this.top;
-    const sc = new Scroller(vs, this.box, -470, top + 60, 940, this.ph - 110);
+    const sc = this.sc = new Scroller(vs, this.box, -470, top + 60, 940, this.ph - 110);
     const C = sc.content;
     const guard = sc.inView;
     let y = 40;
@@ -57,7 +60,9 @@ export class SettingsModal extends Modal {
     row('PRIVACY', 'dark', () => vs.openModal(new InfoSheet(vs, 'PRIVACY',
       'Relic Vault stores your progress on this device only (IndexedDB, with localStorage as a fallback).\n\n' +
       'A local analytics log records offers shown and purchase buttons pressed (item, trigger, session time, rank, gems, gold) to tune the game. In this build it stays on your device unless the operator configures a telemetry endpoint; if one is configured, anonymous gameplay events (a random device id, no name or contact details) are sent to it.\n\n' +
-      'No account. No tracking pixels. Ads in this build are simulated veils.\n\nYou can erase everything with Reset Progress below.', () => vs.openSettings())));
+      `No account. No tracking pixels. ${adsSentence()}\n\nThe full privacy policy and terms open from Settings. Delete My Data below erases everything this game keeps on this device.`, () => vs.openSettings())));
+    row('PRIVACY POLICY', 'dark', () => openPublicPage('privacy.html')); // AB#4726: the public pages, outside the invite wall
+    row('TERMS', 'dark', () => openPublicPage('terms.html'));
     row('ODDS & DISCLOSURES', 'dark', () => vs.openModal(new InfoSheet(vs, 'ODDS',
       chestOddsDisclosure() + '\n\n' +
       `Exact relics are always for sale: Emerald Scarab for ${ECON.exactT5Gems} gems, lower relics for gold.\n\n` +
@@ -71,8 +76,18 @@ export class SettingsModal extends Modal {
       location.reload();
     }, { color: 'red', size: 34, guard });
     C.add(reset);
+    y += 120;
+    // AB#4726: beside Reset Progress, which clears the game; this also clears the device id and any SDK caches.
+    let armedDelete = false;
+    const erase: Button = new Button(vs, 470, y + 50, 780, 100, 'DELETE MY DATA', async () => {
+      if (!armedDelete) { armedDelete = true; erase.setLabel('TAP AGAIN TO DELETE ALL YOUR DATA'); ctx.sfx.play('error'); return; }
+      const left = await deleteMyData(ctx.save);
+      console.info('[rv] delete-my-data remaining', JSON.stringify(left));
+      location.reload();
+    }, { color: 'red', size: 34, guard });
+    C.add(erase);
     y += 140;
-    C.add(txt(vs, 470, y + 30, 'Relic Vault v1.0 · DEMO STORE MODE · no real charges', { size: 22, font: 'body', color: '#6a5a78', strokeW: 0 }));
+    C.add(txt(vs, 470, y + 30, `Relic Vault v${ctx.telemetry.version} · DEMO STORE MODE · no real charges`, { size: 22, font: 'body', color: '#6a5a78', strokeW: 0 }));
     y += 100;
     sc.setContentHeight(y);
   }
