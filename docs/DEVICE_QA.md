@@ -83,3 +83,17 @@ background in layers over the first frames.
 shot: every difference was within main's own difference from itself on a second run (ambient particles, merge timing),
 and the lazily painted screens (shop, wheel, album) were looked at. The unit tests and the e2e suite, with its
 boot-console-errors check, pass.
+
+## The Play store on a device (AB#4725): TODO
+
+Not yet run: it needs an Android device or emulator with Google Play, RevenueCat's sandbox SDK key and a Play licence
+tester (docs/ANDROID.md, "Purchases"). What was checked without them: the adapter against a fake RevenueCat store in
+unit tests, and a play-mode web build fed euro prices, looked at in a German-locale browser
+(`screenshots/store/ab4725/`). That is a stand-in for the store, not the store. On a device, in a non-USD Play country:
+
+1. The shop, the offers, the Welcome pack, the Pass and VIP show Play's own localised prices; no "$", no "demo".
+2. Buy a gem pack with a test card: the gems arrive once. Kill the app during the purchase and reopen: still once.
+3. Buy with "slow test card": the shop says the payment is pending; when Play completes it, the pack arrives, once.
+4. Buy No Ads, then refund it in Play Console: on the next start or resume, interstitials are back.
+5. Subscribe to VIP, cancel in Settings > Manage Subscription (Play's page opens): VIP ends when Play says it lapses.
+6. Reinstall, Restore Purchases: No Ads, the Pass and VIP come back; no gem pack is paid out again.

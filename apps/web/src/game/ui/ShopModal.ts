@@ -1,8 +1,10 @@
 import Phaser from 'phaser';
 import { Modal, keeperLine } from './Modal';
-import { Button, txt, Scroller, badge, money, fmt, iconAmount } from './kit';
+import { Button, txt, Scroller, badge, fmt, iconAmount } from './kit';
 import { ctx } from '../GameCtx';
-import { SKUS, SkuId, COPY, ECON, GEM_CHEST_ODDS, EARNED_CHEST_ODDS, CHEST_PITY_TIER, CHEST_TOP_TIER, RELICS, GEMS_PER_DOLLAR_BASELINE, BASELINE_SKU } from '../data/catalog';
+import { SKUS, SkuId, COPY, ECON, GEM_CHEST_ODDS, EARNED_CHEST_ODDS, CHEST_PITY_TIER, CHEST_TOP_TIER, RELICS, BASELINE_SKU } from '../data/catalog';
+import { priceLabel, gemsPerUnit, baselineGemsPerUnit, currencyUnit } from '../systems/Prices'; // AB#4725: the store's prices
+import { storeCopy } from '../buildMode';
 import { skuAvailable } from '../systems/PurchaseService';
 import { computeLuck } from '../systems/LuckSystem';
 import { chestsAllowed, buyExact, buyMarket, openChest, exactRelicOffer, exactRelicCost, skuValuePct, welcomeValueBasis } from '../systems/Economy';
@@ -91,7 +93,7 @@ export class ShopModal extends Modal {
       card.add(txt(vs, 160, -40, sku.title, { size: 50, gold: true, weight: '900' }));
       const blurb = heroSku === 'welcome' && !allowedRandom ? sku.blurb.replace('a Lucky Chest on the house', 'a third Gold Mask') : sku.blurb;
       card.add(txt(vs, 160, 22, blurb, { size: 26, font: 'body', color: '#e8dcf0', wrap: 520 }));
-      const b = new Button(vs, 160, 112, 340, 104, money(sku.price), () => this.purchase(heroSku), { color: 'green', size: 44, guard });
+      const b = new Button(vs, 160, 112, 340, 104, priceLabel(heroSku), () => this.purchase(heroSku), { color: 'green', size: 44, guard });
       card.add(b);
       if (heroSku === 'welcome') card.add(badge(vs, 420, 90, 'ONE TIME', 'red', 130));
       if (heroSku === 'comeback') card.add(badge(vs, 420, 90, 'SALE', 'red', 120));
@@ -120,9 +122,11 @@ export class ShopModal extends Modal {
       }
       card.add(txt(vs, 0, 40, fmt(sku.gems!), { size: 60, font: 'num', weight: '700', color: '#7EE0FF' }));
       const pct = skuValuePct(id, s);
-      card.add(txt(vs, 0, 94, pct > 100 ? `+${pct - 100}% VALUE` : 'STANDARD', { size: 26, font: 'num', weight: '700', color: pct > 100 ? '#8CF08A' : '#b9a9c6' }));
-      card.add(txt(vs, 0, 126, `${(sku.gems! / sku.price).toFixed(1)} gems per $`, { size: 22, font: 'body', color: '#b9a9c6', strokeW: 0 }));
-      card.add(new Button(vs, 0, 182, 240, 92, money(sku.price), () => this.purchase(id), { color: 'green', size: 38, guard }));
+      // AB#4725: no price from the store yet, no ribbon and no rate, rather than a figure from the USD catalog
+      card.add(txt(vs, 0, 94, Number.isNaN(pct) ? '' : pct > 100 ? `+${pct - 100}% VALUE` : 'STANDARD', { size: 26, font: 'num', weight: '700', color: pct > 100 ? '#8CF08A' : '#b9a9c6' }));
+      const rate = gemsPerUnit(id);
+      card.add(txt(vs, 0, 126, Number.isNaN(rate) ? '' : `${rate.toFixed(1)} gems per ${currencyUnit()}`, { size: 22, font: 'body', color: '#b9a9c6', strokeW: 0 }));
+      card.add(new Button(vs, 0, 182, 240, 92, priceLabel(id), () => this.purchase(id), { color: 'green', size: 38, guard }));
       if (sku.badge) card.add(badge(vs, 108, -190, sku.badge, sku.badge === 'BEST VALUE' ? 'gold' : 'red', 116));
       if (id === 'gems1200') this.best = card;
       C.add(card);
@@ -234,7 +238,7 @@ export class ShopModal extends Modal {
       card.add(title);
       card.add(txt(vs, 0, 76, o.id === 'piggy' ? `Holds ${fmt(Math.floor(s.piggy))} gems` : sku.blurb, { size: 21, font: 'body', color: '#d8cce4', wrap: 260, strokeW: 0 }));
       if (owned) card.add(txt(vs, 0, 156, o.id === 'piggy' ? 'EMPTY' : 'OWNED', { size: 36, font: 'num', weight: '700', color: '#8CF08A' }));
-      else card.add(new Button(vs, 0, 156, 230, 88, money(sku.price), () => this.purchase(o.id), { color: o.color, size: 36, guard }));
+      else card.add(new Button(vs, 0, 156, 230, 88, priceLabel(o.id), () => this.purchase(o.id), { color: o.color, size: 36, guard }));
       if (sku.badge && !owned) card.add(badge(vs, 110, -170, sku.badge, 'red', 100));
       C.add(card);
     });
@@ -259,8 +263,8 @@ export class ShopModal extends Modal {
     const legal = txt(vs, 490, y + 10,
       `Lucky Chest odds for ${ECON.chestGemCost} gems: ${odds(GEM_CHEST_ODDS)}. Chests you earn: ${odds(EARNED_CHEST_ODDS)}. Every ${ECON.pityEvery}th chest without a ${RELICS[CHEST_PITY_TIER].name} or better is guaranteed one. ` +
       `Luck may upgrade a result by one tier. Exact relics are always available for gems or gold.\n` +
-      `Value ribbons compare gems per dollar against the ${money(BASELINE_SKU.price)} pack (${GEMS_PER_DOLLAR_BASELINE.toFixed(1)} gems/$); ${welcomeValueBasis(s)}; gold and relics are extra. ` +
-      `DEMO MODE: purchases are simulated. No real money is charged. Restore & manage purchases in Settings.`,
+      `Value ribbons compare gems per ${currencyUnit() === '$' ? 'dollar' : currencyUnit()} against the ${priceLabel(BASELINE_SKU.id)} pack (${baselineGemsPerUnit().toFixed(1)} gems/${currencyUnit()}); ${welcomeValueBasis(s)}; gold and relics are extra. ` +
+      storeCopy().shopNote,
       { size: 22, font: 'body', color: '#9a8aa8', wrap: 900, strokeW: 0, shadow: false, lineSpacing: 4, origin: [0.5, 0] });
     C.add(legal);
     y += legal.height + 70;

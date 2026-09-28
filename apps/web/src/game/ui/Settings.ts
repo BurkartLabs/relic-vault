@@ -4,7 +4,8 @@ import { ctx } from '../GameCtx';
 import { chestOddsDisclosure, ECON, SKUS, SkuId } from '../data/catalog';
 import { InfoSheet } from './Sheets';
 import type { VaultScene } from '../scenes/VaultScene';
-import { adsSentence, openPublicPage } from '../buildMode'; // AB#4726
+import { adsSentence, openPublicPage, openExternal, storeCopy } from '../buildMode'; // AB#4726, AB#4725
+import { priceLabel } from '../systems/Prices'; // AB#4725
 import { deleteMyData } from '../systems/DataEraser'; // AB#4726
 
 export class SettingsModal extends Modal {
@@ -39,22 +40,38 @@ export class SettingsModal extends Modal {
     const install = (window as any).__installPrompt;
     if (install) row('INSTALL RELIC VAULT', 'gold', async () => { install.prompt(); (window as any).__installPrompt = null; ctx.analytics.log('install_prompt'); });
     row('RESTORE PURCHASES', 'blue', async () => {
+      if (ctx.purchases.mode === 'play') {
+        // AB#4725: what Google Play has for this account. Only unlocks and VIP come back; gem packs were spent in play.
+        vs.toast('Asking Google Play…');
+        const r = await ctx.purchases.restore(s).catch(() => null);
+        if (!r) { vs.toast('Google Play did not answer. Try again in a moment.'); return; }
+        ctx.persistNow();
+        vs.refreshButtons();
+        const names = r.entitlements.map((sku) => SKUS[sku].title);
+        ctx.analytics.log('restore_purchases', { count: names.length });
+        vs.toast(names.length ? `Restored from Google Play: ${names.join(', ')}.` : 'Google Play has no unlocks or VIP for this account. Gem packs are not restored.');
+        return;
+      }
       await ctx.purchases.restore();
       const n = s.purchases.length;
       ctx.analytics.log('restore_purchases', { count: n });
       vs.toast(n ? `Restored ${n} purchase${n > 1 ? 's' : ''} on this device.` : 'Nothing to restore on this device.');
     });
+    // AB#4725: Vault VIP is a Play subscription, cancelled and changed in Play's own subscription centre
+    if (ctx.purchases.mode === 'play') row('MANAGE SUBSCRIPTION', 'dark', async () => openExternal(await ctx.purchases.manageUrl()));
     row('MANAGE PURCHASES', 'dark', () => {
       const owned: string[] = [];
       if (s.ent.passPremium) owned.push('Keeper’s Pass (this season)');
-      if (s.ent.vip) owned.push(`Vault VIP — renews ${new Date(s.ent.vipUntil).toLocaleDateString()}`);
+      if (s.ent.vip) owned.push(s.ent.vipUntil ? `Vault VIP — renews ${new Date(s.ent.vipUntil).toLocaleDateString()}` : 'Vault VIP');
       if (s.ent.removeAds) owned.push('Silence the Criers (no interstitials)');
       if (s.ent.welcome) owned.push('Keeper’s Welcome');
-      const hist = s.purchases.slice(-8).reverse().map((p) => `${new Date(p.t).toLocaleString()} · ${SKUS[p.sku as SkuId]?.title ?? p.sku} · $${SKUS[p.sku as SkuId]?.price ?? '?'}`);
+      // AB#4725: a Play build shows no price here: what was paid, in which currency, is Play's record, not ours
+      const paid = (sku: string) => (ctx.purchases.mode === 'play' || !SKUS[sku as SkuId] ? '' : ` · ${priceLabel(sku as SkuId)}`);
+      const hist = s.purchases.slice(-8).reverse().map((p) => `${new Date(p.t).toLocaleString()} · ${SKUS[p.sku as SkuId]?.title ?? p.sku}${paid(p.sku)}`);
       vs.openModal(new InfoSheet(vs, 'PURCHASES', [
         owned.length ? 'Active:\n' + owned.join('\n') : 'No active subscriptions.',
-        hist.length ? 'Recent (demo, not charged):\n' + hist.join('\n') : 'No purchases yet.',
-        s.ent.vip ? 'Subscriptions are managed in your app store account. In this demo, VIP simply expires after 30 days.' : '',
+        hist.length ? storeCopy().historyHeading + '\n' + hist.join('\n') : 'No purchases yet.',
+        s.ent.vip ? storeCopy().vipNote : '',
       ].filter(Boolean).join('\n\n'), () => vs.openSettings()));
     });
     row('PRIVACY', 'dark', () => vs.openModal(new InfoSheet(vs, 'PRIVACY',
@@ -87,7 +104,7 @@ export class SettingsModal extends Modal {
     }, { color: 'red', size: 34, guard });
     C.add(erase);
     y += 140;
-    C.add(txt(vs, 470, y + 30, `Relic Vault v${ctx.telemetry.version} · DEMO STORE MODE · no real charges`, { size: 22, font: 'body', color: '#6a5a78', strokeW: 0 }));
+    C.add(txt(vs, 470, y + 30, `Relic Vault v${ctx.telemetry.version} · ${storeCopy().footer}`, { size: 22, font: 'body', color: '#6a5a78', strokeW: 0 }));
     y += 100;
     sc.setContentHeight(y);
   }

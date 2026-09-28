@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { Modal, keeperLine } from './Modal';
-import { Button, txt, badge, money, dur } from './kit';
+import { Button, txt, badge, dur } from './kit';
+import { priceLabel, currencyUnit } from '../systems/Prices'; // AB#4725: the store's price in a Play build
 import { ctx } from '../GameCtx';
 import { SKUS, COPY, BASELINE_SKU, WELCOME_RELICS, relicListText } from '../data/catalog';
 import { welcomeDeadline } from '../systems/Offers';
@@ -60,13 +61,13 @@ export class WelcomePack extends Modal {
     B.add(row);
     // Anchored by its top edge below the plates: centred, the derived sentence's third line grew up into them (Bug #678).
     B.add(txt(vs, 0, top + 882, `+ ${relicListText(WELCOME_RELICS)} dropped straight onto your board.\n` +
-      `Value = gems per $ against the ${money(BASELINE_SKU.price)} pack; ${welcomeValueBasis(ctx.state)}. Gold and relics are extra.`,
+      `Value = gems per ${currencyUnit()} against the ${priceLabel(BASELINE_SKU.id)} pack; ${welcomeValueBasis(ctx.state)}. Gold and relics are extra.`,
       { size: 24, font: 'body', color: '#e8dcf0', wrap: 840, origin: [0.5, 0] }));
 
     // price + real countdown (starts at first sight, never resets)
     this.timerText = txt(vs, 0, top + 1020, '', { size: 36, font: 'num', weight: '700', color: '#FF5D6C' });
     B.add(this.timerText);
-    const buy = new Button(vs, 0, top + 1140, 520, 140, money(SKUS.welcome.price), () => {
+    const buy = new Button(vs, 0, top + 1140, 520, 140, priceLabel('welcome'), () => {
       vs.buy('welcome', `welcome:${trigger}`);
       this.close();
     }, { color: 'green', size: 64 });

@@ -1,4 +1,4 @@
-﻿import { BOARD_SIZE, ECON, CARDS, ALBUM_PAGES } from '../data/catalog';
+﻿import { BOARD_SIZE, ECON, CARDS, ALBUM_PAGES, type SkuId } from '../data/catalog';
 import { defaultProfile, type Profile } from './Profile';
 import { FLOOR_COUNT } from '../data/floors';
 import { BINDINGS } from '../data/items';
@@ -81,6 +81,11 @@ export interface GameState {
   settings: { muted: boolean; music: boolean; haptics: boolean };
   createdAt: number;
   purchases: { sku: string; t: number }[];
+  /**
+   * AB#4725: the store's side of purchases in a Play build. granted: store transaction ids already paid out, so none is
+   * paid twice. pending: one-time packs this device started that Play left pending, paid when Play completes them.
+   */
+  store: { granted: string[]; pending: { sku: SkuId; since: number }[] };
   /** RV-M2a (AB#381): power-ups bought with gems and not yet used. See sanitizePowerUps for how a save is read. */
   powerUps: PowerUps;
 }
@@ -154,6 +159,7 @@ export function createState(now = Date.now()): GameState {
     settings: { muted: false, music: true, haptics: true },
     createdAt: now,
     purchases: [],
+    store: { granted: [], pending: [] },
     powerUps: { autoMerge: 0, standIn: {} },
   };
 }
