@@ -1,8 +1,9 @@
 import {
   ECON, CARDS, CARDS_PER_PAGE, ALBUM_PAGES, EARNED_CHEST_ODDS, GEM_CHEST_ODDS, type ChestOdds, CHEST_PITY_TIER, CHEST_TOP_TIER,
   EVENT_MILESTONES, PASS_FREE, PASS_PREMIUM,
-  WHEEL, Reward, MAX_TIER, RELICS, SKUS, type SkuId, GEMS_PER_DOLLAR_BASELINE,
+  WHEEL, Reward, MAX_TIER, RELICS, SKUS, type SkuId,
 } from '../data/catalog';
+import { priceAmount, baselineGemsPerUnit } from './Prices'; // AB#4725
 import type { GameState } from './State';
 import { utcDay } from './State';
 import { Rng, pickWeighted, mulberry32 } from './Rng';
@@ -245,12 +246,16 @@ export function welcomeValueBasis(s: GameState): string {
     : `the Welcome figure counts its ${RELICS[CHEST_EXACT_TIER].name} at ${welcomeChestGems(s)} gems, the exact-relic price`;
 }
 
-/** Computed, never hardcoded: gem-equivalent per dollar vs the baseline pack. Welcome adds its chest (above). */
+/**
+ * Computed, never hardcoded: gem-equivalent per unit of currency vs the baseline pack, both at the price the player is
+ * charged (AB#4725: the store's, in a Play build), so the ribbon holds in any currency. Welcome adds its chest (above).
+ * NaN while a Play build has no price yet: the shop shows no ribbon rather than a wrong one.
+ */
 export function skuValuePct(id: SkuId, s: GameState): number {
   const sku = SKUS[id];
   if (!sku.gems) return 0;
   const gemEq = sku.gems + (id === 'welcome' ? welcomeChestGems(s) : 0);
-  return Math.round(((gemEq / sku.price) / GEMS_PER_DOLLAR_BASELINE) * 100);
+  return Math.round(((gemEq / priceAmount(id)) / baselineGemsPerUnit()) * 100);
 }
 
 /** Which relic the shop offers today: near the player's best Forge tier, so it is always worth having. */

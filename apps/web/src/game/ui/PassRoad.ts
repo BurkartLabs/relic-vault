@@ -1,6 +1,7 @@
 ﻿import Phaser from 'phaser';
 import { Modal, keeperLine } from './Modal';
-import { Button, txt, money, dur, fmt, badge } from './kit';
+import { Button, txt, dur, fmt, badge } from './kit';
+import { priceLabel } from '../systems/Prices'; // AB#4725: the store's price in a Play build
 import { ctx } from '../GameCtx';
 import { PASS_FREE, PASS_PREMIUM, ECON, SKUS, COPY, Reward, RELICS } from '../data/catalog';
 import { passTier, claimPass, chestsAllowed } from '../systems/Economy';
@@ -106,7 +107,7 @@ export class PassRoad extends Modal {
     if (!s.ent.passPremium) {
       if (this.upsell) keeperLine(vs, B, 0, cy, 900, COPY.passLine, 110);
       else B.add(txt(vs, 0, cy, 'Premium: gems every tier · wildcard card at tier 8 · Gilded relic skin · +4% luck', { size: 28, font: 'body', color: '#e8dcf0', wrap: 880 }));
-      const b = new Button(vs, 0, top + 1300, 560, 130, `UNLOCK ${money(SKUS.pass.price)}`, () => vs.buy('pass', `pass:${this.trigger}`, () => { if (this.active && !this.closing) { this.box.removeAll(true); this.build(); } }), { color: 'purple', size: 46 });
+      const b = new Button(vs, 0, top + 1300, 560, 130, `UNLOCK ${priceLabel('pass')}`, () => vs.buy('pass', `pass:${this.trigger}`, () => { if (this.active && !this.closing) { this.box.removeAll(true); this.build(); } }), { color: 'purple', size: 46 });
       B.add(b);
       B.add(badge(vs, 300, top + 1260, 'POPULAR', 'red', 120));
       vs.tweens.add({ targets: b, scale: 1.04, duration: 600, yoyo: true, repeat: -1 });

@@ -8,7 +8,8 @@ import type { SaveService } from './SaveService';
  *
  * What is ours: every localStorage key starting `relic-vault` or `rv_`, and idb-keyval's default store, which nothing
  * but this game writes on its origin. An SDK that keeps its own cache registers a way to clear it (registerDataEraser)
- * when it is integrated. Neither AdMob nor RevenueCat is in the build yet, so nothing is registered today.
+ * when it is integrated. AB#4725: a Play build registers RevenueCat's cached customer info (PlayStore.ts). The customer
+ * record and receipts RevenueCat keeps are deleted on request (docs/DATA_SAFETY.md), not from the device.
  *
  * Before anything is cleared, the save service stops writing for the rest of this page's life. Otherwise the pagehide
  * autosave (GameCtx) would write the save straight back during the reload.

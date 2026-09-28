@@ -15,7 +15,6 @@ export function fmt(n: number): string {
   if (n >= 1e4) return (n / 1e3).toFixed(n >= 1e5 ? 0 : 1).replace(/\.0$/, '') + 'K';
   return Math.floor(n).toLocaleString('en-US');
 }
-export function money(p: number) { return '$' + p.toFixed(2); }
 export function dur(ms: number) {
   ms = Math.max(0, ms);
   const s = Math.floor(ms / 1000), d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60), ss = s % 60;

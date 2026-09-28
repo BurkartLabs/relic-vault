@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { Modal, keeperLine } from './Modal';
-import { Button, txt, money, fmt } from './kit';
+import { Button, txt, fmt } from './kit';
+import { priceLabel } from '../systems/Prices'; // AB#4725: the store's price in a Play build
 import { ctx } from '../GameCtx';
 import { SKUS, ECON, COPY } from '../data/catalog';
 import { piggyGems } from '../systems/Economy';
@@ -31,7 +32,7 @@ export class PiggySheet extends Modal {
     B.add(txt(vs, 0, top + 816, fill >= 1 ? 'FULL: it can’t hold more gems' : `${Math.round(fill * 100)}% full`, { size: 28, font: 'num', weight: '700', color: '#FFE9A3' }));
     B.add(txt(vs, 0, top + 866, `Stored: ${fmt(gems)} of ${fmt(ECON.piggyCap)} gems (1 gem every ${ECON.piggyMergesPerGem} merges)`, { size: 30, font: 'num', weight: '500', color: '#b9a9c6' }));
     B.add(txt(vs, 0, top + 920, `SMASH FOR ${fmt(gems)} GEMS`, { size: 44, weight: '900', gold: true }));
-    const b = new Button(vs, 0, top + 1080, 540, 140, gems > 0 ? `SMASH ${money(SKUS.piggy.price)}` : 'EMPTY', () => this.smash(pig), { color: 'green', size: 52, disabled: gems <= 0 });
+    const b = new Button(vs, 0, top + 1080, 540, 140, gems > 0 ? `SMASH ${priceLabel('piggy')}` : 'EMPTY', () => this.smash(pig), { color: 'green', size: 52, disabled: gems <= 0 });
     B.add(b);
     B.add(txt(vs, 0, top + 1210, 'The pig fills as you merge. It never stops you playing.', { size: 24, font: 'body', color: '#8a7a98', strokeW: 0 }));
   }

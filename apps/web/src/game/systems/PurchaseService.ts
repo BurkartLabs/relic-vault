@@ -4,10 +4,13 @@ import type { Rng } from './Rng';
 import { placeOrStash } from './BoardSystem';
 import { grantGold, grantChests, piggyGems, chestsAllowed, openChest, type ChestResult } from './Economy';
 import { welcomeOpen } from './Offers';
+import { ENTITLEMENT, PLAY_PACKAGE, PLAY_PRODUCT, type StoreBackend, type StoreCustomer, type StoreTransaction } from './PlayStore'; // AB#4725
+import { setStorePrices } from './Prices';
 
 export interface PurchaseGrant {
   ok: boolean;
-  reason?: 'owned';
+  /** owned: a one-time pack already bought; granted: this store transaction was already paid out (AB#4725). */
+  reason?: 'owned' | 'granted';
   sku: SkuId;
   gems: number;
   gold: number;
@@ -64,22 +67,123 @@ export function applyPurchase(s: GameState, sku: SkuId, rng: Rng, now = Date.now
   return g;
 }
 
-export type StoreMode = 'demo' | 'storekit';
+/** Transaction ids kept to refuse a second payout; far more than a player makes, so none that matters is dropped. */
+const GRANTED_KEPT = 500;
 
 /**
- * Store adapter. In demo mode every purchase succeeds after a short "processing" beat.
- * A storekit/play-billing adapter would resolve the same promise after receipt validation.
+ * AB#4725: pays out `sku` for store transaction `txId` exactly once. A transaction already paid (the same purchase
+ * reported twice, a pending purchase completing after it was granted) grants nothing.
+ */
+export function grantOnce(s: GameState, txId: string, sku: SkuId, rng: Rng, now = Date.now()): PurchaseGrant {
+  if (s.store.granted.includes(txId)) return { ok: false, reason: 'granted', sku, gems: 0, gold: 0, relics: [] };
+  const g = applyPurchase(s, sku, rng, now);
+  if (g.ok) {
+    s.store.granted.push(txId);
+    if (s.store.granted.length > GRANTED_KEPT) s.store.granted.splice(0, s.store.granted.length - GRANTED_KEPT);
+  }
+  s.store.pending = s.store.pending.filter((p) => p.sku !== sku);
+  return g;
+}
+
+/**
+ * AB#4725: No Ads, the Keeper's Pass and Vault VIP as the store has them. Set from the store and cleared by it, so a
+ * refund or a cancelled subscription takes the entitlement away with no server of ours. VIP lasts while its
+ * entitlement is active; vipUntil is when the store says it lapses (0 when it does not say). Returns what changed.
+ */
+export function applyEntitlements(s: GameState, active: StoreCustomer['active']): SkuId[] {
+  const changed: SkuId[] = [];
+  const set = (sku: SkuId, on: boolean, write: (v: boolean) => void, was: boolean) => { if (was !== on) changed.push(sku); write(on); };
+  set('noads', 'noads' in active, (v) => (s.ent.removeAds = v), s.ent.removeAds);
+  set('pass', 'pass' in active, (v) => (s.ent.passPremium = v), s.ent.passPremium);
+  set('vip', 'vip' in active, (v) => (s.ent.vip = v), s.ent.vip);
+  s.ent.vipUntil = s.ent.vip ? active.vip ?? 0 : 0;
+  return changed;
+}
+
+/**
+ * AB#4725: a one-time purchase this device started that Play left pending (a slow card, cash at a shop), paid out when
+ * the store later records it. Only transactions after the purchase was started count, so a restore on a new device,
+ * whose history holds every pack ever bought, never pays a consumable out again.
+ */
+export function settlePending(s: GameState, transactions: StoreTransaction[], rng: Rng, now = Date.now()): PurchaseGrant[] {
+  const out: PurchaseGrant[] = [];
+  for (const p of [...s.store.pending]) {
+    const t = transactions.find((x) => x.sku === p.sku && x.at >= p.since && !s.store.granted.includes(x.id));
+    if (t) out.push(grantOnce(s, t.id, p.sku, rng, now));
+  }
+  return out;
+}
+
+export type StoreMode = 'demo' | 'play';
+
+export type PurchaseResult =
+  | { ok: true; receipt: string; customer?: StoreCustomer }
+  | { ok: false; reason: 'cancelled' | 'pending' | 'unavailable' | 'error'; message?: string };
+
+/**
+ * Store adapter. Demo mode (the web default and every e2e run): every purchase succeeds after a short "processing"
+ * beat, with a made-up receipt. Play mode (AB#4725): Google Play Billing through RevenueCat, which confirms the
+ * transaction before the purchase resolves; the caller grants only then, once per transaction id (grantOnce).
  */
 export class PurchaseService {
-  constructor(public mode: StoreMode = 'demo') {}
-  async purchase(sku: SkuId): Promise<{ ok: boolean; receipt: string }> {
+  /** Set once the store has answered in play mode: what failed, for the shop to say instead of showing prices. */
+  unavailable: string | null = null;
+  constructor(public mode: StoreMode = 'demo', private backend: StoreBackend | null = null) {}
+
+  /** Play mode: connect, fetch the localised prices, and read the entitlements. Never throws; a failure is kept. */
+  async start(s: GameState, rng: Rng, onChange?: (changed: SkuId[], grants: PurchaseGrant[]) => void): Promise<void> {
+    if (this.mode !== 'play') return;
+    setStorePrices({}); // a play build never falls back to the catalog's USD prices
+    try {
+      if (!this.backend) throw new Error('no store in this build');
+      await this.backend.start();
+      setStorePrices(await this.backend.prices());
+      await this.sync(s, rng);
+      this.backend.onChange((c) => { const changed = applyEntitlements(s, c.active); const grants = settlePending(s, c.transactions, rng); onChange?.(changed, grants); });
+    } catch (e) {
+      this.unavailable = String((e as Error)?.message ?? e);
+    }
+  }
+
+  /** Play mode: the entitlements, and any pending purchase that has since gone through, as the store has them now. */
+  async sync(s: GameState, rng: Rng): Promise<{ changed: SkuId[]; grants: PurchaseGrant[] }> {
+    if (this.mode !== 'play' || !this.backend || this.unavailable) return { changed: [], grants: [] };
+    const c = await this.backend.customer();
+    return { changed: applyEntitlements(s, c.active), grants: settlePending(s, c.transactions, rng) };
+  }
+
+  async purchase(sku: SkuId, s?: GameState): Promise<PurchaseResult> {
     if (this.mode === 'demo') {
       await new Promise((r) => setTimeout(r, 450));
       return { ok: true, receipt: `demo-${sku}-${Date.now()}` };
     }
-    throw new Error('storekit adapter not linked in v1');
+    if (!this.backend || this.unavailable) return { ok: false, reason: 'unavailable', message: this.unavailable ?? undefined };
+    // Recorded before the store is asked, so a purchase that completes while the app is closed is still paid out on the
+    // next boot; a minute early, for a device clock a little behind Play's purchase time.
+    if (s && !ENTITLEMENT[sku]) s.store.pending = [...s.store.pending.filter((p) => p.sku !== sku), { sku, since: Date.now() - 60_000 }];
+    const r = await this.backend.buy(sku);
+    if (!r.ok) {
+      // A pending purchase stays on the list, to be paid out when Play completes it (settlePending). Nothing else does.
+      if (s && r.reason !== 'pending') s.store.pending = s.store.pending.filter((p) => p.sku !== sku);
+      return r;
+    }
+    return { ok: true, receipt: r.transaction.id, customer: r.customer };
   }
-  async restore(): Promise<string[]> {
-    return [];
+
+  /**
+   * Settings, Restore Purchases. Demo mode: nothing to ask. Play mode: the store's entitlements, applied; consumables
+   * are never paid out again (settlePending only pays what this device left pending). Returns what the store has.
+   */
+  async restore(s?: GameState): Promise<{ entitlements: SkuId[]; changed: SkuId[] } | null> {
+    if (this.mode !== 'play' || !this.backend || this.unavailable || !s) return null;
+    const c = await this.backend.restore();
+    return { entitlements: Object.keys(c.active) as SkuId[], changed: applyEntitlements(s, c.active) };
+  }
+
+  /** Where Play manages the VIP subscription: the store's own link, or Play's subscription centre for this app. */
+  async manageUrl(): Promise<string> {
+    const fallback = `https://play.google.com/store/account/subscriptions?sku=${PLAY_PRODUCT.vip.split(':')[0]}&package=${PLAY_PACKAGE}`;
+    if (this.mode !== 'play' || !this.backend || this.unavailable) return fallback;
+    try { return (await this.backend.customer()).manageUrl || fallback; } catch { return fallback; }
   }
 }

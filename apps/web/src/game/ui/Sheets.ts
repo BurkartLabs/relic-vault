@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { Modal, keeperLine } from './Modal';
-import { Button, txt, money, fmt, dur, badge, Scroller } from './kit';
+import { Button, txt, fmt, dur, badge, Scroller } from './kit';
+import { priceLabel } from '../systems/Prices'; // AB#4725: the store's price in a Play build
+import { storeCopy } from '../buildMode';
 import { keeperLayout } from './keeperLayout';
 import { ctx } from '../GameCtx';
 import { RELICS, ECON, COPY, SKUS, GEM_CHEST_ODDS, EARNED_CHEST_ODDS, CHEST_PITY_TIER, MAX_TIER } from '../data/catalog';
@@ -118,7 +120,7 @@ export class OfferSheet extends Modal {
       vs.tweens.add({ targets: r, y: r.y - 14, duration: 1200, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
       B.add(txt(vs, 0, top + 650, 'EMERALD SCARAB', { size: 44, weight: '900', gold: true }));
       this.items(top + 770, [['gem', '60'], ['coin', '1,500']]);
-      const b = new Button(vs, 0, top + 1020, 520, 140, money(SKUS.comeback.price), () => { vs.buy('comeback', `comeback:${trigger}`); this.close(); }, { color: 'green', size: 56 });
+      const b = new Button(vs, 0, top + 1020, 520, 140, priceLabel('comeback'), () => { vs.buy('comeback', `comeback:${trigger}`); this.close(); }, { color: 'green', size: 56 });
       B.add(b);
       B.add(badge(vs, 320, top + 980, 'SALE', 'red', 130));
       B.add(txt(vs, 0, top + 1140, 'One time. Not a cent more.', { size: 26, font: 'body', color: '#8a7a98', strokeW: 0 }));
@@ -129,8 +131,8 @@ export class OfferSheet extends Modal {
         B.add(vs.add.image(-360, top + 640 + i * 70, 'ic_luck').setDisplaySize(48, 48));
         B.add(txt(vs, -320, top + 640 + i * 70, p, { size: 28, font: 'body', weight: '700', color: '#e8dcf0', origin: [0, 0.5] }));
       });
-      B.add(new Button(vs, 0, top + 1040, 520, 140, `${money(SKUS.vip.price)} / MONTH`, () => { vs.buy('vip', `vip:${trigger}`); this.close(); }, { color: 'purple', size: 46 }));
-      B.add(txt(vs, 0, top + 1160, 'Demo subscription. Cancel anytime in your store account.', { size: 22, font: 'body', color: '#8a7a98', strokeW: 0 }));
+      B.add(new Button(vs, 0, top + 1040, 520, 140, `${priceLabel('vip')} / MONTH`, () => { vs.buy('vip', `vip:${trigger}`); this.close(); }, { color: 'purple', size: 46 }));
+      B.add(txt(vs, 0, top + 1160, storeCopy().vipSheet, { size: 22, font: 'body', color: '#8a7a98', strokeW: 0 }));
     } else {
       B.add(vs.add.image(0, top + 430, 'ic_ad').setDisplaySize(260, 260));
       B.add(txt(vs, 0, top + 640, 'Watch one more, double the gold.', { size: 36, weight: '900', gold: true }));
