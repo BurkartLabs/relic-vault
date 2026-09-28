@@ -46,6 +46,12 @@ function storeBackend(): StoreBackend | null {
 export class GameCtx {
   state: GameState = createState();
   save = new SaveService();
+  /**
+   * AB#4728: run when the Android app comes back to the foreground (apps/web/src/nativeApp.ts); the AdMob story adds
+   * its ad preload here. The entitlement re-check is not needed here: resyncStore runs on visibilitychange, which the
+   * Android WebView fires on pause and resume too (checked on an Android 16 emulator: hidden, then visible).
+   */
+  readonly onResume: (() => void)[] = [];
   sfx = new Sfx();
   rng: Rng = defaultRng;
   purchases = new PurchaseService(STORE_MODE, storeBackend());

@@ -97,6 +97,30 @@ test('reload restores the exact board', async ({ page }) => {
   expect((await state(page)).board).toEqual(before);
 });
 
+test('going to the background mid-drag puts the relic home, and the board comes back exactly (AB#4728)', async ({ page }) => {
+  await boot(page);
+  for (let i = 0; i < 6; i++) await tapForge(page);
+  const before = (await state(page)).board;
+  const from = before.findIndex((t: number) => t > 0);
+  const [pa, pb] = await page.evaluate(([a, b]) => [(window as any).__vault.cellPos(a), (window as any).__vault.cellPos(b)], [from, (from + 7) % before.length]);
+  const p = await toCss(page, pa.x, pa.y), q = await toCss(page, pb.x, pb.y);
+  await page.mouse.move(p.x, p.y);
+  await page.mouse.down();
+  for (let i = 1; i <= 4; i++) { await page.mouse.move(p.x + (q.x - p.x) * i / 8, p.y + (q.y - p.y) * i / 8); await page.waitForTimeout(16); }
+  expect(await page.evaluate(() => (window as any).__vault.isDragging)).toBe(true);
+  // the app goes to the background, as Android pausing it or a hidden tab: the same visibilitychange
+  await page.evaluate(() => { Object.defineProperty(document, 'hidden', { value: true, configurable: true }); document.dispatchEvent(new Event('visibilitychange')); });
+  expect(await page.evaluate(() => (window as any).__vault.isDragging)).toBe(false);
+  await page.mouse.up(); // the finger that was still down lands nowhere
+  await page.evaluate(() => { Object.defineProperty(document, 'hidden', { value: false, configurable: true }); document.dispatchEvent(new Event('visibilitychange')); });
+  await page.waitForTimeout(400);
+  expect((await state(page)).board).toEqual(before);
+  await page.waitForTimeout(500); // the save written on the way out, then a cold start, as Android killing the app would be
+  await page.reload();
+  await page.waitForFunction(() => (window as any).__vault?.hud, null, { timeout: 30_000 });
+  expect((await state(page)).board).toEqual(before);
+});
+
 test('a full dais says so and fades, and the advice it gives is true', async ({ page }) => {
   // Board, #441: the full-screen Vault Jammed sheet is gone. It offered to sell a way out of a state the player
   // can almost always clear themselves, which is why this test now checks the opposite: nothing opens, the

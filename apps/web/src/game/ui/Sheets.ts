@@ -222,7 +222,10 @@ export class InfoSheet extends Modal {
     const t = txt(vs, 430, 10, body, { size: 30, font: 'body', color: '#e8dcf0', wrap: 820, align: 'left', origin: [0.5, 0], lineSpacing: 6 });
     sc.content.add(t);
     sc.setContentHeight(t.height + 40);
-    if (back) this.box.add(new Button(vs, 0, this.bottom - 110, 360, 110, 'BACK', () => { this.close(); vs.time.delayedCall(220, back); }, { color: 'dark', size: 40 }));
+    if (back) {
+      this.onBack = () => { this.close(); vs.time.delayedCall(220, back); };
+      this.box.add(new Button(vs, 0, this.bottom - 110, 360, 110, 'BACK', this.onBack, { color: 'dark', size: 40 }));
+    }
   }
 }
 
@@ -251,7 +254,10 @@ export class OddsModal extends Modal {
     B.add(txt(vs, 0, below, `Pity: every ${ECON.pityEvery}th chest without a ${RELICS[CHEST_PITY_TIER].name} or better guarantees one.\nYour counter: ${ctx.state.pity}/${ECON.pityEvery - 1}. Luck may upgrade any result by one tier.`, { size: 26, font: 'body', color: '#8CF08A', wrap: 820 }));
     const earned = EARNED_CHEST_ODDS.map((o) => `${RELICS[o.tier].name} ${Math.round(o.chance * 100)}%`).join(' · ');
     B.add(txt(vs, 0, below + 100, `Chests you earn roll differently: ${earned}.`, { size: 22, font: 'body', color: '#b9a9c6', wrap: 820 }));
-    if (back) B.add(new Button(vs, 0, this.bottom - 100, 360, 110, 'BACK', () => { this.close(); vs.time.delayedCall(220, back); }, { color: 'dark', size: 40 }));
+    if (back) {
+      this.onBack = () => { this.close(); vs.time.delayedCall(220, back); };
+      B.add(new Button(vs, 0, this.bottom - 100, 360, 110, 'BACK', this.onBack, { color: 'dark', size: 40 }));
+    }
   }
 }
 

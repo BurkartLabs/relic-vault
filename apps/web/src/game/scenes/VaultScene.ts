@@ -203,7 +203,9 @@ export class VaultScene extends Phaser.Scene {
     this.scale.on('resize', this.onResize, this);
     // AB#4723: the Android app's insets can arrive after the vault is drawn (safeArea.ts); lay out again as on a resize
     window.addEventListener(SAFE_AREA_EVENT, this.onSafeArea);
-    this.events.once('shutdown', () => { this.scale.off('resize', this.onResize, this); window.removeEventListener(SAFE_AREA_EVENT, this.onSafeArea); });
+    // AB#4728: going to the background (a hidden tab, the Android app paused) mid-drag puts the relic home
+    document.addEventListener('visibilitychange', this.onHidden);
+    this.events.once('shutdown', () => { this.scale.off('resize', this.onResize, this); window.removeEventListener(SAFE_AREA_EVENT, this.onSafeArea); document.removeEventListener('visibilitychange', this.onHidden); });
     (window as any).__vault = this;
     // first ever session: tutorial. Returning: VIP crate / satchel nudges.
     this.time.delayedCall(700, () => this.tut.start());
@@ -629,6 +631,9 @@ export class VaultScene extends Phaser.Scene {
       }
     });
     const up = (p: Phaser.Input.Pointer) => {
+      // AB#4728: a cancelled touch is not a drop. Android cancels the touch in progress when the app goes to the
+      // background, and Phaser reports it as a pointer-up: the relic went into the cell under the finger. It goes home.
+      if (p.wasCanceled && this.press?.dragging) { this.cancelDrag(); return; }
       const pr = this.press;
       this.press = null;
       if (!pr) return;
@@ -656,6 +661,30 @@ export class VaultScene extends Phaser.Scene {
     this.input.on('pointerup', up);
     this.input.on('pointerupoutside', up);
   }
+
+  /**
+   * AB#4728: the app went to the background mid-drag. The relic goes home as a drop off the board would, and nothing
+   * on the board changes (a merge, move or sale only ever happens on a drop), so the save written on the way out is
+   * the board as it was, and the player comes back to it rather than to a relic stuck in the air.
+   */
+  cancelDrag() {
+    const pr = this.press;
+    if (!pr) return;
+    this.press = null;
+    pr.timer?.remove();
+    this.hoverRing.setVisible(false);
+    (this.sellBin as any).glow.setAlpha(0);
+    if (!pr.dragging) return;
+    this.dragging = false;
+    this.stopMatchPulse();
+    const v = this.relics[pr.i];
+    if (!v) return;
+    v.lifted = false;
+    this.settle(v, pr.i);
+  }
+  private onHidden = () => { if (document.hidden) this.cancelDrag(); };
+  /** Whether a relic is being dragged right now (AB#4728). */
+  get isDragging() { return this.dragging; }
 
   private overSell(p: { x: number; y: number }) {
     return Math.hypot(p.x - this.sellBin.x, p.y - this.sellBin.y) < 110;
@@ -1427,7 +1456,8 @@ export class VaultScene extends Phaser.Scene {
   private toasts: Phaser.GameObjects.Container[] = [];
   /** The last line the Keeper said in passing, so a test can assert the player was actually told (#441). */
   lastToast = '';
-  toast(msg: string) {
+  /** `ms`: how long it stays before fading (AB#4728: the leave-the-vault warning lasts its 2-second window). */
+  toast(msg: string, ms = 2600) {
     this.lastToast = msg;
     // at most two on screen: the newest pushes out the oldest so they never bury the order cards
     while (this.toasts.length >= 2) {
@@ -1445,7 +1475,7 @@ export class VaultScene extends Phaser.Scene {
     this.toasts.forEach((o) => this.tweens.add({ targets: o, y: o.y + bg.height + 12, duration: 200 }));
     this.toasts.push(c);
     this.tweens.add({ targets: c, alpha: 1, y: y0, duration: 240, ease: 'Back.Out' });
-    this.time.delayedCall(2600, () => this.tweens.add({ targets: c, alpha: 0, duration: 300, onComplete: () => { c.destroy(); this.toasts = this.toasts.filter((o) => o !== c); } }));
+    this.time.delayedCall(ms, () => this.tweens.add({ targets: c, alpha: 0, duration: 300, onComplete: () => { c.destroy(); this.toasts = this.toasts.filter((o) => o !== c); } }));
   }
 
   keeperSays(line: string, onDone?: () => void) {
