@@ -23,6 +23,20 @@
       ]
     },
     {
+      "route": "/privacy.html",
+      "allowedRoles": [
+        "anonymous",
+        "authenticated"
+      ]
+    },
+    {
+      "route": "/terms.html",
+      "allowedRoles": [
+        "anonymous",
+        "authenticated"
+      ]
+    },
+    {
       "route": "/*",
       "allowedRoles": [
         "playtester"

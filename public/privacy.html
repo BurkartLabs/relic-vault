@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Relic Vault — Privacy policy</title>
+<meta name="description" content="What Relic Vault keeps on your device, what it sends, who else processes data, and how to delete it.">
+<!-- AB#4726: public, outside the invite wall (staticwebapp.config.json), because Play reviewers and AdMob's crawler
+     fetch it without signing in. docs/DATA_SAFETY.md is the same facts as the Play Data safety form; change both. -->
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; background: #0b0710; color: #e8dcf0; font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; padding: 24px 16px 48px; }
+  main { max-width: 42rem; margin: 0 auto; background: #150e1d; border: 1px solid #2c1f3a; border-radius: 18px; padding: 28px 24px; }
+  h1 { font-size: 26px; margin: 0 0 4px; color: #f4c45a; }
+  h2 { font-size: 19px; margin: 28px 0 8px; color: #f4c45a; }
+  p, li { color: #cfc2da; }
+  .meta { color: #9d8cab; margin: 0 0 20px; }
+  code { color: #f4c45a; font-size: 0.95em; }
+  a { color: #7ee0ff; }
+  ul { padding-left: 1.2rem; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Privacy policy</h1>
+  <p class="meta">Relic Vault · effective 27 September 2026</p>
+
+  <p>Relic Vault is a game about merging cursed treasure. It has no accounts and asks for no name, email address, contacts,
+  photos or location. This page says what the game keeps, what it sends, who else sees data, and how to delete it.</p>
+
+  <h2>What stays on your device</h2>
+  <ul>
+    <li><strong>Your vault:</strong> your progress, settings and a record of what you bought. It is kept in your
+    browser's or the app's own storage (IndexedDB, with localStorage as a fallback), not on our servers.</li>
+    <li><strong>A shop log:</strong> the last 256 shop events (an offer shown, a purchase button pressed, a purchase), each
+    with the item, what showed it, the session time and your rank, gems and gold. We use it to tune the game.</li>
+    <li><strong>A random device id</strong> (<code>rv_did</code>): a random number made the first time you play. It is not
+    your advertising ID, and it names nothing about you.</li>
+    <li><strong>Your age band:</strong> under 16, 16 or over, or unknown, from the question the game asks at the start.</li>
+  </ul>
+
+  <h2>What the game sends</h2>
+  <p>When a build has gameplay telemetry switched on, it sends gameplay events to a collector run for Relic Vault. Each
+  event carries:</p>
+  <ul>
+    <li>the event's name and time (for example a merge, a rank gained, an offer shown, a session started or ended);</li>
+    <li>the random device id <code>rv_did</code> and a random id for the session;</li>
+    <li>the app version, and the platform: your operating system family (such as Android or Windows, read from your browser) and whether the game is installed or running in a browser;</li>
+    <li>the event's details: what was merged or bought and why it was offered, your rank, gems and gold, how long the
+    session has run, your age band, and, if the game hits an error, the error's text.</li>
+  </ul>
+  <p>We use these events to see where the game is confusing or unfair and to fix it. We do not sell them, and we do not
+  use them to show you ads.</p>
+
+  <h2>Google AdMob and Google Play</h2>
+  <p>In the Android app, ads are shown by <strong>Google AdMob</strong>. AdMob may collect your device's advertising ID, IP
+  address and how you interact with ads, under
+  <a href="https://policies.google.com/privacy" rel="noopener">Google's privacy policy</a>
+  (<a href="https://policies.google.com/technologies/partner-sites" rel="noopener">how Google uses data from apps that
+  use its services</a>). Purchases and installs go through <strong>Google Play</strong>, which processes your payment
+  and account details under the same policy. We never see your card or your Google account.</p>
+  <p>Builds that show "AD · DEMO" veils, like the web playtest, contact no ad network, and their purchases are simulated
+  and never charged.</p>
+
+  <h2>Players under 16</h2>
+  <p>If you tell the game you are under 16, it switches off random paid chests and shows you no sales offers. The shop
+  still lists items at fixed prices. If you are under 16, ask a parent or guardian before you buy anything.</p>
+
+  <h2>Deleting your data</h2>
+  <p>Open <strong>Settings</strong> and tap <strong>Delete My Data</strong> twice. It erases everything above from your
+  device: the vault, the shop log, the random device id, and any data an ad or store service keeps inside the game. The
+  game then restarts as a new player with a new random id. Uninstalling the app, or clearing the site's data in your
+  browser, does the same.</p>
+  <p>Events already sent are linked only to the old random id. To have those deleted too, write to us (below) before
+  you delete, and tell us roughly when you played.</p>
+
+  <h2>Contact</h2>
+  <!-- AB#4713's hand-back names the contact address on the Play listing: put it here too once it exists. -->
+  <p>Write to the developer contact email shown on Relic Vault's Google Play listing.</p>
+
+  <h2>Changes</h2>
+  <p>If this policy changes, the date at the top changes with it, and the game's Settings links here.</p>
+
+  <p><a href="terms.html">Terms of play</a></p>
+</main>
+</body>
+</html>
