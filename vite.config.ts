@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import { resolve } from 'node:path';
+import { MAX_WORKERS } from './scripts/test-workers.mjs';
 import { readFileSync } from 'node:fs';
 
 export default defineConfig({
@@ -46,6 +47,8 @@ export default defineConfig({
   ],
   test: {
     root: resolve(import.meta.dirname),
+    // AB#4768: two workers per run, so several agents' suites fit on one PC at once (scripts/test-workers.mjs).
+    maxWorkers: MAX_WORKERS,
     include: ['apps/web/src/**/*.test.ts', 'scripts/**/*.test.mjs'], // AB#4732: scripts/version.mjs's own tests
   },
 } as any);
