@@ -36,13 +36,16 @@ export class BootLoadScene extends Phaser.Scene {
       if (i < steps.length) {
         label.setText(steps[i][0] + '…');
         this.time.delayedCall(16, () => {
+          const t0 = performance.now();
           steps[i][1]();
+          performance.measure(`rv:bake:${steps[i][0]}`, { start: t0, end: performance.now() }); // AB#4737
           i++;
           draw(i / steps.length);
           next();
         });
       } else {
         label.setText('Opening the vault…');
+        const waitFrom = performance.now();
         const ready: Promise<void> = (window as any).__ready ?? Promise.resolve();
         /**
          * Bug #443: this used to be a bare `.then`, so anything that rejected during boot left the splash sitting
@@ -56,6 +59,8 @@ export class BootLoadScene extends Phaser.Scene {
           console.error('[boot] continuing with a degraded start:', e);
           try { (window as any).__rv?.telemetry?.track('boot_error', { why: String((e as Error)?.message ?? e).slice(0, 200) }); } catch { /* telemetry must never be the thing that stops the boot */ }
         }).then(() => {
+          // AB#4737: fonts, the save and, on a first visit, the age gate (the player's own time is in this one)
+          performance.measure('rv:ready-wait', { start: waitFrom, end: performance.now() });
           this.cameras.main.fadeOut(350, 7, 6, 11);
           this.scene.get('Boot').cameras.main.fadeOut(350, 7, 6, 11);
           this.time.delayedCall(360, () => {

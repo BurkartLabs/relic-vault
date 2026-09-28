@@ -1,0 +1,137 @@
+{
+  "tag": "before",
+  "throttle": 4,
+  "renderer": "ANGLE (NVIDIA, NVIDIA GeForce GTX 1070 Ti (0x00001B82) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+  "runs": 3,
+  "summary": {
+    "cold": {
+      "ageGate": 4172,
+      "vaultReady": 8352,
+      "toInteractive": 6451,
+      "firstForge": 8848
+    },
+    "warm": {
+      "ageGate": null,
+      "vaultReady": 7085,
+      "toInteractive": 7085,
+      "firstForge": 7455
+    }
+  },
+  "fps": {
+    "relics": 36,
+    "particlesMean": 190,
+    "fps": 58.6,
+    "p95FrameMs": 16.8,
+    "frames": 293
+  },
+  "textures": {
+    "textures": 146,
+    "gpuMB": 95.1,
+    "canvasMB": 95.1,
+    "largest": [
+      [
+        "relic256",
+        2048,
+        3328,
+        26
+      ],
+      [
+        "relics",
+        1120,
+        3680,
+        15.7
+      ],
+      [
+        "splash",
+        1080,
+        1920,
+        7.9
+      ],
+      [
+        "bgFar",
+        1080,
+        1920,
+        7.9
+      ],
+      [
+        "cards",
+        2400,
+        840,
+        7.7
+      ],
+      [
+        "dais",
+        984,
+        1034,
+        3.9
+      ],
+      [
+        "relic96",
+        768,
+        1248,
+        3.7
+      ],
+      [
+        "bgChains",
+        1080,
+        760,
+        3.1
+      ]
+    ]
+  },
+  "bake": [],
+  "raw": {
+    "cold": [
+      {
+        "ageGate": 7756,
+        "vaultReady": 15971.399999976158,
+        "firstForge": 16199.899999976158,
+        "toInteractive": 11313.399999976158,
+        "bake": [],
+        "errors": []
+      },
+      {
+        "ageGate": 3377.600000023842,
+        "vaultReady": 6952.200000047684,
+        "firstForge": 7102.600000023842,
+        "toInteractive": 5293.100000023842,
+        "bake": [],
+        "errors": []
+      },
+      {
+        "ageGate": 4172.399999976158,
+        "vaultReady": 8351.800000071526,
+        "firstForge": 8848.100000023842,
+        "toInteractive": 6451.200000047684,
+        "bake": [],
+        "errors": []
+      }
+    ],
+    "warm": [
+      {
+        "ageGate": null,
+        "vaultReady": 7084.899999976158,
+        "firstForge": 7455.299999952316,
+        "toInteractive": 7084.899999976158,
+        "bake": [],
+        "errors": []
+      },
+      {
+        "ageGate": null,
+        "vaultReady": 7076,
+        "firstForge": 7371.399999976158,
+        "toInteractive": 7076,
+        "bake": [],
+        "errors": []
+      },
+      {
+        "ageGate": null,
+        "vaultReady": 10044.399999976158,
+        "firstForge": 10737.399999976158,
+        "toInteractive": 10044.399999976158,
+        "bake": [],
+        "errors": []
+      }
+    ]
+  }
+}

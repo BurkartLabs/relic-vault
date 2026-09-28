@@ -1,4 +1,5 @@
 import type Phaser from 'phaser';
+import { installLazyTextures, lazyTexture, type TextureLookup } from './lazy'; // AB#4737
 import { Ctx, makeCanvas, lin, rad, rr, rrPath, glow, speckle, MAT, chrome, metal, shade, star, poly, smooth, sparkle, seeded } from './paint';
 import { paintRelic } from './RelicFactory';
 import { paintCryptBrazier, paintStarWell, paintPatron } from './ChainArt';
@@ -562,9 +563,9 @@ function paintPointer(ctx: Ctx, w: number, h: number) {
 
 // ---------------------------------------------------------------- particles
 function paintParticles(scene: Phaser.Scene) {
-  const add = (key: string, w: number, h: number, fn: (ctx: Ctx) => void) => {
+  const add = (key: string, w: number, h: number, fn: (ctx: Ctx) => void) => lazyTexture(key, () => {
     const [c, ctx] = makeCanvas(w, h); fn(ctx); scene.textures.addCanvas(key, c);
-  };
+  });
   add('p_dot', 32, 32, (ctx) => glow(ctx, 16, 16, 16, 'rgba(255,255,255,1)'));
   add('p_spark', 64, 64, (ctx) => { ctx.fillStyle = '#fff'; ctx.fill(star(32, 32, 4, 3, 30, 0)); glow(ctx, 32, 32, 14, 'rgba(255,255,255,0.8)'); });
   add('p_ring', 256, 256, (ctx) => {
@@ -611,10 +612,15 @@ function paintParticles(scene: Phaser.Scene) {
   add('roadFill', 64, 24, (ctx) => { ctx.fillStyle = chrome(ctx, MAT.gold, 0, 0, 0, 24); ctx.fillRect(0, 0, 64, 24); });
 }
 
+/**
+ * The UI's art. AB#4737: registered here and painted on its first lookup (art/lazy.ts): the first screen paints what it
+ * shows, and the shop's ribbons and seals, the wheel, the piggy bank and the rest wait until a screen asks for them.
+ */
 export function bakeUi(scene: Phaser.Scene) {
-  const add = (key: string, w: number, h: number, fn: (ctx: Ctx) => void) => {
+  installLazyTextures(scene.textures as unknown as TextureLookup);
+  const add = (key: string, w: number, h: number, fn: (ctx: Ctx) => void) => lazyTexture(key, () => {
     const [c, ctx] = makeCanvas(w, h); fn(ctx); scene.textures.addCanvas(key, c);
-  };
+  });
   add('panel', PANEL.size, PANEL.size, (ctx) => paintPanel(ctx, ['#4a1838', '#2a0f22', '#12060e']));
   add('panelBlue', PANEL.size, PANEL.size, (ctx) => paintPanel(ctx, ['#1a3a5a', '#0e1f36', '#060c18']));
   add('panelDark', PANEL.size, PANEL.size, (ctx) => paintPanel(ctx, ['#2e2638', '#1b1424', '#0b080f']));
@@ -659,15 +665,19 @@ export function bakeUi(scene: Phaser.Scene) {
   paintParticles(scene);
 }
 
+/** The album's cards, painted when the album (or anything else) first asks for them (AB#4737). */
 export function bakeCards(scene: Phaser.Scene, cards: { id: number; tier: number; hue: number; page: number }[], pageColors: number[]) {
-  const W = 200, H = 280;
-  const cols = 12;
-  const [c, ctx] = makeCanvas(W * cols, H * Math.ceil(cards.length / cols));
-  for (const card of cards) {
-    const [cc, cctx] = makeCanvas(W, H);
-    paintCardFront(cctx, W, H, card.tier, card.hue, '#' + pageColors[card.page].toString(16).padStart(6, '0'));
-    ctx.drawImage(cc, (card.id % cols) * W, Math.floor(card.id / cols) * H);
-  }
-  const tex = scene.textures.addCanvas('cards', c)!;
-  for (const card of cards) tex.add(`c${card.id}`, 0, (card.id % cols) * W, Math.floor(card.id / cols) * H, W, H);
+  installLazyTextures(scene.textures as unknown as TextureLookup);
+  lazyTexture('cards', () => {
+    const W = 200, H = 280;
+    const cols = 12;
+    const [c, ctx] = makeCanvas(W * cols, H * Math.ceil(cards.length / cols));
+    for (const card of cards) {
+      const [cc, cctx] = makeCanvas(W, H);
+      paintCardFront(cctx, W, H, card.tier, card.hue, '#' + pageColors[card.page].toString(16).padStart(6, '0'));
+      ctx.drawImage(cc, (card.id % cols) * W, Math.floor(card.id / cols) * H);
+    }
+    const tex = scene.textures.addCanvas('cards', c)!;
+    for (const card of cards) tex.add(`c${card.id}`, 0, (card.id % cols) * W, Math.floor(card.id / cols) * H, W, H);
+  });
 }
