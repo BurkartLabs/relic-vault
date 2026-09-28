@@ -7,7 +7,7 @@ import { keeperLayout } from './keeperLayout';
 import { ctx } from '../GameCtx';
 import { RELICS, ECON, COPY, SKUS, GEM_CHEST_ODDS, EARNED_CHEST_ODDS, CHEST_PITY_TIER, MAX_TIER } from '../data/catalog';
 import { lowest, sell, sellValue, findPair } from '../systems/BoardSystem';
-import { gemClear, adSalvage, QUESTS, questProgress, claimQuest, questPowerUpDue, xpToNext, grantGold } from '../systems/Economy';
+import { gemClear, QUESTS, questProgress, claimQuest, questPowerUpDue, xpToNext, grantGold } from '../systems/Economy';
 import { computeLuck } from '../systems/LuckSystem';
 import { DAY } from '../systems/State';
 import type { VaultScene } from '../scenes/VaultScene';

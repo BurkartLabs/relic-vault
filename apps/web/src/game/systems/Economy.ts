@@ -288,16 +288,6 @@ export function gemClear(s: GameState): { ok: boolean; cleared: number[]; gold: 
   return { ok: true, cleared: lo, gold };
 }
 
-/** Rewarded-ad salvage: remove the lowest relic, pay double its sell value. */
-export function adSalvage(s: GameState): { index: number; gold: number } {
-  const [i] = lowest(s, 1);
-  if (i === undefined) return { index: -1, gold: 0 };
-  const gold = sellValue(s.board[i]) * 2 + 10;
-  s.board[i] = 0;
-  grantGold(s, gold);
-  return { index: i, gold };
-}
-
 export function dropFromSatchel(s: GameState, rng: Rng): { index: number; tier: number } | null {
   if (!s.satchel.length) return null;
   const e = empties(s);
