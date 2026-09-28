@@ -36,6 +36,7 @@ import { AdVeil } from '../ui/AdVeil';
 import { Tutorial } from '../ui/Tutorial';
 import { DiscoveryCard } from '../ui/Discovery';
 import { grantGold, enforceChestRules } from '../systems/Economy';
+import { SAFE_AREA_EVENT } from '../../safeArea'; // AB#4723
 
 interface RelicView {
   /** item id (chain * 10 + tier); Forge ids equal their tier */
@@ -191,7 +192,9 @@ export class VaultScene extends Phaser.Scene {
     this.time.addEvent({ delay: 1000, loop: true, callback: () => this.secondTick() });
     this.secondTick();
     this.scale.on('resize', this.onResize, this);
-    this.events.once('shutdown', () => this.scale.off('resize', this.onResize, this));
+    // AB#4723: the Android app's insets can arrive after the vault is drawn (safeArea.ts); lay out again as on a resize
+    window.addEventListener(SAFE_AREA_EVENT, this.onSafeArea);
+    this.events.once('shutdown', () => { this.scale.off('resize', this.onResize, this); window.removeEventListener(SAFE_AREA_EVENT, this.onSafeArea); });
     (window as any).__vault = this;
     // first ever session: tutorial. Returning: VIP crate / satchel nudges.
     this.time.delayedCall(700, () => this.tut.start());
@@ -218,6 +221,7 @@ export class VaultScene extends Phaser.Scene {
   }
 
   private resizeTimer?: number;
+  private onSafeArea = () => this.onResize();
   private onResize() {
     clearTimeout(this.resizeTimer);
     this.resizeTimer = window.setTimeout(() => { ctx.persistNow(); this.scene.restart(); }, 250);
