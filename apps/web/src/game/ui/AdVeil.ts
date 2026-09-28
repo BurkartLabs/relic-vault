@@ -20,7 +20,8 @@ export class AdVeil extends Phaser.GameObjects.Container {
     return true;
   }
   get backState(): 'skippable' | 'playing' { return this.skippable() ? 'skippable' : 'playing'; }
-  constructor(vs: VaultScene, rewarded: boolean, onDone: () => void) {
+  /** `onDone` when a veil runs to its end (a rewarded one grants then); `onClosed` when it closes, either way. */
+  constructor(vs: VaultScene, rewarded: boolean, onDone: () => void, onClosed: () => void = () => {}) {
     super(vs, 0, 0);
     const W = vs.W, H = vs.H;
     this.setDepth(500);
@@ -45,7 +46,7 @@ export class AdVeil extends Phaser.GameObjects.Container {
       ev.remove();
       vs.tweens.add({ targets: this, alpha: 0, duration: 180, onComplete: () => this.destroy() });
       if (rewarded) onDone();
-      else ctx.sfx.play('tick');
+      else { ctx.sfx.play('tick'); onClosed(); }
     };
     const skip = vs.add.container(W - 150, 80 + vs.safeTop).setAlpha(0);
     const sb = vs.add.nineslice(0, 0, 'btn_dark', undefined, 200, 84, 40, 40, 40, 40);

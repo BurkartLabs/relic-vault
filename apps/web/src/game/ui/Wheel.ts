@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { Modal } from './Modal';
 import { Button, txt } from './kit';
 import { ctx } from '../GameCtx';
+import { NO_AD_TEXT } from '../systems/ads/AdService'; // AB#4724
 import { WHEEL, ECON } from '../data/catalog';
 import { spinWheel, wheelGemSpinAllowed } from '../systems/Economy';
 import { WHEEL_SIZE } from '../art/UiArt';
@@ -52,7 +53,21 @@ export class WheelModal extends Modal {
     const gem = new Button(vs, 210, top + 1180, 380, 130, gemOk ? `SPIN ${ECON.wheelGemCost}` : 'FREE SPINS ONLY', () => this.spin('gems'), { color: 'blue', size: gemOk ? 42 : 30, icon: gemOk ? 'gem' : undefined, iconScale: 0.5, disabled: !gemOk });
     this.btns = [ad, gem];
     B.add([ad, gem]);
+    // AB#4724: FREE SPIN needs a loaded ad (none needed when ads are suppressed); until one is, it says so
+    this.adBtn = ad;
+    const off = ctx.ads.onChange(() => this.refreshAd());
+    this.once('destroy', off);
+    this.refreshAd();
     B.add(txt(vs, 0, top + 1330, 'Odds: 50g 26% · 80g 18% · 120g 22% · 250g 16% · 500g 7% · 1K 3.5% · 3 gems 6% · 20 gems 1.5%', { size: 20, font: 'body', color: '#8a7a98', wrap: 860, strokeW: 0 }));
+  }
+
+  private adBtn?: Button;
+  private refreshAd() {
+    const b = this.adBtn;
+    if (!b || this.spinning || !b.scene) return;
+    const ready = ctx.adsSuppressed || ctx.ads.rewardedReady();
+    b.setEnabled(ready);
+    b.sub?.setText(ctx.adsSuppressed ? 'no ad for VIP' : ready ? 'watch a short ad' : NO_AD_TEXT.toLowerCase());
   }
 
   private spin(pay: 'gems' | 'ad') {
@@ -80,6 +95,7 @@ export class WheelModal extends Modal {
         onComplete: () => {
           this.spinning = false;
           this.btns.forEach((b) => b.setEnabled(true));
+          this.refreshAd(); // AB#4724: FREE SPIN again only once the next ad has loaded
           const w = WHEEL[r.slot];
           const m = this.wheel.getWorldTransformMatrix();
           vs.fx.flash(m.tx, m.ty - 300, 2, 0xc79bff);

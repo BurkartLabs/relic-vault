@@ -52,8 +52,9 @@ The number that keeps or kills this (BRIEF): % sessions with `verb_first` within
 
 256 entries, persisted to IndexedDB. Every entry: `type, sku, trigger, sessionSeconds, rank, gems, gold`.
 Types: `session_start`, `offer_impression`, `offer_dismiss`, `offer_decline`, `iap_click`, `iap_purchase`,
-`gem_spend_click`, `chest_open`, `ad_request`, `ad_rewarded`, `ad_interstitial`, `wheel_spin`, `event_claim`,
-`restore_purchases`. `offer_impression`, `offer_dismiss`, `iap_purchase` are mirrored into telemetry.
+`gem_spend_click`, `chest_open`, `ad_request`, `ad_rewarded`, `ad_interstitial`, `ad_failed`, `wheel_spin`,
+`event_claim`, `restore_purchases`. `ad_failed` (AB#4724) carries the `reason` or `trigger` and the ad network's error
+`code` (`not_ready` when no ad had loaded, `no_consent` when consent does not allow a request). `offer_impression`, `offer_dismiss`, `iap_purchase` are mirrored into telemetry.
 
 ## Checking it
 

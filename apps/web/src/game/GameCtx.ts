@@ -10,6 +10,9 @@ import { Telemetry, hashString } from './systems/Telemetry';
 import { platformOf, telemetryEndpoint, setNativeTelemetrySink, reportPluginError } from './systems/NativeTelemetry'; // AB#4739
 import { Sfx } from './audio/Sfx';
 import { defaultRng, Rng } from './systems/Rng';
+import type { AdService } from './systems/ads/AdService';
+import { createAdService } from './systems/ads/createAdService';
+import { ADMOB } from './config/ads';
 
 declare const __APP_VERSION__: string;
 
@@ -57,6 +60,8 @@ export class GameCtx {
   purchases = new PurchaseService(STORE_MODE, storeBackend());
   /** AB#4725: told when the store changes something while the game runs (a pending pack paid, a refund). */
   onStoreChange: ((changed: SkuId[], grants: PurchaseGrant[]) => void) | null = null;
+  /** AB#4724: the ads, demo veils or AdMob. main.ts runs its consent and first loads once the age gate is answered. */
+  ads: AdService = createAdService(ADMOB);
   sessionStart = Date.now();
   telemetry = new Telemetry(
     typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev',
