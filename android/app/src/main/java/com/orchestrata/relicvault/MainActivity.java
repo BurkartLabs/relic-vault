@@ -4,10 +4,12 @@ import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
+import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
 import android.widget.TextView;
 import androidx.activity.EdgeToEdge;
+import androidx.activity.SystemBarStyle;
 import androidx.core.splashscreen.SplashScreen;
 import androidx.webkit.WebViewCompat;
 import com.getcapacitor.BridgeActivity;
@@ -25,11 +27,21 @@ public class MainActivity extends BridgeActivity {
 
     private static final String WEBVIEW_PACKAGE = "com.google.android.webview";
 
+    /** Set by load() when the update-WebView screen is shown instead of the game. */
+    private boolean showingWebViewUpdate = false;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         SplashScreen.installSplashScreen(this); // before super.onCreate, as the compat library requires
-        super.onCreate(savedInstanceState);
-        EdgeToEdge.enable(this);
+        super.onCreate(savedInstanceState); // runs load(), which may show the update-WebView screen
+        if (showingWebViewUpdate) {
+            // Bug AB#4783: that screen is near-black (vault_bg) whatever the system theme, so both bars get light icons.
+            // The default follows the theme, and a light theme drew dark status icons on it, next to invisible, with a
+            // white navigation bar strip under it. The game's own bars are set by the page (SystemBars plugin).
+            EdgeToEdge.enable(this, SystemBarStyle.dark(Color.TRANSPARENT), SystemBarStyle.dark(Color.TRANSPARENT));
+        } else {
+            EdgeToEdge.enable(this);
+        }
     }
 
     @Override
@@ -49,6 +61,7 @@ public class MainActivity extends BridgeActivity {
     }
 
     private void showWebViewUpdate(int major) {
+        showingWebViewUpdate = true;
         setContentView(R.layout.webview_update);
         if (major > 0) {
             TextView found = findViewById(R.id.webview_update_found);

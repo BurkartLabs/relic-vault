@@ -1,7 +1,10 @@
 import { GameState, createState, rollover } from './systems/State';
 import { SaveService } from './systems/SaveService';
 import { Analytics } from './systems/Analytics';
-import { PurchaseService } from './systems/PurchaseService';
+import { PurchaseService, type PurchaseGrant } from './systems/PurchaseService';
+import { RevenueCatBackend, type StoreBackend } from './systems/PlayStore'; // AB#4725
+import { STORE_MODE, REVENUECAT_KEY } from './buildMode';
+import type { SkuId } from './data/catalog';
 import { OfferDirector } from './systems/OfferDirector';
 import { Telemetry, hashString } from './systems/Telemetry';
 import { Sfx } from './audio/Sfx';
@@ -21,21 +24,36 @@ const TELEMETRY_MAP: Record<string, string> = {
   offer_impression: 'offer_shown',
   offer_decline: 'offer_dismiss',
   offer_dismiss: 'offer_dismiss',
-  iap_purchase: 'purchase_demo',
+  // AB#4725: a Play build's purchases are real ones; ANALYTICS.md and the Console's funnel read both names
+  iap_purchase: STORE_MODE === 'play' ? 'purchase' : 'purchase_demo',
 };
+
+/**
+ * AB#4725: the store behind the PurchaseService. A Play build uses RevenueCat; an e2e run of a play-mode web build may
+ * put a fake one on window.__rvStoreBackend before the game loads (there is no Play Billing in a browser). The demo
+ * build uses none.
+ */
+function storeBackend(): StoreBackend | null {
+  if (STORE_MODE !== 'play') return null;
+  const injected = typeof window !== 'undefined' ? (window as any).__rvStoreBackend : undefined;
+  return injected ?? new RevenueCatBackend(REVENUECAT_KEY);
+}
 
 /** Process-wide game context: the pure state plus the services around it. */
 export class GameCtx {
   state: GameState = createState();
   save = new SaveService();
   /**
-   * AB#4728: run when the Android app comes back to the foreground (apps/web/src/nativeApp.ts). The RevenueCat story
-   * adds its entitlement re-check here and the AdMob story its ad preload; neither SDK is in the build yet.
+   * AB#4728: run when the Android app comes back to the foreground (apps/web/src/nativeApp.ts); the AdMob story adds
+   * its ad preload here. The entitlement re-check is not needed here: resyncStore runs on visibilitychange, which the
+   * Android WebView fires on pause and resume too (checked on an Android 16 emulator: hidden, then visible).
    */
   readonly onResume: (() => void)[] = [];
   sfx = new Sfx();
   rng: Rng = defaultRng;
-  purchases = new PurchaseService('demo');
+  purchases = new PurchaseService(STORE_MODE, storeBackend());
+  /** AB#4725: told when the store changes something while the game runs (a pending pack paid, a refund). */
+  onStoreChange: ((changed: SkuId[], grants: PurchaseGrant[]) => void) | null = null;
   sessionStart = Date.now();
   telemetry = new Telemetry(
     typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev',
@@ -63,17 +81,33 @@ export class GameCtx {
     this.state.stats.sessions++;
     this.sfx.muted = this.state.settings.muted;
     this.sfx.music = this.state.settings.music;
+    // AB#4725: a Play build's prices and entitlements, before the vault opens; a store that cannot be reached is kept
+    // as unavailable (the shop says so), never a reason not to open the game.
+    // Waited for at most 6 s: a slow store keeps loading behind the vault, and the shop shows its prices when they come.
+    const store = this.purchases.start(this.state, this.rng, (changed, grants) => this.storeChanged(changed, grants));
+    await Promise.race([store, new Promise((r) => setTimeout(r, 6000))]);
     this.analytics.log('session_start', { session: this.state.stats.sessions });
     const src = new URLSearchParams(location.search).get('src') || (document.referrer ? 'referral' : 'direct');
     this.telemetry.track('app_open', { source: src, returning: this.state.stats.sessions > 1, session_n: this.state.stats.sessions });
     document.addEventListener('visibilitychange', () => {
       // Bug #326: hiding a tab is a pause, not an end. Saving still happens on every hide, because losing
       // progress is the one thing worth being paranoid about; only the telemetry meaning changed.
-      if (document.hidden) { this.persistNow(); this.telemetry.pause(); } else this.telemetry.resume();
+      if (document.hidden) { this.persistNow(); this.telemetry.pause(); } else { this.telemetry.resume(); void this.resyncStore(); }
     });
     window.addEventListener('pagehide', () => { this.persistNow(); this.telemetry.sessionEnd('pagehide'); });
     window.addEventListener('error', (ev) => this.error(ev.message || String(ev.error)));
     window.addEventListener('unhandledrejection', (ev) => this.error(String((ev as PromiseRejectionEvent).reason)));
+  }
+
+  /** AB#4725: on resume, the entitlements again (a refund or a lapsed VIP while the app was away). */
+  async resyncStore() {
+    const r = await this.purchases.sync(this.state, this.rng).catch(() => null);
+    if (r && (r.changed.length || r.grants.length)) this.storeChanged(r.changed, r.grants);
+  }
+
+  private storeChanged(changed: SkuId[], grants: PurchaseGrant[]) {
+    this.persistNow();
+    this.onStoreChange?.(changed, grants);
   }
 
   error(message: string) {

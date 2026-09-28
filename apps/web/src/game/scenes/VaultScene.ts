@@ -4,7 +4,8 @@ import { BOARD_SIZE, BOARD_COLS, ECON, SKUS, SkuId, COPY, CARDS, ALBUM_PAGES } f
 import { merge, canMerge, MergeResult, autoMerge } from '../systems/MergeSystem';
 import { forge } from '../systems/ForgeSystem';
 import { sell, move, fillRatio, canForge, findPair, empties } from '../systems/BoardSystem';
-import { applyPurchase, skuAvailable } from '../systems/PurchaseService';
+import { applyEntitlements, grantOnce, skuAvailable } from '../systems/PurchaseService';
+import { priceAmount, currencyUnit } from '../systems/Prices'; // AB#4725
 import { chestsAllowed, dropFromSatchel, claimVipCrate, CardResult, Granted } from '../systems/Economy';
 import { eventEndsAt, rollover } from '../systems/State';
 import { activeChain, currentFloor, capstoneOf, isCleared } from '../systems/Floors';
@@ -160,6 +161,13 @@ export class VaultScene extends Phaser.Scene {
 
   create() {
     const t0 = performance.now(); // AB#4737
+    // AB#4725: the store changed something while the game runs: a pending pack Play has now confirmed, or an
+    // entitlement a refund or a lapsed subscription took away
+    ctx.onStoreChange = (_changed, grants) => {
+      this.refreshButtons();
+      this.hud.tickGems(); this.hud.tickGold();
+      for (const g of grants.filter((x) => x.ok)) { this.purchaseJuice(g.sku); this.toast(`${SKUS[g.sku].title}: Google Play confirmed it.`); }
+    };
     this.W = this.scale.width; this.H = this.scale.height;
     this.ox = (this.W - 1080) / 2;
     const ds = this.scale.displayScale.y || 1;
@@ -1321,16 +1329,26 @@ export class VaultScene extends Phaser.Scene {
   // ------------------------------------------------------------------ purchases
   async buy(sku: SkuId, trigger: string, after?: () => void) {
     const s = ctx.state;
-    ctx.analytics.log('iap_click', { sku, trigger, price: SKUS[sku].price });
+    ctx.analytics.log('iap_click', { sku, trigger, price: priceAmount(sku), currency: currencyUnit() });
     if (!skuAvailable(s, sku)) { ctx.sfx.play('error'); this.toast('Already owned.'); return; }
     if (this.modal) this.modal.converted = true;
     const veil = this.processingVeil();
-    const res = await ctx.purchases.purchase(sku);
+    const res = await ctx.purchases.purchase(sku, s);
     veil.destroy();
-    if (!res.ok) { ctx.sfx.play('error'); return; }
-    const g = applyPurchase(s, sku, ctx.rng);
-    ctx.analytics.log('iap_purchase', { sku, trigger, price: SKUS[sku].price, receipt: res.receipt });
+    if (!res.ok) {
+      // AB#4725: a cancelled purchase is the player's choice, not an error; a pending one is waiting on Play, not failed
+      if (res.reason === 'cancelled') return;
+      if (res.reason === 'pending') { ctx.persistNow(); this.toast('Payment pending: your pack arrives when Google Play confirms it.'); return; }
+      ctx.sfx.play('error');
+      this.toast(res.reason === 'unavailable' ? 'The store is not available right now.' : 'The purchase did not go through.');
+      return;
+    }
+    // AB#4725: granted only now that the store has confirmed it, and once per transaction
+    const g = grantOnce(s, res.receipt, sku, ctx.rng);
+    if (res.customer) applyEntitlements(s, res.customer.active);
     ctx.persistNow();
+    if (!g.ok) return;
+    ctx.analytics.log('iap_purchase', { sku, trigger, price: priceAmount(sku), currency: currencyUnit(), receipt: res.receipt });
     this.purchaseJuice(sku);
     const bc = this.boardCenter;
     if (g.gems) this.fx.flyTo('gem', bc.x, bc.y - 300, this.hud.anchor('gems'), Math.min(16, 4 + Math.floor(g.gems / 40)), (k, ) => { ctx.sfx.play('gem'); this.hud.bump('gems'); if (k === 0) this.time.delayedCall(500, () => this.hud.tickGems()); });

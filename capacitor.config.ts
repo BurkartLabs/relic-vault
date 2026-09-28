@@ -7,9 +7,9 @@ const config: CapacitorConfig = {
   appName: 'Relic Vault',
   webDir: 'dist',
   android: {
-    // No http:// from an https:// page, and no remote WebView debugging in a release build.
+    // No http:// from an https:// page. webContentsDebuggingEnabled is left unset on purpose (AB#4730): Capacitor then
+    // enables remote WebView debugging in a debug build only, which scripts/android-qa.mjs drives, and never in release.
     allowMixedContent: false,
-    webContentsDebuggingEnabled: false,
   },
   plugins: {
     SystemBars: {
