@@ -5,6 +5,7 @@ import { priceLabel } from '../systems/Prices'; // AB#4725: the store's price in
 import { storeCopy } from '../buildMode';
 import { keeperLayout } from './keeperLayout';
 import { ctx } from '../GameCtx';
+import { NO_AD_TEXT } from '../systems/ads/AdService'; // AB#4724
 import { RELICS, ECON, COPY, SKUS, GEM_CHEST_ODDS, EARNED_CHEST_ODDS, CHEST_PITY_TIER, MAX_TIER } from '../data/catalog';
 import { lowest, sell, sellValue, findPair } from '../systems/BoardSystem';
 import { gemClear, QUESTS, questProgress, claimQuest, questPowerUpDue, xpToNext, grantGold } from '../systems/Economy';
@@ -136,7 +137,9 @@ export class OfferSheet extends Modal {
     } else {
       B.add(vs.add.image(0, top + 430, 'ic_ad').setDisplaySize(260, 260));
       B.add(txt(vs, 0, top + 640, 'Watch one more, double the gold.', { size: 36, weight: '900', gold: true }));
-      B.add(new Button(vs, 0, top + 820, 560, 130, 'DOUBLE IT', () => {
+      // AB#4724: DOUBLE IT needs a loaded ad; until one is, it is off and says so, never a silent failure
+      const noAd = txt(vs, 0, top + 910, `${NO_AD_TEXT}.`, { size: 26, font: 'body', color: '#b9a9c6', strokeW: 0 });
+      const dbl = new Button(vs, 0, top + 820, 560, 130, 'DOUBLE IT', () => {
         this.close();
         vs.watchAd('double_it', () => {
           const n = 150;
@@ -145,7 +148,11 @@ export class OfferSheet extends Modal {
           vs.fx.flyTo('coin', bc.x, bc.y, vs.hud.anchor('gold'), 10, (k) => { if (k === 9) vs.hud.tickGold(); });
           vs.toast(`Doubled: +${n} gold`);
         });
-      }, { color: 'purple', size: 46, icon: 'ic_ad', iconScale: 0.55 }));
+      }, { color: 'purple', size: 46, icon: 'ic_ad', iconScale: 0.55 });
+      B.add([dbl, noAd]);
+      const refresh = () => { if (!dbl.scene) return; const ready = ctx.adsSuppressed || ctx.ads.rewardedReady(); dbl.setEnabled(ready); noAd.setVisible(!ready); };
+      this.once('destroy', ctx.ads.onChange(refresh));
+      refresh();
       B.add(new Button(vs, 0, top + 1000, 560, 120, 'OR SKIP THE ADS: SHOP', () => { this.close(); vs.openShop(`double_it:${trigger}`, 'best'); }, { color: 'gold', size: 34 }));
     }
   }

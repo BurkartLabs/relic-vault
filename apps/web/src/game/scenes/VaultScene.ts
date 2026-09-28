@@ -34,6 +34,7 @@ import { OrdersPanel, patronLine } from '../ui/Orders';
 import { ITEMS, CHAINS, tierOf, BINDINGS } from '../data/items';
 import { tickOrders, refillOrders, deliver, dismissOrder, matchOrder } from '../systems/OrderSystem';
 import { AdVeil } from '../ui/AdVeil';
+import { interstitialBlocked, runRewarded } from '../systems/ads/AdService'; // AB#4724
 import { Tutorial } from '../ui/Tutorial';
 import { DiscoveryCard } from '../ui/Discovery';
 import { grantGold, enforceChestRules } from '../systems/Economy';
@@ -52,8 +53,6 @@ interface RelicView {
 }
 
 const RELIC_SIZE = 160;
-/** Board RV-B7: a denser ad load (was 90s). Rewarded ads stay optional and no ad ever gates play. */
-const AD_GAP_MS = 45000;
 /** Board RV-B8: how long after the last merge a streak still counts as live. */
 const STREAK_GRACE_MS = 2200;
 /** vertical layout in design space; fits a strict 9:16 1080x1920 screen above the dock */
@@ -176,6 +175,8 @@ export class VaultScene extends Phaser.Scene {
     const extra = Math.max(0, this.H - 1920 - this.safeTop - this.safeBottom);
     this.my = this.safeTop + extra * 0.5;
     this.relics = new Array(BOARD_SIZE).fill(null);
+    // AB#4724: the demo adapter draws its veil here; AdMob draws its own over the app
+    ctx.ads.attach?.({ showVeil: (rewarded) => new Promise((resolve) => { new AdVeil(this, rewarded, () => resolve(true), () => resolve(false)); }) });
     this.cameras.main.setBackgroundColor('#07060B');
     // punch-ins may zoom and pan, but never past the painted world
     this.cameras.main.setBounds(0, 0, this.W, this.H);
@@ -1412,30 +1413,38 @@ export class VaultScene extends Phaser.Scene {
   }
 
   // ------------------------------------------------------------------ ads
+  /**
+   * AB#4724: a rewarded ad for `reason` (systems/ads/AdService.ts): `onReward` runs only if the network's reward
+   * callback fired, or at once when ads are suppressed (Silence the Criers, VIP). Otherwise the player is told why.
+   */
   watchAd(reason: string, onReward: () => void) {
-    ctx.analytics.log('ad_request', { reason });
-    const veil = new AdVeil(this, true, () => {
-      ctx.state.stats.ads++;
-      ctx.analytics.log('ad_rewarded', { reason });
-      ctx.sfx.play('adDone');
-      onReward();
-      ctx.director.onAdComplete();
-      ctx.persist();
-      this.pumpOffers();
+    const suppressed = ctx.adsSuppressed;
+    void runRewarded(ctx.ads, reason, suppressed, {
+      log: (type, extra) => ctx.analytics.log(type, extra),
+      tell: (message) => { ctx.sfx.play('error'); this.toast(message); },
+      grant: () => {
+        if (!suppressed) { ctx.state.stats.ads++; ctx.sfx.play('adDone'); }
+        onReward();
+        if (!suppressed) ctx.director.onAdComplete();
+        ctx.persist();
+        this.pumpOffers();
+      },
     });
-    void veil;
   }
 
   /** Board RV-B8: a combo streak is the best part of the loop; nothing interrupts it, and not for a beat after. */
   get streaking() { return this.combo >= 2 && Date.now() - this.lastMergeAt < STREAK_GRACE_MS; }
 
+  /** Board RV-B7: a denser ad load (45 s apart, was 90 s). Never in a drag or a streak, and no ad ever gates play. */
   maybeInterstitial(trigger: string) {
-    if (ctx.adsSuppressed || this.dragging || this.streaking) return;
     const now = Date.now();
-    if (now - this.lastInterstitial < AD_GAP_MS) return;
+    if (interstitialBlocked({ suppressed: ctx.adsSuppressed, dragging: this.dragging, streaking: this.streaking, now, last: this.lastInterstitial })) return;
     this.lastInterstitial = now;
     ctx.analytics.log('ad_interstitial', { trigger });
-    this.time.delayedCall(350, () => new AdVeil(this, false, () => {}));
+    // AB#4724: shown by the service and not waited on; a failure (none loaded yet) is logged and play goes on
+    this.time.delayedCall(350, () => {
+      void ctx.ads.showInterstitial().then((r) => { if (r.error) ctx.analytics.log('ad_failed', { trigger, code: r.error.code }); });
+    });
   }
 
   // ------------------------------------------------------------------ grants

@@ -79,6 +79,8 @@ export class SettingsModal extends Modal {
       'Relic Vault stores your progress on this device only (IndexedDB, with localStorage as a fallback).\n\n' +
       'A local analytics log records offers shown and purchase buttons pressed (item, trigger, session time, rank, gems, gold) to tune the game. In this build it stays on your device unless the operator configures a telemetry endpoint; if one is configured, anonymous gameplay events (a random device id, no name or contact details) are sent to it.\n\n' +
       `No account. No tracking pixels. ${adsSentence()}\n\nThe full privacy policy and terms open from Settings. Delete My Data below erases everything this game keeps on this device.`, () => vs.openSettings())));
+    // AB#4724: the consent choice (UMP) can be changed at any time, where the network requires that it can
+    if (ctx.ads.privacyOptionsRequired()) row('PRIVACY OPTIONS', 'dark', () => { void ctx.ads.showPrivacyOptions(); });
     row('PRIVACY POLICY', 'dark', () => openPublicPage('privacy.html')); // AB#4726: the public pages, outside the invite wall
     row('TERMS', 'dark', () => openPublicPage('terms.html'));
     row('ODDS & DISCLOSURES', 'dark', () => vs.openModal(new InfoSheet(vs, 'ODDS',

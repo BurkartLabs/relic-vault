@@ -68,6 +68,9 @@ async function start() {
       ctx.telemetry.track('funnel_step', { step: 'age_gate_done', band: ctx.state.age });
       ctx.persistNow();
     }
+    // AB#4724: consent (UMP), then the ad network, once the age is known: an under-16 player gets non-personalised
+    // ads, tagged under the age of consent. Not waited on: an ad is offered only once one has loaded.
+    void ctx.ads.init({ underAge: ctx.state.age === 'minor' }).catch((e) => ctx.analytics.log('ad_failed', { reason: 'init', code: String(e?.code ?? e?.message ?? e) }));
   })();
   await fonts; // text in the splash needs the display font
   performance.measure('rv:fonts', 'rv:start');
