@@ -87,7 +87,7 @@ export class SettingsModal extends Modal {
     }, { color: 'red', size: 34, guard });
     C.add(erase);
     y += 140;
-    C.add(txt(vs, 470, y + 30, 'Relic Vault v1.0 · DEMO STORE MODE · no real charges', { size: 22, font: 'body', color: '#6a5a78', strokeW: 0 }));
+    C.add(txt(vs, 470, y + 30, `Relic Vault v${ctx.telemetry.version} · DEMO STORE MODE · no real charges`, { size: 22, font: 'body', color: '#6a5a78', strokeW: 0 }));
     y += 100;
     sc.setContentHeight(y);
   }
