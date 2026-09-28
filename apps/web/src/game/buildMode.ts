@@ -8,6 +8,8 @@
  * VITE_PUBLIC_URL: where privacy.html and terms.html are served. On the web they open from the page's own origin; in
  * the Android app (Capacitor) the in-app browser needs a web address, so it uses this.
  */
+import { reportPluginError } from './systems/NativeTelemetry'; // AB#4739
+
 const env = ((import.meta as any).env ?? {}) as Record<string, string | undefined>;
 
 export type AdsMode = 'admob' | 'demo';
@@ -57,13 +59,13 @@ export function adsSentence(mode: AdsMode = ADS_MODE): string {
 /** Opens one of the public pages: the in-app browser in the Android app, a new tab on the web. */
 export function openPublicPage(page: 'privacy.html' | 'terms.html') {
   const browser = (window as any).Capacitor?.Plugins?.Browser;
-  if (browser?.open) { void browser.open({ url: `${PUBLIC_URL}/${page}` }); return; }
+  if (browser?.open) { void Promise.resolve(browser.open({ url: `${PUBLIC_URL}/${page}` })).catch((e: unknown) => reportPluginError('Browser', 'open', e)); return; }
   window.open(new URL(page, location.href).href, '_blank', 'noopener');
 }
 
 /** AB#4725: an address outside the game (Play's subscription centre), in the in-app browser or a new tab. */
 export function openExternal(url: string) {
   const browser = (window as any).Capacitor?.Plugins?.Browser;
-  if (browser?.open) { void browser.open({ url }); return; }
+  if (browser?.open) { void Promise.resolve(browser.open({ url })).catch((e: unknown) => reportPluginError('Browser', 'open', e)); return; }
   window.open(url, '_blank', 'noopener');
 }

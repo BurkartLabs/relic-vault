@@ -5,7 +5,9 @@ Two layers, both local-first.
 ## 1. Orchestrata telemetry (`systems/Telemetry.ts`)
 
 Implements the TELEMETRY.md minimum. Every event carries `distinct_id` (anonymous, per device, localStorage
-`rv_did`), `session_id` (per boot), `app_version`, `platform` (`pwa-standalone|browser-<os>`).
+`rv_did`), `session_id` (per boot), `app_version`, `platform`: `pwa-standalone|browser-<os>` on the web, and in the
+Android app `capacitor-android-wv<major>`, the Android System WebView's major version (AB#4739), so store sessions
+are separable from the web's and a fault seen on one WebView shows as that WebView.
 
 | Event | Fired from | Props |
 |---|---|---|
@@ -19,6 +21,9 @@ Implements the TELEMETRY.md minimum. Every event carries `distinct_id` (anonymou
 | `purchase_demo` | demo purchase granted (a demo build) | sku, trigger |
 | `purchase` | a Google Play purchase granted after the store confirmed it (a Play build, AB#4725) | sku, trigger |
 | `error` | window error / unhandled rejection | message, hash |
+| `error` (source `plugin`) | a Capacitor plugin call that failed inside handled code: Purchases (start, getCustomerInfo, restorePurchases), Browser.open (AB#4739) | plugin, method, code, message, hash |
+| `purchase_failed` | a purchase that did not go through (AB#4739) | sku, trigger, reason (`cancelled` by the player, `pending` on Play, `unavailable`, `error`), code (RevenueCat's) |
+| `ad_failed` | an ad that could not load or show: sent by the AdMob integration when it lands; the demo veils cannot fail (AB#4739) | format, stage (`load`/`show`), code, message |
 | `funnel_step` | age gate, forge_hint, forge_done, merge_hint, merge_done, tutorial_done, idle_hint | step |
 | `merge` | every merge | tier, ascended, card |
 | `forge` | every forge | tier |
@@ -30,8 +35,16 @@ Implements the TELEMETRY.md minimum. Every event carries `distinct_id` (anonymou
 
 **Sink.** Always a 500-event ring in memory (`window.__rv.telemetry.buf`, visible at `?debug=1`).
 If the build sets `VITE_TELEMETRY_URL`, events are batched every 10s and flushed with `sendBeacon` on hide
-as a JSON array. No endpoint is configured: choosing one (PostHog / Smallweb / self-hosted) is a Board call
-because it has a cost (GOVERNANCE). Until then the preview cannot leave Preview (TELEMETRY.md rule).
+as a JSON array; `app_open`, `verb_first`, purchases, `purchase_failed` and `error` go within a moment.
+The endpoint is the control plane's `/e` (Decision AB#4741): the web preview is built with it by the pipeline, and
+`npm run android:bundle` builds the store bundle with it unless `VITE_TELEMETRY_URL` is set (scripts/android.mjs).
+A debug APK sends nothing unless the variable is set. The client adds `?g=relic-vault` to the URL: the collector
+names a game by that, and the app's pages come from `https://localhost`, which names none (AB#4739).
+
+**Native crashes are not here.** This telemetry is the JavaScript side: the game's own errors, and plugin failures
+the game catches. A crash or ANR in the Android app itself (the shell, the WebView process, a plugin's native code)
+never reaches JavaScript; Google Play Console's **Android vitals** reports those, per app version and device. Read
+both: vitals for the app dying, `error` events for the game going wrong while it runs.
 
 The number that keeps or kills this (BRIEF): % sessions with `verb_first` within 30s of `app_open`, then D7 return after 200 sessions.
 

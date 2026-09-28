@@ -7,6 +7,7 @@ import { STORE_MODE, REVENUECAT_KEY } from './buildMode';
 import type { SkuId } from './data/catalog';
 import { OfferDirector } from './systems/OfferDirector';
 import { Telemetry, hashString } from './systems/Telemetry';
+import { platformOf, telemetryEndpoint, setNativeTelemetrySink, reportPluginError } from './systems/NativeTelemetry'; // AB#4739
 import { Sfx } from './audio/Sfx';
 import { defaultRng, Rng } from './systems/Rng';
 
@@ -15,8 +16,10 @@ declare const __APP_VERSION__: string;
 function platform() {
   const standalone = typeof window !== 'undefined' && (window.matchMedia?.('(display-mode: standalone)').matches || (navigator as any).standalone);
   const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
-  const os = /Android/i.test(ua) ? 'android' : /iPhone|iPad|iPod/i.test(ua) ? 'ios' : /Windows/i.test(ua) ? 'windows' : /Mac/i.test(ua) ? 'mac' : 'other';
-  return `pwa-${standalone ? 'standalone' : 'browser'}-${os}`;
+  // AB#4739: in the Android app Capacitor names the platform, and the WebView's version is in the user agent
+  const cap = typeof window !== 'undefined' ? (window as any).Capacitor : undefined;
+  const native = cap?.isNativePlatform?.() ? cap.getPlatform?.() : null;
+  return platformOf(ua, !!standalone, native);
 }
 
 /** Analytics ring-buffer types that map onto Orchestrata TELEMETRY.md events. */
@@ -52,7 +55,7 @@ export class GameCtx {
   telemetry = new Telemetry(
     typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev',
     platform(),
-    (import.meta as any).env?.VITE_TELEMETRY_URL || undefined,
+    telemetryEndpoint((import.meta as any).env?.VITE_TELEMETRY_URL || undefined), // AB#4739: ?g=relic-vault
   );
   analytics = new Analytics(256, () => ({
     sessionSeconds: Math.round((Date.now() - this.sessionStart) / 1000),
@@ -69,6 +72,8 @@ export class GameCtx {
   private saveTimer: number | null = null;
 
   async boot() {
+    // AB#4739: plugin and ad failures that no window.onerror sees reach telemetry through this
+    setNativeTelemetrySink((event, props) => this.telemetry.track(event, event === 'error' ? { ...props, hash: hashString(String(props.message)) } : props));
     this.state = await this.save.load();
     this.analytics.load(await this.save.loadAnalytics());
     rollover(this.state, Date.now());
@@ -95,7 +100,7 @@ export class GameCtx {
 
   /** AB#4725: on resume, the entitlements again (a refund or a lapsed VIP while the app was away). */
   async resyncStore() {
-    const r = await this.purchases.sync(this.state, this.rng).catch(() => null);
+    const r = await this.purchases.sync(this.state, this.rng).catch((e) => { reportPluginError('Purchases', 'getCustomerInfo', e); return null; });
     if (r && (r.changed.length || r.grants.length)) this.storeChanged(r.changed, r.grants);
   }
 

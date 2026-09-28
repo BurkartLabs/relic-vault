@@ -23,6 +23,17 @@ export function signingProblems(env = process.env, isFile = (p) => existsSync(p)
   return [];
 }
 
+/**
+ * AB#4739: where the store build sends its telemetry. Decision AB#4741 (Board, 2026-09-28) kept the control plane's
+ * telemetry sink as the production endpoint; the web preview is built with it by the pipeline ($(TELEMETRY_URL)), and
+ * a release bundle, built on a machine, gets it here unless VITE_TELEMETRY_URL is set already. Not a secret: every
+ * web build carries it too. A debug APK sends nothing unless the variable is set, so test sessions stay out.
+ */
+export const STORE_TELEMETRY_URL = 'https://orchestrata-control.salmonbay-0aeaf94d.canadacentral.azurecontainerapps.io/e';
+export function storeTelemetryUrl(env = process.env) {
+  return env.VITE_TELEMETRY_URL || STORE_TELEMETRY_URL;
+}
+
 /** What stops any Android build: no JDK, or no Android SDK (by variable or android/local.properties). */
 export function toolchainProblems(env = process.env, { javaOnPath = hasJava(), localProperties = readLocalProperties() } = {}) {
   const problems = [];
@@ -71,6 +82,8 @@ const ACTIONS = {
   bundle() {
     const problems = [...signingProblems(), ...toolchainProblems()];
     if (problems.length) stop(problems);
+    process.env.VITE_TELEMETRY_URL = storeTelemetryUrl();
+    console.log(`android: telemetry to ${process.env.VITE_TELEMETRY_URL}`);
     sync();
     gradle('bundleRelease');
     const out = resolve(ANDROID, 'app/build/outputs/bundle/release/app-release.aab');

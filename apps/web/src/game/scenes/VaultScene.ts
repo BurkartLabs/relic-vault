@@ -1307,6 +1307,8 @@ export class VaultScene extends Phaser.Scene {
     const res = await ctx.purchases.purchase(sku, s);
     veil.destroy();
     if (!res.ok) {
+      // AB#4739: every purchase that did not go through, with why and the store's code (cancelled is the player's choice)
+      ctx.telemetry.track('purchase_failed', { sku, trigger, reason: res.reason, code: res.code });
       // AB#4725: a cancelled purchase is the player's choice, not an error; a pending one is waiting on Play, not failed
       if (res.reason === 'cancelled') return;
       if (res.reason === 'pending') { ctx.persistNow(); this.toast('Payment pending: your pack arrives when Google Play confirms it.'); return; }

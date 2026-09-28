@@ -6,6 +6,7 @@ import { InfoSheet } from './Sheets';
 import type { VaultScene } from '../scenes/VaultScene';
 import { adsSentence, openPublicPage, openExternal, storeCopy } from '../buildMode'; // AB#4726, AB#4725
 import { priceLabel } from '../systems/Prices'; // AB#4725
+import { reportPluginError } from '../systems/NativeTelemetry'; // AB#4739
 import { deleteMyData } from '../systems/DataEraser'; // AB#4726
 
 export class SettingsModal extends Modal {
@@ -43,7 +44,7 @@ export class SettingsModal extends Modal {
       if (ctx.purchases.mode === 'play') {
         // AB#4725: what Google Play has for this account. Only unlocks and VIP come back; gem packs were spent in play.
         vs.toast('Asking Google Play…');
-        const r = await ctx.purchases.restore(s).catch(() => null);
+        const r = await ctx.purchases.restore(s).catch((e) => { reportPluginError('Purchases', 'restorePurchases', e); return null; });
         if (!r) { vs.toast('Google Play did not answer. Try again in a moment.'); return; }
         ctx.persistNow();
         vs.refreshButtons();
