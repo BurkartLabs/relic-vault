@@ -1,4 +1,5 @@
 import { defineConfig } from '@playwright/test';
+import { PLAYWRIGHT_WORKERS } from './scripts/test-workers.mjs';
 
 // QA smoke (Orchestrata GOVERNANCE: QA may fail a preview). Uses the locally installed Edge
 // (PW_CHANNEL=chrome to switch) so no browser download is needed.
@@ -6,7 +7,7 @@ export default defineConfig({
   testDir: 'e2e',
   timeout: 90_000,
   retries: 0,
-  workers: 1,
+  workers: PLAYWRIGHT_WORKERS, // AB#4768: 1 unless TEST_PLAYWRIGHT_WORKERS says otherwise
   reporter: [['list']],
   use: {
     baseURL: 'http://127.0.0.1:4174',

@@ -159,6 +159,7 @@ export class VaultScene extends Phaser.Scene {
   get boardCenter() { return { x: this.ox + 540, y: this.my + BOARD_TOP + CELL * 3 }; }
 
   create() {
+    const t0 = performance.now(); // AB#4737
     this.W = this.scale.width; this.H = this.scale.height;
     this.ox = (this.W - 1080) / 2;
     const ds = this.scale.displayScale.y || 1;
@@ -218,6 +219,7 @@ export class VaultScene extends Phaser.Scene {
         'Something in your ledger was written in a hand I cannot read. I have kept the page. Start here, and if I ever learn that hand, your vault comes back.',
       ));
     }
+    performance.measure('rv:vault-create', { start: t0, end: performance.now() });
   }
 
   private resizeTimer?: number;

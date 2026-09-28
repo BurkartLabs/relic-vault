@@ -7,6 +7,7 @@ export class BootScene extends Phaser.Scene {
   constructor() { super('Boot'); }
 
   create() {
+    const t0 = performance.now(); // AB#4737
     const { width: W, height: H } = this.scale;
     const [c, ctx] = makeCanvas(1080, 1920);
     ctx.fillStyle = lin(ctx, 0, 0, 0, 1920, [[0, '#07060B'], [0.45, '#1B1424'], [1, '#07060B']]);
@@ -39,6 +40,7 @@ export class BootScene extends Phaser.Scene {
     this.add.text(W / 2, H / 2 + 470, 'Fuse the cursed gold.', {
       fontFamily: 'Cinzel, Georgia, serif', fontSize: '46px', fontStyle: '700', color: '#F7EED8', stroke: '#0c0608', strokeThickness: 6,
     }).setOrigin(0.5).setAlpha(0.9);
+    performance.measure('rv:splash', { start: t0, end: performance.now() });
     this.scene.launch('BootLoad');
   }
 }

@@ -9,6 +9,9 @@ const BROKEN_KEY = 'relic-vault-save-unreadable';
 /** IndexedDB first, localStorage fallback. Schema-versioned via migrate(). */
 export class SaveService {
   private idbOk = true;
+  /** AB#4726: set by Delete my data, so nothing (the pagehide autosave above all) writes the save back before the reload. */
+  private halted = false;
+  halt() { this.halted = true; }
   /**
    * Set when the stored save could not be read at all. The scene shows this to the player, because starting
    * them silently at zero with no explanation is its own kind of data loss.
@@ -42,6 +45,7 @@ export class SaveService {
   }
 
   async save(s: GameState) {
+    if (this.halted) return;
     const snap = JSON.parse(JSON.stringify(s));
     if (this.idbOk) {
       try { await set(KEY, snap); } catch { this.idbOk = false; }
@@ -53,6 +57,7 @@ export class SaveService {
     try { return (await get(AKEY)) ?? JSON.parse(localStorage.getItem(AKEY) || '[]'); } catch { return []; }
   }
   async saveAnalytics(buf: unknown[]) {
+    if (this.halted) return;
     try { await set(AKEY, buf); } catch { try { localStorage.setItem(AKEY, JSON.stringify(buf)); } catch { /* */ } }
   }
 

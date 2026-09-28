@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "prebuild": "node scripts/version.mjs",
     "build": "vite build",
     "preview": "vite preview --port 4173",
     "test": "node scripts/test-strict.mjs",
@@ -17,7 +18,8 @@
     "android:sync": "node scripts/android.mjs sync",
     "android:bundle": "node scripts/android.mjs bundle",
     "android:apk": "node scripts/android.mjs apk",
-    "android:icons": "node apps/web/tools/make-android-icons.mjs"
+    "android:icons": "node apps/web/tools/make-android-icons.mjs",
+    "version": "node scripts/version.mjs --release && git add CHANGELOG.md"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.2",

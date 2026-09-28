@@ -1,7 +1,11 @@
 // Scripted playtest harness: drives the real game in headless Edge at phone size and saves screenshots.
 // Usage: node apps/web/tools/play.mjs <url> <outDir> [scenario]
+// AB#4729: scenario 'store' writes Google Play's screenshots to screenshots/store/ (outDir holds the raw captures).
 import { chromium } from '@playwright/test';
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { resolve, join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 const url = process.argv[2] || 'http://localhost:5173/';
 const out = process.argv[3] || 'screenshots/tmp';
@@ -9,7 +13,9 @@ const scenario = process.argv[4] || 'basic';
 mkdirSync(out, { recursive: true });
 
 const browser = await chromium.launch({ channel: process.env.PW_CHANNEL || 'msedge' });
-const ctxB = await browser.newContext({ viewport: { width: 412, height: 892 }, deviceScaleFactor: 2.5, hasTouch: true, isMobile: true });
+// AB#4729: the store's captures are the game's own 1080x1920 design space, 9:16 (432x768 at 2.5x)
+const viewport = scenario === 'store' ? { width: 432, height: 768 } : { width: 412, height: 892 };
+const ctxB = await browser.newContext({ viewport, deviceScaleFactor: 2.5, hasTouch: true, isMobile: true });
 const page = await ctxB.newPage();
 const errors = [];
 page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
@@ -189,6 +195,128 @@ if (scenario === 'welcome') {
   await offer(); await shot('welcome-modal-minor');
   console.log('minor modal:', JSON.stringify(await valueText()));
   await closeModal(); await wait(400);
+}
+
+// ---------------------------------------------------------------- AB#4729: the Play store's screenshots
+// Eight moments that sell the game, each captured at 1080x1920 and framed under a two-to-four-word caption in the
+// game's type (Cinzel). Four of them are framed again for Play's 7-inch (1200x1920) and 10-inch (1600x2560) tablets.
+// Play takes screenshots as 24-bit PNG (no alpha), so each is converted with ffmpeg. The captions are the store's
+// voice, not the game's: nothing in them may promise what the build does not do.
+if (scenario === 'store') {
+  const root = resolve(import.meta.dirname, '../../..');
+  const storeDir = join(root, 'screenshots/store');
+  mkdirSync(storeDir, { recursive: true });
+  const raw = {};
+  const capture = async (id) => { const file = join(out, `raw-${id}.png`); await page.screenshot({ path: file }); raw[id] = file; };
+  // a modal closes on a tween, so each is closed and waited for in turn (a loop inside the page would never yield)
+  const clear = async () => { for (let k = 0; k < 5 && (await vs(() => !!window.__vault.modal)); k++) { await closeModal(); await wait(450); } await wait(150); };
+
+  // 1. the first forge
+  await forge(); await wait(700); await capture('first-forge');
+  const first = await vs(() => window.__vault.pair);
+  if (first) { await drag(await cell(first[0]), await cell(first[1])); await wait(1600); }
+  await tap(540, 900); await wait(2200); await clear();
+  // a few turns, so the board looks played
+  for (let k = 0; k < 14; k++) {
+    await clear();
+    const pair = await vs(() => window.__vault.pair);
+    if (pair && k % 3) await drag(await cell(pair[0]), await cell(pair[1])); else await forge();
+    await wait(380);
+  }
+  await clear();
+  // 2. a tier-6 merge, caught in its VFX. Every tier is marked seen first, so no New Relic card (from the turns above,
+  // or from this merge) comes up over the shot.
+  await vs(() => { const f = window.__rv.state.flags; for (let t = 1; t <= 9; t++) f['disc_' + t] = true; });
+  await wait(1500); await clear();
+  await vs(() => { const s = window.__rv.state; s.board[20] = 5; s.board[21] = 5; window.__vault.syncBoard(); }); await wait(300);
+  await drag(await cell(20), await cell(21)); await wait(170); await capture('t6-merge'); await wait(1800); await clear();
+  // 3. the shop
+  await vs(() => { window.__rv.state.gems += 400; window.__vault.hud.refresh(true); window.__vault.openShop('qa'); }); await wait(1000); await capture('shop'); await clear();
+  // 4. the album, a few pages begun
+  await vs(() => { const a = window.__rv.state.album; for (const i of [0, 1, 2, 3, 5, 6, 8, 11]) a[i] = 1; window.__vault.openTab('album'); }); await wait(1000); await capture('album'); await clear();
+  // 5. an event ladder
+  await vs(() => { window.__rv.state.stats.merges = Math.max(40, window.__rv.state.stats.merges); window.__vault.openEvents('qa'); }); await wait(1000); await capture('event'); await clear();
+  // 6. a chest opening
+  await vs(() => { window.__rv.state.freeChests++; window.__vault.openChest('free', 'qa'); }); await wait(2800); await capture('chest'); await clear();
+  // 7. the odds, from Settings, where every player can find them
+  await vs(() => window.__vault.openSettings()); await wait(800);
+  await tapLabel('ODDS & DISCLOSURES'); await wait(1000); await capture('odds'); await clear();
+  // 8. floor 2: floor 1 counted as cleared, then the game's own descent (Floors.descend resets the new floor's ladder
+  // and wakes its generator), and a few turns on the new ladder
+  await vs(async () => {
+    const F = await import('/src/game/systems/Floors.ts');
+    const s = window.__rv.state;
+    s.clears = s.clears || []; s.clears[0] = Math.max(1, s.clears[0] || 0);
+    const r = F.descend(s);
+    if (!r.ok) throw new Error('descend: ' + r.reason);
+    window.__vault.onFloorChanged('descend', r);
+  });
+  await page.waitForFunction(() => window.__vault?.hud && window.__rv.state.floor === 1, null, { timeout: 20000 }); await wait(2600);
+  await clear();
+  for (let k = 0; k < 26; k++) {
+    await clear();
+    const pair = await vs(() => window.__vault.pair);
+    if (pair && k % 3 === 2) await drag(await cell(pair[0]), await cell(pair[1])); else await forge();
+    await wait(350);
+  }
+  await wait(1200); await clear(); await wait(400); await capture('floor-2');
+
+  // Play's order: what a player sees first comes first
+  const SHOTS = [
+    ['first-forge', 'Forge your first relic'],
+    ['t6-merge', 'Two become one'],
+    ['floor-2', 'Ten floors down'],
+    ['chest', 'Open cursed chests'],
+    ['album', 'Complete the album'],
+    ['event', 'Climb the event ladder'],
+    ['shop', 'Prices shown up front'],
+    ['odds', 'All odds shown']
+  ];
+  const TABLET = ['first-forge', 't6-merge', 'floor-2', 'chest'];
+  const font = (f) => pathToFileURL(join(root, 'node_modules/@fontsource', f)).href;
+  const framer = await browser.newPage();
+  async function frame(rawFile, caption, W, H, file) {
+    const band = Math.round(H * 0.16);
+    const gameH = H - band - Math.round(H * 0.05);
+    const gameW = Math.round((gameH * 9) / 16);
+    const img = 'data:image/png;base64,' + readFileSync(rawFile).toString('base64');
+    await framer.setViewportSize({ width: W, height: H });
+    await framer.setContent(`<!doctype html><html><head><style>
+      @font-face{font-family:Cinzel;font-weight:900;src:url(${font('cinzel/files/cinzel-latin-900-normal.woff2')})}
+      html,body{margin:0;width:${W}px;height:${H}px;overflow:hidden}
+      body{background:radial-gradient(ellipse at 50% 30%,#3a1a3a 0%,#1B1424 40%,#07060B 85%)}
+      .cap{position:absolute;left:0;right:0;top:0;height:${band}px;display:flex;align-items:center;justify-content:center;
+        font-family:Cinzel;font-weight:900;font-size:${Math.round(W * 0.075)}px;letter-spacing:1px;text-align:center;
+        background:linear-gradient(#FFF6CF,#F4C45A 55%,#A56A12);-webkit-background-clip:text;background-clip:text;color:transparent;
+        filter:drop-shadow(0 6px 8px rgba(0,0,0,.85));padding:0 ${Math.round(W * 0.05)}px}
+      img{position:absolute;top:${band}px;left:${Math.round((W - gameW) / 2)}px;width:${gameW}px;height:${gameH}px;
+        border-radius:${Math.round(W * 0.035)}px;border:${Math.max(6, Math.round(W * 0.008))}px solid #F4C45A;
+        box-shadow:0 0 0 4px #2a1402,0 0 90px rgba(244,196,90,.35);box-sizing:border-box}
+      </style></head><body><div class="cap">${caption}</div><img src="${img}"></body></html>`);
+    await framer.evaluate(() => document.fonts.ready);
+    const tmp = file + '.rgba.png';
+    await framer.screenshot({ path: tmp });
+    const r = spawnSync('ffmpeg', ['-v', 'error', '-y', '-i', tmp, '-pix_fmt', 'rgb24', file], { encoding: 'utf8' });
+    rmSync(tmp);
+    if (r.status !== 0) throw new Error(`ffmpeg: ${r.stderr}`);
+  }
+  let i = 0;
+  for (const [id, caption] of SHOTS) {
+    const nn = String(++i).padStart(2, '0');
+    await frame(raw[id], caption, 1080, 1920, join(storeDir, `phone-${nn}-${id}.png`));
+    if (TABLET.includes(id)) {
+      await frame(raw[id], caption, 1200, 1920, join(storeDir, `tablet7-${nn}-${id}.png`));
+      await frame(raw[id], caption, 1600, 2560, join(storeDir, `tablet10-${nn}-${id}.png`));
+    }
+    console.log('framed', id);
+  }
+  // the contact sheet, for the pull request (not a store asset): every phone shot in two rows of four
+  const phones = SHOTS.map((_, k) => join(storeDir, `phone-${String(k + 1).padStart(2, '0')}-${SHOTS[k][0]}.png`));
+  const sheet = spawnSync('ffmpeg', ['-v', 'error', '-y', ...phones.flatMap((f) => ['-i', f]), '-filter_complex',
+    phones.map((_, k) => `[${k}:v]scale=360:640[s${k}]`).join(';') + ';' + phones.map((_, k) => `[s${k}]`).join('') + `xstack=inputs=8:layout=0_0|w0_0|w0+w1_0|w0+w1+w2_0|0_h0|w0_h0|w0+w1_h0|w0+w1+w2_h0`,
+    join(out, 'contact-sheet.png')], { encoding: 'utf8' });
+  if (sheet.status !== 0) throw new Error(`contact sheet: ${sheet.stderr}`);
+  await framer.close();
 }
 
 const tele = await vs(() => window.__rv.telemetry.buf.map((e) => e.event));
