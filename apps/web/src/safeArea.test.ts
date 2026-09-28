@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { measureSafe, watchSafeArea, SAFE_AREA_EVENT, SAFE_PROBE_CSS } from './safeArea';
 // @ts-ignore: a Node script, tested here because vitest runs apps/web/src's tests (AB#4723)
-import { signingProblems, toolchainProblems, SIGNING_VARS } from '../../../scripts/android.mjs';
+import { signingProblems, toolchainProblems, gradleCommand, SIGNING_VARS } from '../../../scripts/android.mjs';
 
 // AB#4723: the Android app's insets reach the HUD and the Dock through the same measureSafe() the web uses. The CSS
 // itself (env() and Capacitor's --safe-area-inset-*) is measured in a real browser by e2e/android-safe-area.spec.ts;
@@ -69,5 +69,13 @@ describe('android:bundle refuses to build without its signing variables (AB#4723
   it('says which of the JDK and the Android SDK is missing', () => {
     expect(toolchainProblems({}, { javaOnPath: false, localProperties: '' })).toHaveLength(2);
     expect(toolchainProblems({ JAVA_HOME: 'x' }, { javaOnPath: false, localProperties: 'sdk.dir=C\\:\\\\Android' })).toEqual([]);
+  });
+
+  // Bug #4776: by bare name, cmd does not find gradlew.bat in android/ where NoDefaultCurrentDirectoryInExePath is set
+  it('runs the Gradle wrapper by its absolute path, quoted where the path has a space', () => {
+    expect(gradleCommand('win32', 'C:/work/rv/android')).toMatch(/^[A-Z]:[\\/]work[\\/]rv[\\/]android[\\/]gradlew\.bat$/);
+    expect(gradleCommand('win32', 'C:/my work/android')).toMatch(/^"[A-Z]:[\\/]my work[\\/]android[\\/]gradlew\.bat"$/);
+    expect(gradleCommand('linux', '/home/rv/android')).toMatch(/[\\/]home[\\/]rv[\\/]android[\\/]gradlew$/);
+    expect(gradleCommand('linux', '/home/rv/android')).not.toMatch(/^\.\//);
   });
 });

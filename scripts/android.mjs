@@ -53,8 +53,17 @@ function sync() {
   run('npm', ['run', 'build']);
   run('npx', ['cap', 'sync', 'android']);
 }
+/**
+ * Bug #4776: the Gradle wrapper by its absolute path. By bare name, Windows cmd does not look in the current directory
+ * where NoDefaultCurrentDirectoryInExePath is set (a hardening setting), and the build failed after a clean sync.
+ * Quoted when the path has a space, because the command is run through the shell on Windows.
+ */
+export function gradleCommand(platform = process.platform, dir = ANDROID) {
+  const file = resolve(dir, platform === 'win32' ? 'gradlew.bat' : 'gradlew');
+  return /\s/.test(file) ? `"${file}"` : file;
+}
 function gradle(task) {
-  run(process.platform === 'win32' ? 'gradlew.bat' : './gradlew', [task], ANDROID);
+  run(gradleCommand(), [task], ANDROID);
 }
 
 const ACTIONS = {
