@@ -16,3 +16,14 @@ video/raw
 *.keystore
 *.p12
 *.pk8
+
+# Release hygiene (AB#4738), checked by scripts/repo-hygiene.test.mjs. Build output: dist and apps/web/dist-qa above.
+# The Android build's own output, and the version file scripts/version.mjs writes on every build (AB#4732).
+android/app/build/
+android/.gradle/
+android/version.properties
+# Google service-account credentials (a Play Console publishing key is one). The test also refuses any tracked JSON
+# with a service account's shape, whatever it is called.
+*service-account*.json
+*service_account*.json
+*serviceaccount*.json
