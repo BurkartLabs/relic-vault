@@ -16,7 +16,8 @@ Implements the TELEMETRY.md minimum. Every event carries `distinct_id` (anonymou
 | `session_end` | pagehide, or hidden past 30 min | duration_s, actions, pauses, reason |
 | `offer_shown` | any offer modal or shop open | sku, trigger |
 | `offer_dismiss` | offer closed without buying | sku |
-| `purchase_demo` | demo purchase granted | sku, trigger |
+| `purchase_demo` | demo purchase granted (a demo build) | sku, trigger |
+| `purchase` | a Google Play purchase granted after the store confirmed it (a Play build, AB#4725) | sku, trigger |
 | `error` | window error / unhandled rejection | message, hash |
 | `funnel_step` | age gate, forge_hint, forge_done, merge_hint, merge_done, tutorial_done, idle_hint | step |
 | `merge` | every merge | tier, ascended, card |

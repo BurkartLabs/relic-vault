@@ -35,6 +35,25 @@ Google Play App Signing holds the app signing key; a lost upload key can be rese
 
 The version is `package.json`'s: `npm run build` writes `android/version.properties` (versionName, and versionCode as major*10000 + minor*100 + patch), which the build reads. Cutting a release: docs/RELEASE.md.
 
+## Purchases: the Play store (AB#4725)
+
+A build sells through Google Play Billing only when it is built with `VITE_STORE_MODE=play` and RevenueCat's public
+Android SDK key in `VITE_REVENUECAT_KEY` (`goog_...`, made to ship inside the app). Without them it is the demo store,
+which charges nothing, as every web and e2e build is:
+`VITE_STORE_MODE=play VITE_REVENUECAT_KEY=goog_... npm run android:bundle`.
+
+- **Products** (created in Play Console and RevenueCat, Board release step 7): `rv_welcome`, `rv_gems_200`,
+  `rv_gems_500`, `rv_gems_1200`, `rv_piggy`, `rv_comeback` (consumable one-time products), `rv_pass`, `rv_noads`
+  (non-consumable), and the subscription `rv_vip` with base plan `monthly`. RevenueCat entitlements `noads`, `pass`
+  and `vip` attach to `rv_noads`, `rv_pass` and `rv_vip`. The mapping is `apps/web/src/game/systems/PlayStore.ts`.
+- **Testing without charges**: a sandbox SDK key, and the tester's Google account added as a licence tester in Play
+  Console; Play then shows its test cards, including "slow test card" for the pending state.
+- **What the game does**: prices are the store's, localised (never the catalog's USD); a pack is granted only after
+  RevenueCat confirms the transaction, once per transaction id; No Ads, the Pass and VIP are read from RevenueCat on
+  every start and resume, so a refund or a cancelled subscription removes them; Settings has Restore Purchases and
+  Manage Subscription (Play's subscription centre).
+- **Not yet done on a device**: this needs a phone or emulator and the key; `docs/DEVICE_QA.md`.
+
 ## How the shell behaves
 
 - **SDK levels:** compile and target API 36, minimum API 26 (Android 8.0).
