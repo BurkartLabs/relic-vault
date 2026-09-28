@@ -4,6 +4,8 @@
 <script type="module">
   import { paintRelic } from '../src/game/art/RelicFactory.ts';
   import { makeCanvas, rad, glow, chrome, MAT, lin } from '../src/game/art/paint.ts';
+  import { paintFar } from '../src/game/art/VaultBackground.ts';
+  import '@fontsource/cinzel/900.css';
 
   function icon(size, maskable) {
     const [c, ctx] = makeCanvas(size, size);
@@ -24,6 +26,38 @@
     ctx.drawImage(rc, 256 * s - d / 2, 256 * s - d / 2 - 6 * s, d, d); ctx.restore();
     return c.toDataURL('image/png');
   }
+  /*
+   * AB#4729: Google Play's feature graphic, 1024x500: the vault's back wall, the Ruby Crown lit on the right, the
+   * wordmark on the left, and no small text (Play crops and overlays it at many sizes). make-icons.mjs writes it as a
+   * 24-bit PNG, as Play asks.
+   */
+  function feature() {
+    const [c, ctx] = makeCanvas(1024, 500);
+    const [bg, bctx] = makeCanvas(1080, 1920);
+    paintFar(bctx);
+    ctx.drawImage(bg, 0, 250, 1080, 527, 0, 0, 1024, 500);
+    ctx.fillStyle = lin(ctx, 0, 0, 1024, 0, [[0, 'rgba(7,6,11,0.88)'], [0.5, 'rgba(7,6,11,0.45)'], [1, 'rgba(7,6,11,0.15)']]);
+    ctx.fillRect(0, 0, 1024, 500);
+    glow(ctx, 770, 255, 300, 'rgba(244,196,90,0.55)');
+    const [rc, rctx] = makeCanvas(256, 256);
+    paintRelic(rctx, 7, true);
+    ctx.save(); ctx.shadowColor = 'rgba(255,190,80,0.8)'; ctx.shadowBlur = 40;
+    ctx.drawImage(rc, 770 - 210, 255 - 215, 420, 420); ctx.restore();
+    const gold = lin(ctx, 0, 150, 0, 360, [[0, '#FFF6CF'], [0.55, '#F4C45A'], [1, '#A56A12']]);
+    ctx.font = '900 118px Cinzel';
+    ctx.textBaseline = 'alphabetic';
+    for (const [word, y] of [['RELIC', 232], ['VAULT', 360]]) {
+      ctx.lineWidth = 10; ctx.strokeStyle = '#1a0c02'; ctx.lineJoin = 'round';
+      ctx.strokeText(word, 64, y);
+      ctx.fillStyle = gold; ctx.fillText(word, 64, y);
+    }
+    return c.toDataURL('image/png');
+  }
+  await document.fonts.load('900 118px Cinzel');
+  window.__store = {
+    'icon-512.png': icon(512, false), // Play: 512x512, 32-bit PNG, full bleed; Play applies its own mask
+    'feature-graphic-1024x500.png': feature(),
+  };
   window.__icons = {
     'icon-192.png': icon(192, false),
     'icon-512.png': icon(512, false),

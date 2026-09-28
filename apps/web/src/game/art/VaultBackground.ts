@@ -136,7 +136,8 @@ function chain(ctx: Ctx, x0: number, y0: number, x1: number, y1: number, sag: nu
 }
 
 // ------------------------------------------------------------------ far layer
-function paintFar(ctx: Ctx) {
+/** The vault's back wall, 1080x1920. Exported for the store's feature graphic (tools/icons.html, AB#4729). */
+export function paintFar(ctx: Ctx) {
   ctx.fillStyle = lin(ctx, 0, 0, 0, H, [[0, '#07060B'], [0.3, '#140E18'], [0.62, '#1B1424'], [1, '#07060B']]);
   ctx.fillRect(0, 0, W, H);
   stoneWall(ctx, 0, 0, W, H, 11);

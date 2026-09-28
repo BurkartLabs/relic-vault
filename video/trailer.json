@@ -1,0 +1,34 @@
+{
+  "_comment": "AB#4729: the 30-second store trailer, cut by apps/web/tools/make-trailer.mjs. Each footage shot names a segment of video/segments.json and one of its clips ('clip', default 0), which names the raw recording, and a range within that recording. Record fresh footage of the current build first (apps/web/tools/record.mjs <url> video/build/raw). No caption is burned in: 'caption' is the cue written to video/trailer.vtt for YouTube.",
+  "shots": [
+    {
+      "card": "title",
+      "seconds": 2.5,
+      "caption": "Relic Vault."
+    },
+    {
+      "segment": "02-first-verb",
+      "from": 5.5,
+      "to": 12.5,
+      "caption": "Forge a relic. Drag one onto its twin."
+    },
+    {
+      "segment": "03-loop",
+      "from": 14,
+      "to": 29,
+      "caption": "Two of a kind become one older relic. Quick chains build combos. No energy: the forge never locks."
+    },
+    {
+      "segment": "04-monetization",
+      "clip": 1,
+      "from": 9.8,
+      "to": 13,
+      "caption": "Open chests. Their odds are always shown."
+    },
+    {
+      "card": "end",
+      "seconds": 3,
+      "caption": "Relic Vault. Free to play, with optional purchases."
+    }
+  ]
+}
