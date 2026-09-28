@@ -15,7 +15,8 @@ Relic Vault's performance budget and what it measures today. Release 2 (AB#4737)
 
 | Target | Status |
 |---|---|
-| Real low-end Android device (Pixel-class) | **TODO**: no device, SDK or emulator on the build machine yet. Run this page's method on one and fill in a row below. |
+| Real low-end Android device (Pixel-class) | **TODO**: not yet run. The release checklist below says how. |
+| Android emulator, Pixel 8, API 36 (`npm run android:qa`) | The app itself in its WebView. The timings are the build machine's, not a phone's; see "Device QA on Android". |
 | Desktop Chrome, CPU throttled 4x | The numbers below. A stand-in for a slow phone, not a measurement of one. |
 
 **Method.** A production build (`npm run build`, served by `npx vite preview`) in headless Chromium through Playwright,
@@ -97,3 +98,73 @@ unit tests, and a play-mode web build fed euro prices, looked at in a German-loc
 4. Buy No Ads, then refund it in Play Console: on the next start or resume, interstitials are back.
 5. Subscribe to VIP, cancel in Settings > Manage Subscription (Play's page opens): VIP ends when Play says it lapses.
 6. Reinstall, Restore Purchases: No Ads, the Pass and VIP come back; no gem pack is paid out again.
+
+## Device QA on Android (AB#4730)
+
+`npm run android:qa` (scripts/android-qa.mjs) builds the debug APK, boots an emulator or uses an attached phone,
+installs the app from clean, launches it and drives it through its WebView over Chrome DevTools (the play.mjs actions:
+game coordinates to CSS pixels, a real pointer). It saves the device's own screenshots (`adb screencap`, status and
+navigation bars included) to `screenshots/android/`, with `summary.json` beside them (device, WebView version,
+timings, one line per check, console errors). It exits non-zero if a check failed.
+
+    npm run android:qa                                   build, boot the rvqa_pixel8_36 emulator (created if missing), run
+    npm run android:qa -- --device <serial>              a phone over USB (adb devices), or an emulator already running
+    npm run android:qa -- --no-build --keep --window     reuse the last APK, leave the emulator up, show its window
+
+Needs JDK 21 as `JAVA_HOME` (not Android Studio's JDK 25, docs/ANDROID.md) and the SDK's `system-images;android-36;
+google_apis;x86_64`. `ANDROID_AVD_HOME` chooses where the emulator is created. The emulator runs with `-gpu host` and
+3 GB: with the image's defaults (software GPU, 2 GB) it crashed loading the game, twice. Only a debug build can be
+driven: capacitor.config.ts leaves `webContentsDebuggingEnabled` unset, which Capacitor turns on for debug and off
+for release.
+
+The shots, in order: launch, age gate, vault, three forges, a merge (tier 3 onto tier 3), the shop, after Back with
+the shop open, settings, a full board (36 relics) with the frame rate counted, a rotation, Home and back, a cold start.
+
+**What it cannot see.** Real ads and purchases (test ids only), touch feel, heat and battery, and a phone's speed: the
+emulator borrows the build machine's CPU and GPU, and here it shared them with two other emulators. It is the app on
+Android, not a measurement of a phone. Its first run (2026-09-28, emulator, API 36, WebView 133):
+
+| | Emulator |
+|---|---|
+| `am start` cold (process start to first frame) | 2.2 to 2.5 s |
+| Cold, navigation start to vault ready (the page's own clock) | 9.8 to 10.1 s |
+| Cold, first launch after install, to the age gate (page clock) | 8.8 s |
+| `am start` warm (process alive) | 0.8 to 0.9 s |
+| Frame rate, full board | 50 to 54 fps |
+| Rotation | portrait-locked (the manifest), page kept |
+| Background and resume | page and board kept |
+| Back with the shop open | **leaves the app**: AB#4728 is in flight |
+
+The cold start agrees with the desktop measurement above: the start budget is not met.
+
+## Release checklist, on a real phone (AB#4730)
+
+A session or the Board runs this before a release goes to production, on a mid-range 2022 phone (Pixel 6a,
+Galaxy A53 class) with the build the release will ship: the signed bundle through the internal testing track, not
+a debug APK. Run `npm run android:qa -- --device <serial>` first against a debug build on the same phone. It covers
+the start timings, frame rate, gate, forge, merge, shop, back, rotation and resume, and saves the shots. Then work
+through the list by hand. Write down the phone, Android version, WebView version and build (Settings > Version), and
+a pass/fail for every row. A fail blocks the release unless the Board waives it in writing.
+
+| # | Check | How | Passes when |
+|---|---|---|---|
+| 1 | Start time, cold | Force-stop (Settings > Apps > Relic Vault > Force stop), wait 10 s, open it with a stopwatch; or `adb shell am start -W` plus summary.json's `coldPageMsToInteractive`. Three tries, take the median. | The vault is playable (forge responds) in under 5 s. |
+| 2 | Start time, warm | Open it, press Home, open it again from the launcher. Three tries. | Playable in under 3 s; the board is as it was left. |
+| 3 | Frame rate | Fill the board (36 relics) and merge a high tier for the particles. Turn on Developer options > Profile HWUI rendering > On screen as bars. Watch for 30 s, then read summary.json `fullBoardFps` from the scripted run. | Bars stay under the green 16 ms line apart from single spikes; no visible stutter while dragging; 58 fps or more. |
+| 4 | Age gate | Clear storage (Settings > Apps > Relic Vault > Storage > Clear storage), open. Answer "Under 16" once and open the shop; clear again and answer "16 or older". | The gate shows before anything else. Under 16: no random paid chest in the shop. 16 or older: the full shop. It never asks again after it is answered. |
+| 5 | Forge | Tap the forge ten times. | A relic lands each time with its sound and haptic; the forge counter and gold move; a full board says so rather than failing silently. |
+| 6 | Merge | Drag one relic onto its twin; drag onto a different relic; drag off the board. | The twin merges into the next tier with its effect; a different relic swaps or bounces back; nothing is lost off the board. |
+| 7 | Shop | Open the shop from the dock and from the gems pill; scroll to the bottom; close it with X and with Back. | Every price is Play's localised price (no "$" in a non-USD country, no "demo"). The odds link opens the odds. The shop closes both ways. |
+| 8 | A real test ad | With AB#4724 merged: a licence-tester account, no No Ads purchase. Watch a rewarded ad (a chest or a double reward) to the end, and one to half then close it. Let an interstitial come up between floors. | Google's "Test Ad" label is on each ad. The reward arrives once, only for the ad watched to the end. The game resumes where it was with its sound. No ad appears in the first session or over the age gate. |
+| 9 | A test purchase | A licence tester, in a non-USD Play country if possible. Buy a gem pack with "Test card, always approves"; buy one with "slow test card"; kill the app during a purchase and reopen. | The gems arrive once, every time. Slow card: the shop says pending, and the pack arrives once when Play completes it. The rest is in "The Play store on a device" above (steps 1 to 5). |
+| 10 | Restore | Buy No Ads (test card), uninstall, install again, Settings > Restore Purchases. | No Ads, the Pass and VIP come back. No gem pack is paid out a second time. |
+| 11 | Back button | With AB#4728 merged: press Back (or swipe back) with a sheet open, on the vault with nothing open, and during the age gate. | Back closes the top sheet. On the vault it asks before leaving, or leaves without losing progress. It never skips the age gate. |
+| 12 | Rotation | Turn auto-rotate on and turn the phone both ways, on the vault and with the shop open. | It stays portrait (the manifest locks it); nothing reloads or flickers; the board is kept. |
+| 13 | Background and resume | Mid-merge press Home; wait 1 minute; come back. Then Home, open five heavy apps (camera, maps, a game), come back. | The first time the same screen comes back. After the heavy apps, a reload is allowed but the board, gold and gems are what they were, and timers (Gold Rush, the chest) have counted the time away. |
+| 14 | Low storage | Fill the phone to under 500 MB free (large videos, or `adb shell dd if=/dev/zero of=/sdcard/fill bs=1m count=<n>`, deleted afterwards). Play: forge, merge, buy with a test card, force-stop, reopen. | No crash. The progress made before the force-stop is there after it. If the save fails, the player is told rather than losing it silently. |
+| 15 | Airplane mode | Turn on airplane mode, then cold-start. Play a few merges, open the shop, try to watch an ad and to buy. Turn the network back on. | It starts and plays offline. The shop and the ads say they need a connection, with no spinner forever and no crash. Progress is kept when the network comes back. |
+| 16 | The WebView-version screen | The rv_api29 emulator (or any phone) with Android System WebView disabled or rolled back below version 90 (Settings > Apps > Android System WebView > uninstall updates), then open the app. | A plain native screen: "Update Android System WebView", the version found and the one needed, and an Update button that opens the WebView's Play listing. No white screen, no crash. With the WebView updated, the game starts. |
+| 17 | Accessibility (Pre-launch report) | Play Console > Testing > Pre-launch report for the build > Accessibility. Then on the phone: TalkBack on (the age gate, the shop's close), font size at the largest, display size at the largest. | No new warnings since the last release, or each one written down with a reason: the canvas is one view to TalkBack, so it is expected to be flagged. The age gate's buttons are read out and work with TalkBack. At the largest font and display size the HUD, the dock and the shop's buttons are not clipped or overlapping. Touch targets are 48 dp or more. |
+
+Checks 8, 9 and 11 are waiting on AB#4724 (AdMob) and AB#4728 (the back button). Until those merge, their rows are
+run for what exists and marked "not yet in the build".
