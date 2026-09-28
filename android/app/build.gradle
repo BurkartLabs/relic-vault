@@ -23,6 +23,10 @@ android {
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
         applicationId "com.orchestrata.relicvault"
+        // AB#4724: the AdMob app id. Google's test app id until the Board supplies the real one (AB#4718), which a
+        // release build takes from RELIC_VAULT_ADMOB_APP_ID (a Gradle property or the environment), like the signing.
+        def admobAppId = project.findProperty('RELIC_VAULT_ADMOB_APP_ID') ?: System.getenv('RELIC_VAULT_ADMOB_APP_ID') ?: 'ca-app-pub-3940256099942544~3347511713'
+        manifestPlaceholders += [admobAppId: admobAppId]
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode(versionProps.getProperty('versionCode') as Integer)

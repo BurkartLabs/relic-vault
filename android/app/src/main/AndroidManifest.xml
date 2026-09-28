@@ -36,6 +36,11 @@
 
         </activity>
 
+        <!-- AB#4724: the AdMob app id (build.gradle, admobAppId). Without it the Mobile Ads SDK stops the app at launch. -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="${admobAppId}" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
