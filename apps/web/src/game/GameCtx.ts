@@ -8,6 +8,7 @@ import type { SkuId } from './data/catalog';
 import { OfferDirector } from './systems/OfferDirector';
 import { Telemetry, hashString } from './systems/Telemetry';
 import { platformOf, telemetryEndpoint, setNativeTelemetrySink, reportPluginError } from './systems/NativeTelemetry'; // AB#4739
+import { lootboxSource } from './systems/Region'; // AB#4733
 import { Sfx } from './audio/Sfx';
 import { defaultRng, Rng } from './systems/Rng';
 import type { AdService } from './systems/ads/AdService';
@@ -98,7 +99,8 @@ export class GameCtx {
     await Promise.race([store, new Promise((r) => setTimeout(r, 6000))]);
     this.analytics.log('session_start', { session: this.state.stats.sessions });
     const src = new URLSearchParams(location.search).get('src') || (document.referrer ? 'referral' : 'direct');
-    this.telemetry.track('app_open', { source: src, returning: this.state.stats.sessions > 1, session_n: this.state.stats.sessions });
+    // AB#4733: which loot-box rule applies this session (store, manual or none); never the country itself
+    this.telemetry.track('app_open', { source: src, returning: this.state.stats.sessions > 1, session_n: this.state.stats.sessions, lootbox_source: lootboxSource(this.state) });
     document.addEventListener('visibilitychange', () => {
       // Bug #326: hiding a tab is a pause, not an end. Saving still happens on every hide, because losing
       // progress is the one thing worth being paranoid about; only the telemetry meaning changed.

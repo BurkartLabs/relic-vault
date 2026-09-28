@@ -11,7 +11,7 @@ are separable from the web's and a fault seen on one WebView shows as that WebVi
 
 | Event | Fired from | Props |
 |---|---|---|
-| `app_open` | GameCtx.boot | source (`?src=` or referral/direct), returning, session_n |
+| `app_open` | GameCtx.boot | source (`?src=` or referral/direct), returning, session_n, lootbox_source (`store`: the Play storefront's country forbids random chests; `manual`: the player switched them off; `none`; AB#4733) |
 | `verb_first` | first merge of the session | latency_ms since app_open |
 | `verb_repeat` | every later merge | count_in_session |
 | `session_pause` | tab hidden | duration_s, actions, n_pause |

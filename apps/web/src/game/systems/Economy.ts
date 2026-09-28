@@ -4,6 +4,7 @@ import {
   WHEEL, Reward, MAX_TIER, RELICS, SKUS, type SkuId,
 } from '../data/catalog';
 import { priceAmount, baselineGemsPerUnit } from './Prices'; // AB#4725
+import { storeRestriction } from './Region'; // AB#4733
 import type { GameState } from './State';
 import { utcDay } from './State';
 import { Rng, pickWeighted, mulberry32 } from './Rng';
@@ -134,7 +135,8 @@ export function cardDropChance(tier: number) {
 }
 
 // ---------------- chests ----------------
-export function chestsAllowed(s: GameState) { return s.lootboxesAllowed && s.age !== 'minor'; }
+/** AB#4733: never in a storefront country on the restricted list, whatever the toggle says (systems/Region.ts). */
+export function chestsAllowed(s: GameState) { return !storeRestriction() && s.lootboxesAllowed && s.age !== 'minor'; }
 
 /** Exact-item stand-in for a chest when random contents are not allowed (minors, loot-box-free regions). */
 export const CHEST_EXACT_TIER = 4;

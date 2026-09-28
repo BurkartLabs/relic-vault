@@ -6,6 +6,7 @@ import { grantGold, grantChests, piggyGems, chestsAllowed, openChest, type Chest
 import { welcomeOpen } from './Offers';
 import { ENTITLEMENT, PLAY_PACKAGE, PLAY_PRODUCT, type StoreBackend, type StoreCustomer, type StoreTransaction } from './PlayStore'; // AB#4725
 import { setStorePrices } from './Prices';
+import { setStoreCountry } from './Region'; // AB#4733
 import { reportPluginError } from './NativeTelemetry'; // AB#4739
 
 export interface PurchaseGrant {
@@ -138,6 +139,10 @@ export class PurchaseService {
     try {
       if (!this.backend) throw new Error('no store in this build');
       await this.backend.start();
+      // AB#4733: the storefront's country first, so the loot-box rule is set before the first shop render
+      if (this.backend.storefront) {
+        setStoreCountry(await this.backend.storefront().catch((e) => { reportPluginError('Purchases', 'getStorefront', e); return null; }));
+      }
       setStorePrices(await this.backend.prices());
       await this.sync(s, rng);
       this.backend.onChange((c) => { const changed = applyEntitlements(s, c.active); const grants = settlePending(s, c.transactions, rng); onChange?.(changed, grants); });
