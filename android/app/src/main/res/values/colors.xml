@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- AB#4723: the vault's colours for the native surfaces (splash, window, the WebView-update screen), the age gate's
+     own from apps/web/src/style.css. -->
+<resources>
+    <color name="vault_bg">#07060B</color>
+    <color name="vault_text">#F7EED8</color>
+    <color name="vault_text_muted">#9A8AA8</color>
+</resources>
