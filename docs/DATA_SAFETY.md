@@ -20,12 +20,17 @@ field in `Telemetry.ts` or `Analytics.ts` is missing from this page.
 | Financial info → Purchase history | Telemetry | a purchase event (`purchase` in a Play build, `purchase_demo` in the demo) with the `sku` bought; a purchase that did not go through (`purchase_failed`) with its `sku`, `trigger`, `reason` and the store's error `code` | Analytics | No | No | Device copy, yes; sent events, on request |
 | Personal info → Other info | Telemetry | the age band from the age question (`band`: minor, adult, unknown), in the `funnel_step` event | Analytics; App functionality (under-16 rules) | No | No | Yes |
 | App info and performance → Crash logs | Telemetry | `error` and `boot_error` events: the error's text (first 200 characters) and its `hash`; for a failed call to the app's native code (AB#4739), its `source`, `plugin`, `method` and error `code`; an ad that failed to load or show (`ad_failed`), with its `format`, `stage` and error `code` | Analytics (stability) | No | No | Device copy, yes; sent events, on request |
-| App info and performance → Diagnostics | Telemetry | `app_version`; `platform` (OS family from the user agent, installed or browser; in the Android app, the Android System WebView's major version); `save_unreadable` with its reason | Analytics | No | No | Device copy, yes; sent events, on request |
+| App info and performance → Diagnostics | Telemetry | `app_version`; `platform` (OS family from the user agent, installed or browser; in the Android app, the Android System WebView's major version); `save_unreadable` with its reason; in `app_open`, which loot-box rule applies (`lootbox_source`: store, manual or none; AB#4733) | Analytics | No | No | Device copy, yes; sent events, on request |
 | Device or other IDs; Location → Approximate; App activity; App info and performance | **Google AdMob SDK** (Android app, when `VITE_ADS_MODE=admob`) | advertising ID, IP address, ad interactions, SDK diagnostics, collected by Google | Advertising or marketing; Analytics; Fraud prevention | **Confirm at Board step 3** against Google's own AdMob data-disclosure page, which says what to declare for its SDK | No | By Google (reset the advertising ID in Android settings) |
 | Financial info → Purchase history; Device or other IDs | **RevenueCat SDK**, in a Play build (AB#4725) | purchase receipts; the anonymous app user id RevenueCat assigns | App functionality (restoring purchases, entitlements) | No: a service provider acting for us is not sharing under Play's definition | No | Delete My Data clears its cache on the device; the customer record RevenueCat keeps is deleted on request, by the operator in RevenueCat |
 
 Payments go through **Google Play Billing**. Card and account details are collected by Google, never by the app, so they
 are not declared as the app's collection.
+
+**The Play storefront's country** (AB#4733) is read from RevenueCat on each boot of a Play build, to switch random paid
+chests off where the law treats them as gambling (Belgium today, `data/lootboxRestrictedCountries.ts`). It is held in
+memory for that session only: never saved on the device and never sent. Telemetry carries only which rule applied
+(`lootbox_source`), not the country.
 
 ## Stays on the device (not collected)
 

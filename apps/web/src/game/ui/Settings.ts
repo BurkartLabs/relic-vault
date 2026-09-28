@@ -7,6 +7,7 @@ import type { VaultScene } from '../scenes/VaultScene';
 import { adsSentence, openPublicPage, openExternal, storeCopy } from '../buildMode'; // AB#4726, AB#4725
 import { priceLabel } from '../systems/Prices'; // AB#4725
 import { reportPluginError } from '../systems/NativeTelemetry'; // AB#4739
+import { storeRestriction } from '../systems/Region'; // AB#4733
 import { deleteMyData } from '../systems/DataEraser'; // AB#4726
 
 export class SettingsModal extends Modal {
@@ -32,7 +33,16 @@ export class SettingsModal extends Modal {
     toggle('Sound', () => !s.settings.muted, (v) => { s.settings.muted = !v; ctx.sfx.setMuted(!v); });
     toggle('Vault drone', () => s.settings.music, (v) => { s.settings.music = v; ctx.sfx.setMusic(v); });
     toggle('Haptics', () => s.settings.haptics, (v) => { s.settings.haptics = v; if (v) ctx.haptic(20); });
-    toggle('Loot boxes in region', () => s.lootboxesAllowed, (v) => { s.lootboxesAllowed = v; vs.refreshButtons(); });
+    // AB#4733: in a storefront country that forbids random paid chests the toggle is locked off, with the reason
+    const region = storeRestriction();
+    if (region) {
+      C.add(txt(vs, 60, y + 50, 'Loot boxes in region', { size: 40, weight: '700', color: '#FFE9A3', origin: [0, 0.5] }));
+      C.add(new Button(vs, 760, y + 50, 240, 96, 'OFF', () => {}, { color: 'dark', size: 38, guard, disabled: true }));
+      C.add(txt(vs, 60, y + 112, `Not offered where your Google Play account is (${region.name}).`, { size: 26, font: 'body', color: '#b9a9c6', origin: [0, 0.5] }));
+      y += 160;
+    } else {
+      toggle('Loot boxes in region', () => s.lootboxesAllowed, (v) => { s.lootboxesAllowed = v; vs.refreshButtons(); });
+    }
     y += 10;
     const row = (label: string, color: 'gold' | 'dark' | 'blue' | 'red' | 'purple', fn: () => void) => {
       C.add(new Button(vs, 470, y + 50, 780, 100, label, fn, { color, size: 36, guard }));

@@ -59,6 +59,8 @@ export interface StoreBackend {
   buy(sku: SkuId): Promise<BuyResult>;
   customer(): Promise<StoreCustomer>;
   restore(): Promise<StoreCustomer>;
+  /** AB#4733: the store account's country code (alpha-2 or alpha-3), or null when the store cannot say. */
+  storefront?(): Promise<string | null>;
   /** Called with the customer whenever the store reports a change (a pending purchase completing, a refund). */
   onChange(listener: (customer: StoreCustomer) => void): void;
 }
@@ -138,6 +140,10 @@ export class RevenueCatBackend implements StoreBackend {
 
   async customer() {
     return toCustomer((await this.rc.getCustomerInfo()).customerInfo);
+  }
+
+  async storefront() {
+    return (await this.rc.getStorefront())?.countryCode ?? null;
   }
 
   async restore() {
