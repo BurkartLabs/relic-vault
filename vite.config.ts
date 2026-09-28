@@ -20,7 +20,8 @@ export default defineConfig({
   plugins: [
     VitePWA({
       registerType: 'autoUpdate',
-      injectRegister: 'auto',
+      // Bug #4787: registered from apps/web/src/serviceWorker.ts, on the web only (the Android app serves its own files)
+      injectRegister: null,
       includeAssets: ['icons/*.png', 'icons/*.svg'],
       manifest: {
         name: 'Relic Vault',

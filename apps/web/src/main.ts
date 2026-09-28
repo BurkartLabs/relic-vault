@@ -12,6 +12,7 @@ import { mountDebug } from './debug';
 import type { AgeBand } from './game/systems/State';
 import { measureSafe, watchSafeArea } from './safeArea';
 import { wireNativeApp } from './nativeApp';
+import { setupServiceWorker } from './serviceWorker';
 
 // ---- install prompt (PWA)
 window.addEventListener('beforeinstallprompt', (e) => {
@@ -47,6 +48,7 @@ function ageGate(): Promise<AgeBand> {
 }
 
 async function start() {
+  if (await setupServiceWorker()) return; // Bug #4787: the app is reloading once, off a previous build's cached code
   performance.mark('rv:start'); // AB#4737: the boot's own timings, as performance measures named rv:*
   // safe areas (notches, system bars): env(), and in the Android app Capacitor's insets too (safeArea.ts, AB#4723)
   measureSafe();
