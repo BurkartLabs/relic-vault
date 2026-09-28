@@ -28,6 +28,11 @@ const TELEMETRY_MAP: Record<string, string> = {
 export class GameCtx {
   state: GameState = createState();
   save = new SaveService();
+  /**
+   * AB#4728: run when the Android app comes back to the foreground (apps/web/src/nativeApp.ts). The RevenueCat story
+   * adds its entitlement re-check here and the AdMob story its ad preload; neither SDK is in the build yet.
+   */
+  readonly onResume: (() => void)[] = [];
   sfx = new Sfx();
   rng: Rng = defaultRng;
   purchases = new PurchaseService('demo');

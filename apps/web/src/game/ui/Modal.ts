@@ -20,6 +20,11 @@ export class Modal extends Phaser.GameObjects.Container {
   kind = 'Modal';
   private offerId?: string;
   onClosed?: () => void;
+  /**
+   * AB#4728: what Android's back does on this sheet, when it is not a plain close(): a sheet opened from another (odds
+   * from the shop) has a BACK button that closes it and re-opens the one it came from, and back takes that path.
+   */
+  onBack?: () => void;
   protected dimmer: Phaser.GameObjects.Image;
   protected frame: Phaser.GameObjects.Container;
 

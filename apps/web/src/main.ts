@@ -11,6 +11,7 @@ import { VaultScene } from './game/scenes/VaultScene';
 import { mountDebug } from './debug';
 import type { AgeBand } from './game/systems/State';
 import { measureSafe, watchSafeArea } from './safeArea';
+import { wireNativeApp } from './nativeApp';
 
 // ---- install prompt (PWA)
 window.addEventListener('beforeinstallprompt', (e) => {
@@ -50,6 +51,7 @@ async function start() {
   // safe areas (notches, system bars): env(), and in the Android app Capacitor's insets too (safeArea.ts, AB#4723)
   measureSafe();
   watchSafeArea();
+  wireNativeApp(); // AB#4728: Android back button and lifecycle; nothing on the web
   const fonts = Promise.all([
     document.fonts.load('900 40px Cinzel'), document.fonts.load('700 40px Cinzel'),
     document.fonts.load('700 40px Oswald'), document.fonts.load('500 40px Oswald'),

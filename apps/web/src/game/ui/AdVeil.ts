@@ -8,7 +8,18 @@ import type { VaultScene } from '../scenes/VaultScene';
  * (skip after 1.2s also counts). Real SDKs would slot in here.
  */
 export class AdVeil extends Phaser.GameObjects.Container {
+  /** AB#4728: the veil on screen, if any, for Android's back button. */
+  static current: AdVeil | null = null;
   private done = false;
+  private skippable = () => false;
+  private skipNow = () => {};
+  /** Back, as the skip button: skips once the skip is offered; before that it is held. Returns whether it skipped. */
+  back(): boolean {
+    if (!this.skippable()) return false;
+    this.skipNow();
+    return true;
+  }
+  get backState(): 'skippable' | 'playing' { return this.skippable() ? 'skippable' : 'playing'; }
   constructor(vs: VaultScene, rewarded: boolean, onDone: () => void) {
     super(vs, 0, 0);
     const W = vs.W, H = vs.H;
@@ -25,9 +36,12 @@ export class AdVeil extends Phaser.GameObjects.Container {
     vs.tweens.add({ targets: bg, alpha: 0.96, duration: 150 });
     vs.tweens.add({ targets: scroll, angle: { from: -6, to: 6 }, duration: 400, yoyo: true, repeat: -1 });
     const start = vs.time.now;
+    AdVeil.current = this;
+    this.once(Phaser.GameObjects.Events.DESTROY, () => { if (AdVeil.current === this) AdVeil.current = null; });
     const finish = () => {
       if (this.done) return;
       this.done = true;
+      if (AdVeil.current === this) AdVeil.current = null;
       ev.remove();
       vs.tweens.add({ targets: this, alpha: 0, duration: 180, onComplete: () => this.destroy() });
       if (rewarded) onDone();
@@ -36,7 +50,9 @@ export class AdVeil extends Phaser.GameObjects.Container {
     const skip = vs.add.container(W - 150, 80 + vs.safeTop).setAlpha(0);
     const sb = vs.add.nineslice(0, 0, 'btn_dark', undefined, 200, 84, 40, 40, 40, 40);
     skip.add([sb, txt(vs, 0, -4, 'SKIP ▸', { size: 32, font: 'num', weight: '700' })]);
-    skip.setSize(200, 84).setInteractive({ useHandCursor: true }).on('pointerup', () => { if (vs.time.now - start >= 1200) finish(); });
+    this.skippable = () => !this.done && vs.time.now - start >= 1200;
+    this.skipNow = finish;
+    skip.setSize(200, 84).setInteractive({ useHandCursor: true }).on('pointerup', () => { if (this.skippable()) finish(); });
     this.add(skip);
     const ev = vs.time.addEvent({
       delay: 16, loop: true, callback: () => {
