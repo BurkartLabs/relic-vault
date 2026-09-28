@@ -18,6 +18,7 @@
     "android:sync": "node scripts/android.mjs sync",
     "android:bundle": "node scripts/android.mjs bundle",
     "android:apk": "node scripts/android.mjs apk",
+    "android:qa": "node scripts/android-qa.mjs",
     "android:icons": "node apps/web/tools/make-android-icons.mjs",
     "version": "node scripts/version.mjs --release && git add CHANGELOG.md"
   },

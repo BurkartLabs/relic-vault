@@ -27,3 +27,6 @@ android/version.properties
 *service-account*.json
 *service_account*.json
 *serviceaccount*.json
+
+# The device-QA run's raw output (AB#4730): 12 full-resolution device shots per run. A reviewed sheet goes in screenshots/ab<id>/.
+screenshots/android/
