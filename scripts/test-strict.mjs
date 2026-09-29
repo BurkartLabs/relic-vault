@@ -12,11 +12,12 @@
  * what learnings/TRANSFERABLE.md T-008 exists to prevent: judge a test run by the count of tests it reports, not
  * by its status. A run that executed nothing is a failure wearing a success.
  */
+// AB#4889: arguments pass through to vitest, so `npm test -- <files>` (and test:related) runs just those files.
 import { spawnSync } from 'node:child_process';
 import { readFileSync, rmSync } from 'node:fs';
 
 const out = '.vitest-results.json';
-const run = spawnSync('npx', ['vitest', 'run', '--reporter=default', '--reporter=json', `--outputFile=${out}`], { stdio: 'inherit', shell: process.platform === 'win32' });
+const run = spawnSync('npx', ['vitest', 'run', '--reporter=default', '--reporter=json', `--outputFile=${out}`, ...process.argv.slice(2)], { stdio: 'inherit', shell: process.platform === 'win32' });
 
 let report;
 try { report = JSON.parse(readFileSync(out, 'utf8')); } catch { report = null; }
