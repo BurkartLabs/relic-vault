@@ -10,6 +10,8 @@
     "build": "vite build",
     "preview": "vite preview --port 4173",
     "test": "node scripts/test-strict.mjs",
+    "test:related": "node scripts/test-related.mjs",
+    "test:gate": "node scripts/test-gate.mjs typecheck test",
     "typecheck": "tsc --noEmit -p .",
     "test:e2e": "playwright test",
     "icons": "node apps/web/tools/make-icons.mjs",
