@@ -12,6 +12,7 @@ import { mountDebug } from './debug';
 import type { AgeBand } from './game/systems/State';
 import { measureSafe, watchSafeArea } from './safeArea';
 import { wireNativeApp } from './nativeApp';
+import { wirePower, type FrameLoop } from './game/systems/Power';
 import { setupServiceWorker } from './serviceWorker';
 
 // ---- install prompt (PWA)
@@ -85,6 +86,7 @@ async function start() {
     scene: [BootScene, BootLoadScene, VaultScene],
   });
   (window as any).__game = game;
+  wirePower(game.loop as unknown as FrameLoop, ctx.sfx); // AB#4712: asleep out of sight, 30 fps when idle
   const unlock = () => ctx.sfx.unlock();
   window.addEventListener('pointerdown', unlock);
   window.addEventListener('keydown', unlock);

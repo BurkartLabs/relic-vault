@@ -15,9 +15,11 @@ export class Sfx {
   music = true;
   private droneStarted = false;
   private lastPlay: Record<string, number> = {};
+  /** AB#4712: suspended because the game went out of sight (systems/Power.ts), to be resumed when it is back. */
+  private backgrounded = false;
 
   unlock() {
-    if (this.ac) { if (this.ac.state === 'suspended') this.ac.resume(); return; }
+    if (this.ac) { if (this.ac.state === 'suspended' && !this.backgrounded) this.ac.resume(); return; }
     const AC = (window.AudioContext || (window as any).webkitAudioContext) as typeof AudioContext | undefined;
     if (!AC) return;
     this.ac = new AC();
@@ -34,6 +36,19 @@ export class Sfx {
     const d = this.noiseBuf.getChannelData(0);
     for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
     this.startDrone();
+  }
+
+  /** AB#4712: the screen went off or the app was minimised: the drone and every sound stop until it is back. */
+  suspendForBackground() {
+    if (this.backgrounded) return;
+    this.backgrounded = true;
+    if (this.ac && this.ac.state === 'running') void this.ac.suspend();
+  }
+
+  resumeFromBackground() {
+    if (!this.backgrounded) return;
+    this.backgrounded = false;
+    if (this.ac && this.ac.state === 'suspended') void this.ac.resume();
   }
 
   setMuted(m: boolean) {
@@ -72,7 +87,8 @@ export class Sfx {
     n.connect(bp).connect(ng).connect(out); n.start();
     // occasional distant bell
     const bell = () => {
-      if (this.ac) this.tone(this.ac.currentTime, [293.7, 440, 587.3][Math.floor(Math.random() * 3)] / 2, 3.5, 0.035, 'sine', this.musicGain!, 2.76);
+      // a suspended context's clock stands still: bells scheduled then would all ring at once when it resumed
+      if (this.ac && this.ac.state === 'running') this.tone(this.ac.currentTime, [293.7, 440, 587.3][Math.floor(Math.random() * 3)] / 2, 3.5, 0.035, 'sine', this.musicGain!, 2.76);
       setTimeout(bell, 9000 + Math.random() * 12000);
     };
     setTimeout(bell, 6000);
@@ -110,7 +126,7 @@ export class Sfx {
 
   /** Two-tone merge chime that rises with tier. */
   chime(tier: number) {
-    if (!this.ac || this.muted) return;
+    if (!this.ac || this.muted || this.backgrounded) return;
     const t = this.ac.currentTime;
     const scale = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24];
     const base = 392 * Math.pow(2, scale[Math.min(tier, 10)] / 12) / 2;
@@ -125,7 +141,7 @@ export class Sfx {
   }
 
   play(name: SfxName, opt = 0) {
-    if (!this.ac || this.muted) return;
+    if (!this.ac || this.muted || this.backgrounded) return;
     const now = performance.now();
     if (this.lastPlay[name] && now - this.lastPlay[name] < 28) return; // de-dupe bursts
     this.lastPlay[name] = now;
