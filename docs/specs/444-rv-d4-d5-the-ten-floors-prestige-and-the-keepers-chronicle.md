@@ -73,10 +73,10 @@ session, and 81 is not. The grammar (form painters, material finishes, the ornam
 
 ### Slice 2: floors 5-7 (lane: relic-vault/all)
 
-- [ ] material finishes and ornament passes for the Mirror Stair (mirror, silvered glass, a reflection band), the Root Cellar (root, fungus, wet wood), the Frost Ledger (ice, rime, frozen ink)
-- [ ] any form painter these floors need that slice 1 did not exercise, with the same tier parameterisation
-- [ ] hand-painted capstones: the Second Keeper, the Taproot Reliquary, the Debt in Ice
-- [ ] contact sheet updated; screenshots of the Mirror Stair board at both sizes attached
+- [x] material finishes and ornament passes for the Mirror Stair (mirror, silvered glass, a reflection band), the Root Cellar (root, fungus, wet wood), the Frost Ledger (ice, rime, frozen ink)
+- [x] any form painter these floors need that slice 1 did not exercise, with the same tier parameterisation (none: every form floors 5-7 compose, shard to crown, was already exercised by floors 2-4; the one form slice 1 composed nowhere, book, is the Debt in Ice, hand-painted)
+- [x] hand-painted capstones: the Second Keeper, the Taproot Reliquary, the Debt in Ice
+- [x] contact sheet updated; screenshots of the Mirror Stair board at both sizes attached
 
 ### Slice 3: floors 8-10 (lane: relic-vault/all)
 

@@ -41,6 +41,7 @@ import { Tutorial } from '../ui/Tutorial';
 import { FloorIntro } from '../ui/FloorIntro'; // AB#444 slice 5
 import { chapterCard, firstChapterDue, markFirstChapter, type ChapterKind } from '../systems/Chapters';
 import { DiscoveryCard } from '../ui/Discovery';
+import { FORGE_X, fitScale } from '../ui/forgeLabels'; // Bug #4897
 import { grantGold, enforceChestRules } from '../systems/Economy';
 import { SAFE_AREA_EVENT } from '../../safeArea'; // AB#4723
 
@@ -450,7 +451,7 @@ export class VaultScene extends Phaser.Scene {
     const { ox, my } = this;
     const y = my + FORGE_Y;
     // three generators (RV-D3): the floor's own, then the Crypt Brazier and the Star Well, which run every floor
-    const X = [540, 322, 758], SIZE = [220, 168, 168], KEY = ['forge', 'gen1', 'gen2'];
+    const X = FORGE_X, SIZE = [220, 168, 168], KEY = ['forge', 'gen1', 'gen2'];
     const AURA = [0xff8a2a, 0x7dffb0, 0x9ab8ff];
     const LABEL = [currentFloor(ctx.state).gen.toUpperCase(), 'CRYPT', 'STARS'];
     AURA[0] = currentFloor(ctx.state).color;
@@ -462,6 +463,7 @@ export class VaultScene extends Phaser.Scene {
       const aura = this.add.image(0, 0, 'relicGlow').setDisplaySize(SIZE[slot] * 1.7, SIZE[slot] * 1.7).setTint(AURA[slot]).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.5);
       const f = this.add.image(0, 0, KEY[slot]).setDisplaySize(SIZE[slot], SIZE[slot]);
       const lbl = txt(this, 0, SIZE[slot] / 2 - 6, LABEL[slot], { size: slot ? 28 : 30, gold: true, weight: '900', strokeW: 6 });
+      if (slot === 0) lbl.setScale(fitScale(lbl.width)); // a long floor name no longer runs into its neighbours (Bug #4897)
       const lvl = this.add.container(SIZE[slot] / 2 - 18, -SIZE[slot] / 2 + 18);
       const lvlBg = this.add.image(0, 0, 'seal_gold').setDisplaySize(62, 62);
       const lvlT = txt(this, 0, 0, '1', { size: 26, font: 'num', weight: '700', color: '#3a1c02', strokeW: 0, shadow: false });

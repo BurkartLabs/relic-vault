@@ -30,9 +30,10 @@ describe('floor relic art routing (AB#444)', () => {
     expect(PAINTED_FORMS).toHaveLength(12);
   });
 
-  it('the Drowned Wing, the Glass Orchard and the Ash Kilns capstones are hand-painted', () => {
-    expect([...CAPSTONE_IDS].sort()).toEqual([39, 49, 59]);
-    for (const id of [39, 49, 59]) expect(floorPainterFor(id)).toEqual({ kind: 'capstone', id });
+  it('floors 2-7 have hand-painted capstones (slices 1 and 2): the Tide Ledger to the Debt in Ice', () => {
+    const ids = [39, 49, 59, 69, 79, 89];
+    expect([...CAPSTONE_IDS].sort()).toEqual(ids);
+    for (const id of ids) expect(floorPainterFor(id)).toEqual({ kind: 'capstone', id });
   });
 
   it('nothing outside the floor ladders routes here', () => {
