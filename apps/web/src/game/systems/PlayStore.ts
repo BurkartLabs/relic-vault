@@ -31,9 +31,11 @@ export const SUBSCRIPTION_SKUS: readonly SkuId[] = ['vip'];
 /**
  * The SKUs RevenueCat keeps as entitlements, by the entitlement identifier configured in the RevenueCat dashboard. They
  * are read from the customer's info on every boot and resume, so a refund or a lapsed subscription takes them away.
- * Everything else is a consumable: granted once per transaction, never by a restore.
+ * Everything else is a consumable: granted once per transaction, never by a restore. The Keeper's Pass is one since
+ * Decision AB#4788 (Bug AB#4786): bought once per season, and on while a transaction from this season is on record
+ * (PurchaseService.seasonPassFrom).
  */
-export const ENTITLEMENT: Partial<Record<SkuId, string>> = { noads: 'noads', vip: 'vip', pass: 'pass' };
+export const ENTITLEMENT: Partial<Record<SkuId, string>> = { noads: 'noads', vip: 'vip' };
 
 export const skuForProduct = (productId: string): SkuId | undefined =>
   (Object.keys(PLAY_PRODUCT) as SkuId[]).find((sku) => PLAY_PRODUCT[sku] === productId || PLAY_PRODUCT[sku].split(':')[0] === productId);

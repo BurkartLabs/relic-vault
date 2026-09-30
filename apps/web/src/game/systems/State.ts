@@ -180,7 +180,8 @@ export function rollover(s: GameState, now: number) {
   const cyc = eventCycle(now);
   if (s.event.cycle !== cyc) s.event = { cycle: cyc, points: 0, claimed: [], boostUntil: 0 };
   const sea = seasonId(now);
-  if (s.pass.season !== sea) s.pass = { season: sea, xp: 0, free: [], prem: [] };
+  // Bug AB#4786, Decision AB#4788: the Keeper's Pass is bought for a season, so a new season closes the premium track
+  if (s.pass.season !== sea) { s.pass = { season: sea, xp: 0, free: [], prem: [] }; s.ent.passPremium = false; }
   if (s.ent.vip && s.ent.vipUntil && now > s.ent.vipUntil) s.ent.vip = false;
 }
 

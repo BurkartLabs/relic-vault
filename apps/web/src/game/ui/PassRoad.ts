@@ -106,13 +106,14 @@ export class PassRoad extends Modal {
     const cy = top + 1130;
     if (!s.ent.passPremium) {
       if (this.upsell) keeperLine(vs, B, 0, cy, 900, COPY.passLine, 110);
-      else B.add(txt(vs, 0, cy, 'Premium: gems every tier · wildcard card at tier 8 · Gilded relic skin · +4% luck', { size: 28, font: 'body', color: '#e8dcf0', wrap: 880 }));
+      // AB#4786, Decision AB#4788: the pass is bought for this season, and the line says so
+      else B.add(txt(vs, 0, cy, 'This season’s premium: gems every tier · wildcard card at tier 8 · Gilded relic skin · +4% luck', { size: 28, font: 'body', color: '#e8dcf0', wrap: 880 }));
       const b = new Button(vs, 0, top + 1300, 560, 130, `UNLOCK ${priceLabel('pass')}`, () => vs.buy('pass', `pass:${this.trigger}`, () => { if (this.active && !this.closing) { this.box.removeAll(true); this.build(); } }), { color: 'purple', size: 46 });
       B.add(b);
       B.add(badge(vs, 300, top + 1260, 'POPULAR', 'red', 120));
       vs.tweens.add({ targets: b, scale: 1.04, duration: 600, yoyo: true, repeat: -1 });
     } else {
-      B.add(txt(vs, 0, cy, 'PREMIUM ACTIVE · +4% luck', { size: 40, weight: '900', color: '#c79bff' }));
+      B.add(txt(vs, 0, cy, 'PREMIUM ACTIVE THIS SEASON · +4% luck', { size: 40, weight: '900', color: '#c79bff' }));
       if (s.ent.skin) {
         const tog = new Button(vs, 0, top + 1300, 520, 110, s.ent.skinOn ? 'GILDED SKIN: ON' : 'GILDED SKIN: OFF', () => {
           s.ent.skinOn = !s.ent.skinOn; ctx.persist(); tog.setLabel(s.ent.skinOn ? 'GILDED SKIN: ON' : 'GILDED SKIN: OFF');

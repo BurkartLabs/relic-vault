@@ -43,9 +43,10 @@ which charges nothing, as every web and e2e build is:
 `VITE_STORE_MODE=play VITE_REVENUECAT_KEY=goog_... npm run android:bundle`.
 
 - **Products** (created in Play Console and RevenueCat, Board release step 7): `rv_welcome`, `rv_gems_200`,
-  `rv_gems_500`, `rv_gems_1200`, `rv_piggy`, `rv_comeback` (consumable one-time products), `rv_pass`, `rv_noads`
-  (non-consumable), and the subscription `rv_vip` with base plan `monthly`. RevenueCat entitlements `noads`, `pass`
-  and `vip` attach to `rv_noads`, `rv_pass` and `rv_vip`. The mapping is `apps/web/src/game/systems/PlayStore.ts`.
+  `rv_gems_500`, `rv_gems_1200`, `rv_piggy`, `rv_comeback`, `rv_pass` (consumable one-time products; the Keeper's
+  Pass is bought once per season, Decision AB#4788), `rv_noads` (non-consumable), and the subscription `rv_vip` with
+  base plan `monthly`. RevenueCat entitlements `noads` and `vip` attach to `rv_noads` and `rv_vip`; `rv_pass` has no
+  entitlement (the game reads this season's pass transaction). The mapping is `apps/web/src/game/systems/PlayStore.ts`.
 - **Testing without charges**: a sandbox SDK key, and the tester's Google account added as a licence tester in Play
   Console; Play then shows its test cards, including "slow test card" for the pending state.
 - **What the game does**: prices are the store's, localised (never the catalog's USD); a pack is granted only after
