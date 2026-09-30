@@ -1,4 +1,4 @@
-package com.orchestrata.relicvault;
+package com.madgod_games.relic_vault;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;

@@ -1,4 +1,4 @@
-package com.orchestrata.relicvault;
+package com.madgod_games.relic_vault;
 
 /**
  * AB#4723: the Android System WebView version the game needs, and reading one. Pure Java, so a JVM unit test covers it

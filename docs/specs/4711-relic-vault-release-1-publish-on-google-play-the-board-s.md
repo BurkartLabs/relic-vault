@@ -41,7 +41,7 @@ What: Where it sits: Release 1, step 3 of 9. Every answer here must match what t
 
 ### Board: Play App Signing, first Android App Bundle upload, and install on your phone (Requirement AB#4716, Proposed)
 
-What: Where it sits: Release 1, step 4 of 9. Needs the signed .aab that release 2's "Capacitor Android shell" and "CI builds a signed AAB" stories produce. This is the first time the game exists as an Android app. / Steps, in order: / - Decide the package name with the Builder before the first upload; it can never change. Proposed: com.orchestrata.relicvault. / - Generate the upload keystore once, on your machine, not in the repo: keytool -genkeypair -v -keystore relic-vault-upload.jks -alias upload… (the rest: AB#4716)
+What: Where it sits: Release 1, step 4 of 9. Needs the signed .aab that release 2's "Capacitor Android shell" and "CI builds a signed AAB" stories produce. This is the first time the game exists as an Android app. / Steps, in order: / - Decide the package name with the Builder before the first upload; it can never change. Chosen: com.madgod_games.relic_vault. / - Generate the upload keystore once, on your machine, not in the repo: keytool -genkeypair -v -keystore relic-vault-upload.jks -alias upload… (the rest: AB#4716)
 
 - [ ] An internal-testing release is live and installed from Play on the Board's phone.
 - [ ] Package name recorded on this item and identical to the one in android/app/build.gradle.

@@ -111,7 +111,7 @@ Proposed fix: Confidence: medium. Wait for __vault.pair to be non-null (page.wai
 
 ### Capacitor Android shell: android/ project, target API 36, edge-to-edge, orientation, splash, signed AAB script (Requirement AB#4723, Resolved, not verified)
 
-What: Where it sits: Release 2, story 1: everything else runs inside this. Opens once the Decision picks Capacitor (recommended) over a TWA. / What: Add Capacitor (@capacitor/core, @capacitor/cli, @capacitor/android) with appId from the Decision (proposed com.orchestrata.relicvault), appName "Relic Vault", webDir dist. Android project: compileSdk/targetSdk 36, minSdk 26 (WebView 90+ check on boot with a plain "update Android System WebView" screen), portrait-only activity, edge-to-edge (mandatory on… (the rest: AB#4723)
+What: Where it sits: Release 2, story 1: everything else runs inside this. Opens once the Decision picks Capacitor (recommended) over a TWA. / What: Add Capacitor (@capacitor/core, @capacitor/cli, @capacitor/android) with appId from the Decision (chosen: com.madgod_games.relic_vault), appName "Relic Vault", webDir dist. Android project: compileSdk/targetSdk 36, minSdk 26 (WebView 90+ check on boot with a plain "update Android System WebView" screen), portrait-only activity, edge-to-edge (mandatory on… (the rest: AB#4723)
 
 - [x] npm run android:bundle produces a signed .aab when the keystore env vars are set, and fails with a clear message when they are not.
 - [x] The .aab installs on an Android 10 and an Android 16 device or emulator; the game boots to the age gate in portrait, the HUD sits below the status bar and the Dock above the gesture bar (screenshots of both attached, P-001).

@@ -2,7 +2,7 @@
 
 The Android app is a [Capacitor 8](https://capacitorjs.com) shell (`android/`, `capacitor.config.ts`) around the
 same web build the PWA serves (`dist/`). Capacitor is additive: `npm run build`, `npm test` and the e2e suite are the
-web build's, unchanged. App id `com.orchestrata.relicvault`, name "Relic Vault" (AB#4723).
+web build's, unchanged. App id `com.madgod_games.relic_vault`, name "Relic Vault" (AB#4723).
 
 ## Setup, once per machine
 

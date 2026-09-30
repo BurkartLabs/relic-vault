@@ -3,7 +3,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.orchestrata.relicvault',
+  appId: 'com.madgod_games.relic_vault',
   appName: 'Relic Vault',
   webDir: 'dist',
   android: {

@@ -19,10 +19,10 @@ if (!versionFile.exists()) throw new GradleException('android/version.properties
 versionFile.withInputStream { versionProps.load(it) }
 
 android {
-    namespace = "com.orchestrata.relicvault"
+    namespace = "com.madgod_games.relic_vault"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.orchestrata.relicvault"
+        applicationId "com.madgod_games.relic_vault"
         // AB#4724: the AdMob app id. Google's test app id until the Board supplies the real one (AB#4718), which a
         // release build takes from RELIC_VAULT_ADMOB_APP_ID (a Gradle property or the environment), like the signing.
         def admobAppId = project.findProperty('RELIC_VAULT_ADMOB_APP_ID') ?: System.getenv('RELIC_VAULT_ADMOB_APP_ID') ?: 'ca-app-pub-3940256099942544~3347511713'
