@@ -56,7 +56,7 @@ are **not** required for Done; they stay in the checklist so they are not forgot
 
 ## Checklist
 
-Each heading replaces a Requirement or Bug, which Azure DevOps keeps (Closed, tagged folded, linked here); its lines are its Acceptance. A checked line was Resolved and has not been verified. 6 open, 11 resolved.
+Each heading replaces a Requirement or Bug, which Azure DevOps keeps (Closed, tagged folded, linked here); its lines are its Acceptance. A checked line was Resolved and has not been verified. 5 open, 12 resolved.
 
 ### CI: build and sign the Android App Bundle on main, publish it as an artifact, optional upload to the internal track (Requirement AB#4731, Proposed)
 
@@ -98,7 +98,7 @@ Symptom: Settings > Manage Purchases lists 'Keeper's Pass (this season)' (Settin
 Repro: Buy the Keeper's Pass (demo), move the clock past seasonEndsAt(now) and reload: passPremium is still true and the premium track is still open, while Settings says 'this season'.
 Proposed fix: Confidence: medium. A product decision first (Director/Board): per-season pass or lifetime premium track. If lifetime: change the Settings copy to 'Keeper's Pass' and the blurb accordingly. If per-season: reset passPremium in rollover at a season change and make rv_pass a consumable per season in Play (granted once per transaction, as grantOnce does), with the price copy saying 'this season'. Confidence medium on the mechanics, the choice is not ours.
 
-- [ ] Fixed: Relic Vault: Settings calls the Keeper's Pass '(this season)' but the premium pass never ends at a season change
+- [x] Fixed: Relic Vault: Settings calls the Keeper's Pass '(this season)' but the premium pass never ends at a season change
 
 ### Relic Vault e2e 'telemetry reaches a real sink' flakes: __vault.pair is null after the first forge (Bug AB#4789, Proposed)
 

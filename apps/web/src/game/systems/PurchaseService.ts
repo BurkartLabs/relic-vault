@@ -1,5 +1,5 @@
 import { SKUS, SkuId, WELCOME_RELICS } from '../data/catalog';
-import type { GameState } from './State';
+import { seasonId, type GameState } from './State';
 import type { Rng } from './Rng';
 import { placeOrStash } from './BoardSystem';
 import { grantGold, grantChests, piggyGems, chestsAllowed, openChest, type ChestResult } from './Economy';
@@ -88,15 +88,26 @@ export function grantOnce(s: GameState, txId: string, sku: SkuId, rng: Rng, now 
 }
 
 /**
- * AB#4725: No Ads, the Keeper's Pass and Vault VIP as the store has them. Set from the store and cleared by it, so a
- * refund or a cancelled subscription takes the entitlement away with no server of ours. VIP lasts while its
- * entitlement is active; vipUntil is when the store says it lapses (0 when it does not say). Returns what changed.
+ * Bug AB#4786, Decision AB#4788: the Keeper's Pass is a consumable bought once per season (rv_pass), not an
+ * entitlement. It is on while the store holds a pass transaction dated in the current season, so a restore within the
+ * season brings it back, a refund takes it away, and last season's purchase opens nothing.
  */
-export function applyEntitlements(s: GameState, active: StoreCustomer['active']): SkuId[] {
+export function seasonPassFrom(transactions: StoreTransaction[], now = Date.now()): boolean {
+  const season = seasonId(now);
+  return transactions.some((t) => t.sku === 'pass' && seasonId(t.at) === season);
+}
+
+/**
+ * AB#4725: No Ads, Vault VIP and (given the store's transactions) this season's Keeper's Pass, as the store has them.
+ * Set from the store and cleared by it, so a refund or a cancelled subscription takes the entitlement away with no
+ * server of ours. VIP lasts while its entitlement is active; vipUntil is when the store says it lapses (0 when it does
+ * not say). Without `transactions` the pass is left as it is (a purchase just granted it). Returns what changed.
+ */
+export function applyEntitlements(s: GameState, active: StoreCustomer['active'], transactions?: StoreTransaction[], now = Date.now()): SkuId[] {
   const changed: SkuId[] = [];
   const set = (sku: SkuId, on: boolean, write: (v: boolean) => void, was: boolean) => { if (was !== on) changed.push(sku); write(on); };
   set('noads', 'noads' in active, (v) => (s.ent.removeAds = v), s.ent.removeAds);
-  set('pass', 'pass' in active, (v) => (s.ent.passPremium = v), s.ent.passPremium);
+  if (transactions) set('pass', seasonPassFrom(transactions, now), (v) => (s.ent.passPremium = v), s.ent.passPremium);
   set('vip', 'vip' in active, (v) => (s.ent.vip = v), s.ent.vip);
   s.ent.vipUntil = s.ent.vip ? active.vip ?? 0 : 0;
   return changed;
@@ -145,7 +156,7 @@ export class PurchaseService {
       }
       setStorePrices(await this.backend.prices());
       await this.sync(s, rng);
-      this.backend.onChange((c) => { const changed = applyEntitlements(s, c.active); const grants = settlePending(s, c.transactions, rng); onChange?.(changed, grants); });
+      this.backend.onChange((c) => { const changed = applyEntitlements(s, c.active, c.transactions); const grants = settlePending(s, c.transactions, rng); onChange?.(changed, grants); });
     } catch (e) {
       this.unavailable = String((e as Error)?.message ?? e);
       reportPluginError('Purchases', 'start', e); // AB#4739: a store build whose store never answered is worth knowing
@@ -156,7 +167,7 @@ export class PurchaseService {
   async sync(s: GameState, rng: Rng): Promise<{ changed: SkuId[]; grants: PurchaseGrant[] }> {
     if (this.mode !== 'play' || !this.backend || this.unavailable) return { changed: [], grants: [] };
     const c = await this.backend.customer();
-    return { changed: applyEntitlements(s, c.active), grants: settlePending(s, c.transactions, rng) };
+    return { changed: applyEntitlements(s, c.active, c.transactions), grants: settlePending(s, c.transactions, rng) };
   }
 
   async purchase(sku: SkuId, s?: GameState): Promise<PurchaseResult> {
@@ -184,7 +195,9 @@ export class PurchaseService {
   async restore(s?: GameState): Promise<{ entitlements: SkuId[]; changed: SkuId[] } | null> {
     if (this.mode !== 'play' || !this.backend || this.unavailable || !s) return null;
     const c = await this.backend.restore();
-    return { entitlements: Object.keys(c.active) as SkuId[], changed: applyEntitlements(s, c.active) };
+    const entitlements = Object.keys(c.active) as SkuId[];
+    if (seasonPassFrom(c.transactions)) entitlements.push('pass'); // AB#4786: this season's pass comes back, older ones do not
+    return { entitlements, changed: applyEntitlements(s, c.active, c.transactions) };
   }
 
   /** Where Play manages the VIP subscription: the store's own link, or Play's subscription centre for this app. */

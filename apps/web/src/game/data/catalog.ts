@@ -106,7 +106,7 @@ export const SKUS: Record<SkuId, Sku> = {
   gems500: { id: 'gems500', title: 'Chest of Gems', price: 4.99, gems: 500, badge: 'POPULAR', blurb: 'The vault’s preferred offering.' },
   gems1200: { id: 'gems1200', title: 'Hoard of Gems', price: 8.99, gems: 1200, badge: 'BEST VALUE', blurb: 'For keepers who intend to stay.' },
   piggy: { id: 'piggy', title: 'Smash the Pig', price: 2.99, blurb: 'Every gem it swallowed while you merged, up to 250.' },
-  pass: { id: 'pass', title: 'Keeper’s Pass', price: 9.99, blurb: 'Premium track: gems, a wildcard card, the Gilded skin, +4% luck.' },
+  pass: { id: 'pass', title: 'Keeper’s Pass', price: 9.99, blurb: 'This season’s premium track: gems, a wildcard card, the Gilded skin, +4% luck.' }, // AB#4786: per season
   noads: { id: 'noads', title: 'Silence the Criers', price: 7.99, blurb: 'Removes interstitials and the shop banner. Rewarded ads stay optional.' },
   vip: { id: 'vip', title: 'Vault VIP', price: 9.99, blurb: 'Monthly. Daily crate, +2% luck, a crown, no ads.' },
   comeback: { id: 'comeback', title: 'So Close Bundle', price: 2.99, gems: 120, gold: 15000, badge: 'SALE', oneTime: true,

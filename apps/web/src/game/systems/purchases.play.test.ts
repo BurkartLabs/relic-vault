@@ -1,12 +1,12 @@
 import { describe, it, expect, afterEach } from 'vitest';
-import { createState, migrate } from './State';
-import { PurchaseService, grantOnce, applyEntitlements, settlePending } from './PurchaseService';
-import { PLAY_PRODUCT, skuForProduct, type StoreBackend, type StoreCustomer, type BuyResult } from './PlayStore';
+import { createState, migrate, rollover, seasonEndsAt } from './State';
+import { PurchaseService, grantOnce, applyEntitlements, settlePending, seasonPassFrom } from './PurchaseService';
+import { ENTITLEMENT, PLAY_PRODUCT, skuForProduct, type StoreBackend, type StoreCustomer, type BuyResult } from './PlayStore';
 import { setStorePrices, priceLabel, priceAmount, currencyUnit } from './Prices';
 import { skuValuePct } from './Economy';
 import { storeCopy } from '../buildMode';
 import { mulberry32 } from './Rng';
-import { SKUS, type SkuId } from '../data/catalog';
+import { ECON, SKUS, type SkuId } from '../data/catalog';
 import type { StorePrice } from './Prices';
 
 // AB#4725: the Play store adapter, against a fake of the RevenueCat backend (there is no Play Billing under vitest).
@@ -137,14 +137,18 @@ describe('Play store adapter (AB#4725)', () => {
     const s = createState();
     const store = new FakeStore();
     const renews = Date.now() + 20 * 86400000;
-    store.customerNow = { active: { noads: null, vip: renews, pass: null }, transactions: [], manageUrl: null };
+    const pass = { id: 'GPA.pass-1', sku: 'pass' as SkuId, at: Date.now() };
+    store.customerNow = { active: { noads: null, vip: renews }, transactions: [pass], manageUrl: null };
     const p = new PurchaseService('play', store);
     await p.start(s, rng());
     expect(s.ent).toMatchObject({ removeAds: true, vip: true, vipUntil: renews, passPremium: true });
-    store.customerNow = { active: { pass: null }, transactions: [], manageUrl: null }; // No Ads refunded, VIP cancelled
+    store.customerNow = { active: {}, transactions: [pass], manageUrl: null }; // No Ads refunded, VIP cancelled
     const r = await p.sync(s, rng());
     expect(r.changed.sort()).toEqual(['noads', 'vip']);
     expect(s.ent).toMatchObject({ removeAds: false, vip: false, vipUntil: 0, passPremium: true });
+    store.customerNow = { active: {}, transactions: [], manageUrl: null }; // the pass refunded
+    expect((await p.sync(s, rng())).changed).toEqual(['pass']);
+    expect(s.ent.passPremium).toBe(false);
   });
 
   it('a restore brings back unlocks and VIP, and never pays a consumable out again', async () => {
@@ -172,6 +176,73 @@ describe('Play store adapter (AB#4725)', () => {
     s.store.pending = [{ sku: 'gems500', since: now - 1000 }];
     expect(settlePending(s, [{ id: 'GPA.old', sku: 'gems500', at: now - 86400000 }], rng(), now)).toEqual([]);
     expect(settlePending(s, [{ id: 'GPA.new', sku: 'gems500', at: now }], rng(), now).map((g) => g.ok)).toEqual([true]);
+  });
+
+  describe('the Keeper’s Pass is bought once per season (Bug AB#4786, Decision AB#4788)', () => {
+    const SEASON = ECON.seasonDays * 86400000;
+
+    it('is a consumable in Play, not an entitlement', () => {
+      expect(ENTITLEMENT.pass).toBeUndefined();
+    });
+
+    it('a new season closes the premium track; a reload in the same season keeps it', () => {
+      const now = Date.now();
+      const s = createState();
+      grantOnce(s, 'GPA.pass-1', 'pass', rng(), now);
+      expect(s.ent.passPremium).toBe(true);
+      rollover(s, now + 1000);
+      expect(s.ent.passPremium).toBe(true);
+      rollover(s, seasonEndsAt(now) + 1000);
+      expect(s.ent.passPremium).toBe(false);
+      expect(s.pass.prem).toEqual([]);
+    });
+
+    it('can be bought again next season, and each purchase is paid once', () => {
+      const now = Date.now();
+      const s = createState();
+      expect(grantOnce(s, 'GPA.pass-1', 'pass', rng(), now).ok).toBe(true);
+      expect(grantOnce(s, 'GPA.pass-2', 'pass', rng(), now).reason).toBe('owned'); // not twice in a season
+      const next = seasonEndsAt(now) + 1000;
+      rollover(s, next);
+      expect(grantOnce(s, 'GPA.pass-1', 'pass', rng(), next).reason).toBe('granted'); // last season's receipt again
+      expect(grantOnce(s, 'GPA.pass-3', 'pass', rng(), next).ok).toBe(true);
+      expect(s.ent.passPremium).toBe(true);
+    });
+
+    it('the store’s transactions decide it: this season’s opens the track, last season’s does not', () => {
+      const now = Date.now();
+      const s = createState();
+      expect(seasonPassFrom([{ id: 'GPA.old', sku: 'pass', at: now - SEASON }], now)).toBe(false);
+      expect(seasonPassFrom([{ id: 'GPA.new', sku: 'pass', at: now }], now)).toBe(true);
+      expect(seasonPassFrom([{ id: 'GPA.gems', sku: 'gems200', at: now }], now)).toBe(false);
+      s.ent.passPremium = true;
+      expect(applyEntitlements(s, {}, [{ id: 'GPA.old', sku: 'pass', at: now - SEASON }], now)).toEqual(['pass']);
+      expect(s.ent.passPremium).toBe(false);
+      s.ent.passPremium = true;
+      expect(applyEntitlements(s, {}, undefined, now)).toEqual([]); // without transactions (just bought) it is left alone
+      expect(s.ent.passPremium).toBe(true);
+    });
+
+    it('a restore on a new device brings this season’s pass back', async () => {
+      const s = createState();
+      const store = new FakeStore();
+      store.customerNow = { active: {}, transactions: [{ id: 'GPA.pass-9', sku: 'pass', at: Date.now() }], manageUrl: null };
+      const p = new PurchaseService('play', store);
+      await p.start(s, rng());
+      const r = await p.restore(s);
+      expect(r?.entitlements).toEqual(['pass']);
+      expect(s.ent.passPremium).toBe(true);
+    });
+
+    it('a Play purchase of the pass is recorded as pending first, like every consumable', async () => {
+      const s = createState();
+      const store = new FakeStore();
+      const p = new PurchaseService('play', store);
+      await p.start(s, rng());
+      store.next = { ok: false, reason: 'pending' };
+      await p.purchase('pass', s);
+      expect(s.store.pending.map((x) => x.sku)).toEqual(['pass']);
+    });
   });
 
   it('VIP’s 30-day flag is the entitlement: the store’s expiry, or none', () => {
