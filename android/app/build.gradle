@@ -97,6 +97,13 @@ gradle.taskGraph.whenReady { graph ->
         throw new GradleException("A release build needs the live AdMob app id: set RELIC_VAULT_ADMOB_APP_ID to the app id in " +
             "apps/web/src/game/config/ads.ts (docs/ANDROID.md, 'Ads'). With Google's test app id the live ad units serve nothing.")
     }
+    // Bug #4894: the web app decides AdMob or the demo veil when it is built (VITE_ADS_MODE); scripts/version.mjs records
+    // which in version.properties. A release that would show players the demo veil instead of ads stops here.
+    if (versionProps.getProperty('adsMode') != 'admob') {
+        throw new GradleException("A release build needs the web app built with VITE_ADS_MODE=admob, or players see the demo veil and " +
+            "no real ad: npm run android:bundle sets it (docs/ANDROID.md, 'Ads'). version.properties says adsMode=" +
+            (versionProps.getProperty('adsMode') ?: 'nothing (built before Bug #4894)') + ".")
+    }
 }
 
 try {
