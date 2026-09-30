@@ -8,7 +8,8 @@ import { applyEntitlements, grantOnce, skuAvailable } from '../systems/PurchaseS
 import { priceAmount, currencyUnit } from '../systems/Prices'; // AB#4725
 import { chestsAllowed, dropFromSatchel, claimVipCrate, CardResult, Granted } from '../systems/Economy';
 import { eventEndsAt, rollover } from '../systems/State';
-import { activeChain, currentFloor, capstoneOf, isCleared } from '../systems/Floors';
+import { activeChain, currentFloor, capstoneOf, isCleared, descend, restore } from '../systems/Floors';
+import { FloorTransition } from './FloorTransition'; // AB#444 slice 4
 import { bubble, currentMain, resetFloorStats, refillErrands } from '../systems/Chronicle';
 import { OfferRequest } from '../systems/OfferDirector';
 import { CELL, DAIS_PAD } from '../art/VaultBackground';
@@ -119,7 +120,11 @@ export class VaultScene extends Phaser.Scene {
    * So every field that belongs to one run starts empty here. What belongs to the session stays: lastInterstitial
    * (ad pacing), lastActionAt, and discoveries (item ids still owed a card, which pumpOffers shows).
    */
+  /** AB#444 slice 4: the floor whose board atlas the next run lays before it builds (set by a floor change's swap). */
+  private rebakeOnStart: number | null = null;
+
   init() {
+    if (this.rebakeOnStart !== null) { rebakeBoardFor(this, this.rebakeOnStart, [...ctx.state.board, ...ctx.state.satchel]); this.rebakeOnStart = null; }
     this.relics = [];
     this.modal = null;
     this.selected = -1;
@@ -232,6 +237,9 @@ export class VaultScene extends Phaser.Scene {
       ));
     }
     performance.measure('rv:vault-create', { start: t0, end: performance.now() });
+    // AB#444 slice 4: a floor transition over the vault waits for this before it opens its veil, so the restart is
+    // never seen
+    this.game.events.emit('vault-ready', this);
   }
 
   private resizeTimer?: number;
@@ -1548,17 +1556,47 @@ export class VaultScene extends Phaser.Scene {
     ctx.telemetry.track(kind === 'descend' ? 'floor_descend' : 'floor_restore', {
       floor: s.floor, renown: s.renown, recorded: r.recorded.length, memento: r.memento ?? 0,
     });
-    // the board atlas only ever holds the relics this floor can show, so it is re-laid before the scene comes
-    // back up (ten floors of sheen frames in one atlas is past the maximum texture size on a phone)
-    rebakeBoardFor(this, s.floor ?? 0);
-    // the scene is rebuilt because the forge row, the background mood and the board all belong to the floor
-    ctx.persistNow();
-    this.scene.restart();
     const floor = currentFloor(s);
     const line = kind === 'descend'
       ? `${floor.name}. ${floor.subtitle}`
       : `${floor.name}, again. Renown ${r.renown} — the vault will remember it even if I do not.`;
-    this.time.delayedCall(900, () => this.keeperSays(line));
+    // AB#444 slice 4: the move is shown, not cut. The transition plays over this scene and calls swap under its
+    // closed veil; the new vault is handed back only once it reports ready (FloorTransition.ts).
+    FloorTransition.play(this, {
+      kind, recorded: r.recorded, floor,
+      swap: () => {
+        // the board atlas only ever holds the relics this floor can show, so it is re-laid before the scene comes
+        // back up (ten floors of sheen frames in one atlas is past the maximum texture size on a phone). It is laid
+        // in init(), after this run is gone: the old relics ask the atlas for their frames every frame until then,
+        // and a frame the new floor's atlas does not have stops the render.
+        this.rebakeOnStart = s.floor ?? 0;
+        // the scene is rebuilt because the forge row, the background mood and the board all belong to the floor
+        ctx.persistNow();
+        this.scene.restart();
+      },
+      // the Keeper's line waits for the new vault (it was scheduled on the old one's clock, which the restart cleared)
+      onArrive: (vault) => vault.time.delayedCall(900, () => vault.keeperSays(line)),
+    });
+  }
+
+  /** AB#444 slice 4: the generator row builds in on arrival, one after another, from below. */
+  buildInGenerators(ms: number) {
+    this.gens.forEach((g, i) => {
+      const y = g.y;
+      g.setY(y + 70).setAlpha(0);
+      this.tweens.add({ targets: g, y, alpha: 1, delay: i * Math.min(90, ms / 4), duration: ms * 0.6, ease: 'Back.Out' });
+    });
+  }
+
+  /**
+   * AB#444 slice 4, a browser-test handle: what descend() or restore() would leave, run on a copy of the state with the
+   * memento the open doors sheet has chosen, so the e2e can hold the transition to exactly that board.
+   */
+  predictFloorChange(kind: 'descend' | 'restore') {
+    const copy = structuredClone(ctx.state);
+    const memento = (this.modal as any)?.memento || undefined;
+    const r = kind === 'descend' ? descend(copy, memento) : restore(copy, memento);
+    return { ok: r.ok, floor: copy.floor, renown: copy.renown, board: [...copy.board], reliquary: [...(copy.reliquary ?? [])], satchel: structuredClone((copy as any).satchel ?? null) };
   }
 
   /** debug helpers, and the handles the browser tests drive the real UI through */

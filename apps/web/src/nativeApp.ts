@@ -12,6 +12,7 @@ import { App } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import { ctx } from './game/GameCtx';
 import { AdVeil } from './game/ui/AdVeil';
+import { FloorTransition } from './game/scenes/FloorTransition';
 import type { VaultScene } from './game/scenes/VaultScene';
 import { createBackHandler, EXIT_WARNING, EXIT_WINDOW_MS } from './game/systems/backButton';
 import { appBackgrounded, appForegrounded } from './game/systems/Power';
@@ -24,11 +25,12 @@ export function wireNativeApp() {
     view: () => ({
       ageGate: !!document.getElementById('age-gate'),
       ready: !!scene(),
-      adVeil: AdVeil.current?.backState ?? null,
+      // AB#444 slice 4: a floor transition takes back the way the ad veil does: held, then skip from 1.2 s
+      adVeil: AdVeil.current?.backState ?? FloorTransition.current?.backState ?? null,
       sheet: !!scene()?.modal,
     }),
     closeSheet: () => { const m = scene()?.modal; if (m) (m.onBack ?? (() => m.close()))(); },
-    skipAd: () => { AdVeil.current?.back(); },
+    skipAd: () => { if (AdVeil.current) AdVeil.current.back(); else FloorTransition.current?.back(); },
     warn: () => scene()?.toast(EXIT_WARNING, EXIT_WINDOW_MS),
     exit: () => { ctx.persistNow(); void App.exitApp(); },
   });

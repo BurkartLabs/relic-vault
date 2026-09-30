@@ -17,7 +17,7 @@ export class BootLoadScene extends Phaser.Scene {
     const bw = 620, by = H / 2 + 600;
     const g = this.add.graphics();
     const steps: [string, () => void][] = [
-      ['Waking the relics', () => bakeRelics(this, ctx.state.floor ?? 0)],
+      ['Waking the relics', () => bakeRelics(this, ctx.state.floor ?? 0, [...ctx.state.board, ...ctx.state.satchel])], // AB#444 s4: a memento from above too
       ['Carving the vault', () => bakeVault(this)],
       ['Gilding the frames', () => bakeUi(this)],
       ['Shuffling the album', () => bakeCards(this, CARDS, ALBUM_PAGES.map((p) => p.color))],
