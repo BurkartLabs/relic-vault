@@ -80,9 +80,9 @@ session, and 81 is not. The grammar (form painters, material finishes, the ornam
 
 ### Slice 3: floors 8-10 (lane: relic-vault/all)
 
-- [ ] material finishes and ornament passes for the Clockworks (brass, spring, escapement), the Ink Vaults (ink, vellum, seal-wax), the Hollow Core (absence: silhouettes drawn as their own negative space, per ROOMS.md "un-things")
-- [ ] hand-painted capstones: the Hour Unspent, the Name of the Vault, the Empty Setting
-- [ ] the AB#4737 numbers re-measured with every floor painted (cold start, texture memory) and recorded in docs/DEVICE_QA.md; contact sheet complete; screenshots of the Hollow Core board at both sizes attached
+- [x] material finishes and ornament passes for the Clockworks (brass, spring, escapement), the Ink Vaults (ink, vellum, seal-wax), the Hollow Core (absence: silhouettes drawn as their own negative space, per ROOMS.md "un-things")
+- [x] hand-painted capstones: the Hour Unspent, the Name of the Vault, the Empty Setting
+- [x] the AB#4737 numbers re-measured with every floor painted (cold start, texture memory) and recorded in docs/DEVICE_QA.md; contact sheet complete; screenshots of the Hollow Core board at both sizes attached
 
 ### Slice 4: the descent (lane: relic-vault/all)
 
