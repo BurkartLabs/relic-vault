@@ -521,9 +521,111 @@ const FROST: FloorStyle = {
 };
 
 /** Floors 8-10 until slice 3 gives them their own: their colours only, no floor pass. */
+/** The Clockworks: polished brass with the lathe's lines in it, and a cog and a mainspring worked into the metal. */
+const CLOCKWORKS: FloorStyle = {
+  accent: ['#fff6d8', '#ffd060', '#d09a28', '#6a4a10', '#2a1c06'],
+  finish(ctx, rnd) {
+    // polished brass: a warm horizon band, then the brushed lines the lathe left, curving with the piece
+    ctx.fillStyle = lin(ctx, 0, 40, 0, 230, [[0, 'rgba(255,240,190,0.18)'], [0.42, 'rgba(255,250,220,0.4)'], [0.5, 'rgba(120,80,20,0.22)'], [1, 'rgba(60,36,6,0.3)']]);
+    ctx.fillRect(0, 0, 256, 256);
+    ctx.strokeStyle = 'rgba(255,240,200,0.14)'; ctx.lineWidth = 1;
+    const cx = 128 + (rnd() - 0.5) * 20;
+    for (let r = 20; r < 180; r += 5) { ctx.beginPath(); ctx.arc(cx, 150, r, Math.PI * 1.05, Math.PI * 1.95); ctx.stroke(); }
+  },
+  ornament(ctx, rnd, _r, tier) {
+    // the escapement: a cog low on one side, teeth and hub, and a coiled mainspring beside it; bigger with tier
+    const side = rnd() > 0.5 ? 1 : -1, cx = 128 + side * (46 + rnd() * 10), cy = 186 - tier, R = 12 + tier * 1.2, teeth = 8 + tier;
+    const cog = new Path2D();
+    for (let i = 0; i < teeth * 2; i++) { const a = (i / (teeth * 2)) * Math.PI * 2, rr = i % 2 ? R : R + 4; i ? cog.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr) : cog.moveTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr); }
+    cog.closePath();
+    ctx.save();
+    ctx.fillStyle = 'rgba(90,60,14,0.55)'; ctx.fill(cog);
+    ctx.lineWidth = 1.6; ctx.strokeStyle = 'rgba(255,236,170,0.85)'; ctx.stroke(cog);
+    ctx.fillStyle = 'rgba(40,26,6,0.8)'; ctx.beginPath(); ctx.arc(cx, cy, R * 0.32, 0, Math.PI * 2); ctx.fill();
+    // the mainspring: an Archimedean coil opposite the cog
+    ctx.strokeStyle = 'rgba(60,40,10,0.75)'; ctx.lineWidth = 2; ctx.beginPath();
+    const sx = 256 - cx, sy = cy - 6;
+    for (let t = 0; t <= Math.PI * 6; t += 0.2) { const rr = 1.2 * t; const x = sx + Math.cos(t) * rr, y = sy + Math.sin(t) * rr; t ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+    ctx.stroke(); ctx.strokeStyle = 'rgba(255,230,160,0.6)'; ctx.lineWidth = 0.8; ctx.stroke();
+    ctx.restore();
+  },
+};
+
+/** The Ink Vaults: vellum grain, ink pooled low and wicking up, and a red wax seal set on the piece with a line of script. */
+const INK: FloorStyle = {
+  accent: ['#fff4e0', '#e05050', '#a82828', '#4a0e0e', '#1a0404'],
+  finish(ctx, rnd) {
+    speckle(ctx, 30, 30, 196, 200, 160, Math.floor(rnd() * 1e6), ['#f4ead0', '#c8b890', '#8a7a58'], [0.6, 1.8]);
+    // the ink wash: pooled at the foot, feathering upward
+    ctx.fillStyle = lin(ctx, 0, 130, 0, 236, [[0, 'rgba(20,20,48,0)'], [0.6, 'rgba(20,20,48,0.28)'], [1, 'rgba(10,10,30,0.55)']]);
+    ctx.fillRect(0, 0, 256, 256);
+    for (let i = 0; i < 4; i++) glow(ctx, 60 + rnd() * 136, 190 + rnd() * 30, 12 + rnd() * 10, 'rgba(18,18,50,0.45)');
+  },
+  ornament(ctx, rnd, _r, tier) {
+    ctx.save(); ctx.lineCap = 'round';
+    // a line of script, too small to read, where a clerk wrote on it
+    ctx.strokeStyle = 'rgba(24,20,50,0.75)'; ctx.lineWidth = 1.4;
+    const y0 = 150 + (rnd() - 0.5) * 16;
+    for (let row = 0; row < 1 + Math.floor(tier / 4); row++) {
+      ctx.beginPath(); let x = 70;
+      ctx.moveTo(x, y0 + row * 9);
+      while (x < 176) { const w = 4 + rnd() * 6; ctx.quadraticCurveTo(x + w / 2, y0 + row * 9 - 3 - rnd() * 3, x + w, y0 + row * 9); x += w + (rnd() < 0.25 ? 5 : 0); if (rnd() < 0.25) ctx.moveTo(x, y0 + row * 9); }
+      ctx.stroke();
+    }
+    // the seal: a wax blob, its drips, and the impression of a device
+    const side = rnd() > 0.5 ? 1 : -1, sx = 128 + side * (52 + rnd() * 10), sy = 204 - tier, sr = 7 + tier * 0.5; // a small seal at the foot, off to one side
+    const blob = new Path2D();
+    for (let i = 0; i <= 14; i++) { const a = (i / 14) * Math.PI * 2, rr = sr * (0.9 + rnd() * 0.2); i ? blob.lineTo(sx + Math.cos(a) * rr, sy + Math.sin(a) * rr) : blob.moveTo(sx + Math.cos(a) * rr, sy + Math.sin(a) * rr); }
+    blob.closePath();
+    ctx.fillStyle = rad(ctx, sx - sr * 0.3, sy - sr * 0.3, 1, sr * 1.2, [[0, '#ff8a7a'], [0.5, '#c02828'], [1, '#5a0808']]); ctx.fill(blob);
+    ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(40,4,4,0.9)'; ctx.stroke(blob);
+    ctx.strokeStyle = 'rgba(70,6,6,0.9)'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(sx, sy, sr * 0.55, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = 'rgba(70,6,6,0.9)'; ctx.fill(star(sx, sy, 5, sr * 0.14, sr * 0.36));
+    ctx.fillStyle = 'rgba(255,200,190,0.7)'; ctx.beginPath(); ctx.ellipse(sx - sr * 0.4, sy - sr * 0.45, sr * 0.25, sr * 0.12, -0.5, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  },
+};
+
+/**
+ * The Hollow Core: un-things (ROOMS.md). The relic is drawn as its own negative space: the silhouette is emptied to a
+ * void with a little starlight in it, and only its inner edge is left, as a thin pale rim. A ghost of its detail
+ * shows at the lowest alpha, so a tier still reads by what it once had.
+ */
+/** The Hollow Core finish leaves its rim here for the ornament pass that follows it (same relic, same paint). */
+let hollowEdge: HTMLCanvasElement | null = null;
+const HOLLOW: FloorStyle = {
+  accent: ['#f0f0ff', '#b8b8ff', '#7070c0', '#2a2a50', '#0a0a18'],
+  finish(ctx, rnd) {
+    const [ghost, g] = makeCanvas(256, 256);
+    g.drawImage(ctx.canvas, 0, 0);
+    // the inner edge: the silhouette less itself eroded by 3 px (drawn shifted, kept only where all four agree)
+    const [er, e] = makeCanvas(256, 256);
+    e.drawImage(ghost, 0, 0);
+    e.globalCompositeOperation = 'destination-in';
+    for (const [dx, dy] of [[3, 0], [-3, 0], [0, 3], [0, -3]]) e.drawImage(ghost, dx, dy);
+    const [ring, rg] = makeCanvas(256, 256);
+    rg.drawImage(ghost, 0, 0);
+    rg.globalCompositeOperation = 'destination-out'; rg.drawImage(er, 0, 0);
+    rg.globalCompositeOperation = 'source-in'; rg.fillStyle = '#d8d8ff'; rg.fillRect(0, 0, 256, 256);
+    // empty it
+    ctx.fillStyle = rad(ctx, 128, 128, 4, 150, [[0, '#15152c'], [1, '#040410']]);
+    ctx.fillRect(0, 0, 256, 256);
+    speckle(ctx, 20, 20, 216, 216, 70, Math.floor(rnd() * 1e6), ['#ffffff', '#b8b8ff'], [0.6, 1.6]);
+    ctx.globalAlpha = 0.12; ctx.drawImage(ghost, 0, 0); ctx.globalAlpha = 1;
+    ctx.drawImage(ring, 0, 0);
+    hollowEdge = ring;
+  },
+  ornament(ctx) {
+    // the rim glows a little outward, as an absence does against a lit room
+    if (!hollowEdge) return;
+    ctx.save(); ctx.globalCompositeOperation = 'source-over'; ctx.shadowColor = '#9a9aff'; ctx.shadowBlur = 8; ctx.globalAlpha = 0.6; ctx.drawImage(hollowEdge, 0, 0); ctx.restore();
+    hollowEdge = null;
+  },
+};
+
 const PLAIN: FloorStyle = { accent: ['#ffffff', '#cfe8ff', '#8fb8e0', '#3a5a80', '#101a28'], finish() {}, ornament() {} };
 
-const FLOOR_STYLE: Record<number, FloorStyle> = { 1: DROWNED, 2: ORCHARD, 3: KILNS, 4: MIRROR, 5: CELLAR, 6: FROST };
+const FLOOR_STYLE: Record<number, FloorStyle> = { 1: DROWNED, 2: ORCHARD, 3: KILNS, 4: MIRROR, 5: CELLAR, 6: FROST, 7: CLOCKWORKS, 8: INK, 9: HOLLOW };
 
 // ---------------------------------------------------------------- hand-painted capstones
 
@@ -706,7 +808,94 @@ function debtInIce(ctx: Ctx) {
   sparkle(ctx, 190, 150, 9, '#e8fbff');
 }
 
-const CAPSTONE_PAINTERS: Record<number, (ctx: Ctx) => void> = { 39: tideLedger, 49: sapCrown, 59: kilnHeart, 69: secondKeeper, 79: taprootReliquary, 89: debtInIce };
+/** The Hour Unspent: a stopped watch in brass, its glass cracked across, one hour on the dial still lit. */
+function hourUnspent(ctx: Ctx) {
+  glow(ctx, 128, 136, 124, 'rgba(255,220,120,0.45)');
+  bar(ctx, (c) => { c.arc(128, 30, 14, 0, Math.PI * 2); }, 6, chrome(ctx, MAT_BRASS, 110, 14, 146, 46));
+  shade(ctx, rrPath(116, 40, 24, 22, 5), metal(ctx, MAT_BRASS, 116, 40, 140, 62), [116, 40, 24, 22], { lw: 4, drop: false });
+  const caseP = circle(128, 138, 86);
+  shade(ctx, caseP, chrome(ctx, MAT_BRASS, 42, 0, 214, 0), [42, 52, 172, 172], { lw: 5, hi: 0.4 });
+  const face = circle(128, 138, 70);
+  shade(ctx, face, rad(ctx, 116, 124, 4, 76, [[0, '#fffaf0'], [0.7, '#efe2c0'], [1, '#bfa870']]), [58, 68, 140, 140], { lw: 4, drop: false });
+  ctx.save(); ctx.clip(face);
+  // the one hour left: its twelfth of the dial lit
+  ctx.fillStyle = 'rgba(255,200,80,0.55)'; ctx.beginPath(); ctx.moveTo(128, 138); ctx.arc(128, 138, 70, -Math.PI / 2, -Math.PI / 2 + Math.PI / 6); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = '#3a2a10'; ctx.lineCap = 'round';
+  for (let i = 0; i < 12; i++) { const a = (i / 12) * Math.PI * 2 - Math.PI / 2; ctx.lineWidth = i % 3 ? 2 : 4; ctx.beginPath(); ctx.moveTo(128 + Math.cos(a) * 58, 138 + Math.sin(a) * 58); ctx.lineTo(128 + Math.cos(a) * (i % 3 ? 64 : 66), 138 + Math.sin(a) * (i % 3 ? 64 : 66)); ctx.stroke(); }
+  // the hands, stopped at the top of the unspent hour
+  ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(128, 138); ctx.lineTo(128, 88); ctx.stroke();
+  ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(128, 138); ctx.lineTo(158, 128); ctx.stroke();
+  ctx.fillStyle = '#3a2a10'; ctx.beginPath(); ctx.arc(128, 138, 6, 0, Math.PI * 2); ctx.fill();
+  // the glass, cracked from a strike at the rim
+  ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(186, 104); ctx.lineTo(160, 124); ctx.lineTo(150, 152); ctx.moveTo(160, 124); ctx.lineTo(132, 118); ctx.lineTo(108, 128); ctx.moveTo(186, 104); ctx.lineTo(170, 90); ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,0.18)'; ctx.save(); ctx.translate(128, 138); ctx.rotate(-0.7); ctx.fillRect(-80, -48, 160, 12); ctx.restore();
+  ctx.restore();
+  sparkle(ctx, 186, 104, 12, '#fff8d8');
+}
+
+/** The Name of the Vault: a tome in gold leaf, its true name rising off the page as letters of light, a wax seal on a ribbon. */
+function nameOfTheVault(ctx: Ctx) {
+  glow(ctx, 128, 110, 122, 'rgba(255,232,154,0.45)');
+  for (const s of [-1, 1]) {
+    const page = poly([[128, 150], [128 + s * 100, 136], [128 + s * 96, 214], [128, 228]]);
+    shade(ctx, page, lin(ctx, 128, 140, 128 + s * 96, 214, [[0, '#fbf2dc'], [1, '#d0bc8c']]), [s < 0 ? 28 : 128, 136, 100, 92], { lw: 5 });
+    ctx.save(); ctx.clip(page); ctx.fillStyle = 'rgba(30,24,50,0.55)';
+    for (let i = 0; i < 5; i++) { const y = 166 + i * 11; for (let k = 0; k < 5; k++) ctx.fillRect(128 + s * (14 + k * 15) - (s < 0 ? 11 : 0), y - k * 1.3, 11 - (k % 2) * 4, 2.2); }
+    ctx.restore();
+  }
+  bar(ctx, (c) => { c.moveTo(128, 150); c.lineTo(128, 228); }, 5, '#6a4a18');
+  // the name, in gold, lifting off the page as it is read
+  const glyphs = [[128, 118, 22], [104, 90, 15], [152, 86, 16], [124, 60, 12], [146, 44, 9], [108, 40, 8]];
+  for (const [x, y, r] of glyphs) {
+    glow(ctx, x, y, r * 1.8, 'rgba(255,220,120,0.6)');
+    ctx.save(); ctx.translate(x, y);
+    // a letter of a script nobody taught you: each glyph its own strokes
+    const g = new Path2D(), k = glyphs.findIndex((q) => q[0] === x && q[1] === y);
+    const strokes = [[[-0.5, 0.6], [0, -0.7], [0.5, 0.6]], [[-0.4, -0.6], [0.4, -0.6], [-0.4, 0.6], [0.4, 0.6]], [[0, -0.7], [0, 0.7], [0.5, 0.2]], [[-0.5, 0], [0.5, -0.6], [0.2, 0.7]], [[-0.4, -0.5], [0.4, 0], [-0.4, 0.5]], [[0.4, -0.6], [-0.4, -0.1], [0.4, 0.6]]][k % 6];
+    strokes.forEach(([px, py], i) => (i ? g.lineTo(px * r, py * r) : g.moveTo(px * r, py * r)));
+    g.moveTo(-r * 0.3, r * 0.15); g.lineTo(r * 0.1, r * 0.15);
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(2, r * 0.22); ctx.strokeStyle = '#7a4a08'; ctx.stroke(g);
+    ctx.lineWidth = Math.max(1, r * 0.12); ctx.strokeStyle = '#fff2b0'; ctx.stroke(g);
+    ctx.restore();
+  }
+  // the ribbon and its seal
+  bar(ctx, (c) => { c.moveTo(160, 212); c.quadraticCurveTo(174, 232, 196, 238); }, 7, '#a82020');
+  const seal = circle(196, 236, 14);
+  shade(ctx, seal, rad(ctx, 192, 232, 1, 15, [[0, '#ff8a7a'], [0.5, '#c02828'], [1, '#5a0808']]), [182, 222, 28, 28], { lw: 3, drop: false });
+  ctx.save(); ctx.fillStyle = 'rgba(70,6,6,0.9)'; ctx.fill(star(196, 236, 5, 3, 7)); ctx.restore();
+  sparkle(ctx, 146, 44, 12, '#fff8d0');
+}
+
+/** The Empty Setting: a mount of vault-iron, claws and all, around a socket in the shape of a relic, and nothing in it. */
+function emptySetting(ctx: Ctx) {
+  glow(ctx, 128, 128, 118, 'rgba(184,184,255,0.35)');
+  // the mount: an iron plate with four claws reaching in
+  const plate = circle(128, 128, 92);
+  shade(ctx, plate, rad(ctx, 110, 104, 10, 100, [[0, '#8a8aa0'], [0.5, '#4a4a60'], [1, '#1a1a28']]), [36, 36, 184, 184], { lw: 5, hi: 0.3 });
+  ctx.save(); ctx.clip(plate); ctx.strokeStyle = 'rgba(210,210,255,0.25)'; ctx.lineWidth = 2;
+  for (const r of [80, 72]) { ctx.beginPath(); ctx.arc(128, 128, r, 0, Math.PI * 2); ctx.stroke(); }
+  speckle(ctx, 36, 36, 184, 184, 90, 1191, ['#b8b8d0', '#2a2a3a'], [0.8, 2]);
+  ctx.restore();
+  // the socket: a relic's shape, cut out of the plate, with the void behind it
+  const socket = new Path2D();
+  socket.moveTo(128, 186); socket.bezierCurveTo(72, 150, 70, 104, 92, 86); socket.bezierCurveTo(110, 72, 124, 82, 128, 96);
+  socket.bezierCurveTo(132, 82, 146, 72, 164, 86); socket.bezierCurveTo(186, 104, 184, 150, 128, 186); socket.closePath();
+  ctx.save(); ctx.fillStyle = rad(ctx, 128, 128, 4, 70, [[0, '#1c1c3a'], [1, '#02020a']]); ctx.fill(socket); ctx.clip(socket);
+  speckle(ctx, 70, 72, 116, 116, 40, 1192, ['#ffffff', '#b8b8ff'], [0.6, 1.6]);
+  ctx.restore();
+  ctx.save(); ctx.shadowColor = '#b8b8ff'; ctx.shadowBlur = 12; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(216,216,255,0.95)'; ctx.stroke(socket); ctx.restore();
+  outline(ctx, socket, 3);
+  for (const a of [-0.75, -0.25, 0.25, 0.75].map((k) => k * Math.PI + Math.PI / 2)) {
+    const x0 = 128 + Math.cos(a) * 96, y0 = 128 + Math.sin(a) * 96, x1 = 128 + Math.cos(a) * 58, y1 = 128 + Math.sin(a) * 58;
+    bar(ctx, (c) => { c.moveTo(x0, y0); c.quadraticCurveTo((x0 + x1) / 2 + Math.cos(a + 1.2) * 10, (y0 + y1) / 2 + Math.sin(a + 1.2) * 10, x1, y1); }, 8, metal(ctx, MAT_IRON, x0, y0, x1, y1));
+  }
+}
+
+const MAT_BRASS = ['#fff6d0', '#ffd878', '#d8a838', '#7a5410', '#2a1c04'];
+const MAT_IRON = ['#b8b8d0', '#7a7a92', '#4a4a60', '#22222e', '#0c0c14'];
+
+const CAPSTONE_PAINTERS: Record<number, (ctx: Ctx) => void> = { 39: tideLedger, 49: sapCrown, 59: kilnHeart, 69: secondKeeper, 79: taprootReliquary, 89: debtInIce, 99: hourUnspent, 109: nameOfTheVault, 119: emptySetting };
 
 // ---------------------------------------------------------------- routing
 
@@ -725,6 +914,8 @@ export function floorPainterFor(id: number): FloorPainter | null {
 /** Every form has a painter (the unit test holds this against data/floors.ts's Form type). */
 export const PAINTED_FORMS: readonly Form[] = FORMS.filter((f) => !!FORM_PAINTERS[f]);
 export const CAPSTONE_IDS: readonly number[] = Object.keys(CAPSTONE_PAINTERS).map(Number);
+/** The floors (by index) with their own finish and ornament; the unit test holds that every floor 2-10 has one. */
+export const STYLED_FLOORS: readonly number[] = Object.keys(FLOOR_STYLE).map(Number);
 
 /** Paint floor relic `id` into a 256 canvas context: capstone, or form + finish + ornament. Throws for a non-floor id. */
 export function paintFloorRelic(ctx: Ctx, id: number) {

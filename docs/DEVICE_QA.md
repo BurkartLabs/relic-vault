@@ -85,6 +85,37 @@ shot: every difference was within main's own difference from itself on a second 
 and the lazily painted screens (shop, wheel, album) were looked at. The unit tests and the e2e suite, with its
 boot-console-errors check, pass.
 
+## All ten floors painted (AB#444)
+
+With the last floors' art in (slice 3), every relic in the game is real, composed art (art/FloorArt.ts) for the first
+time. Same method as above (production preview, CPU throttled 4x, WebGL on the GPU, 412x915), 2026-09-30, on the
+same machine. The first two rows are `apps/web/tools/perf.mjs` (3 runs, a fresh player on floor 1); the others are
+`apps/web/tools/perf-deep.mjs` (3 runs): the worst case, a player on the Hollow Core, whose boot paints every floor's
+relics (`bootChains` paints each floor down to the player's own), then every relic in the game asked for once, as a
+session that opened every album page would.
+
+| | Measured | Budget |
+|---|---|---|
+| Fresh player: cold, vault ready | 3.5 s | 5 s: met |
+| Fresh player: warm, vault ready | 3.4 s | 3 s: **not met** (by 0.4 s) |
+| Frame rate, 36 relics + ~194 live particles | 60.1 fps, p95 frame 16.7 ms | met |
+| Texture memory, fresh player (GPU) | 81.3 MB, 112 textures | met |
+| Hollow Core player: warm, vault ready (median) | 3.1 s (2.7 to 3.6 s) | 3 s: **not met** (by 0.1 s) |
+| Hollow Core player: painting every floor's relics at boot (`rv:bake:Waking the relics`) | 0.59 s (a floor-1 player's boot: 0.53 s) | |
+| Every relic painted: texture memory (GPU) | 82.1 MB, 108 textures | 256 MB: met |
+| Every relic painted: the 256 px masters kept in the WebView's heap | 26.3 MB (105 canvases) | |
+
+Why painting everything costs so little memory: the `relic256` and `relic96` atlases are allocated for every relic at
+boot (AB#4737) and only filled in as relics are painted, so a fully painted game has the same GPU textures as a new one.
+The board's sheen atlas holds one floor's relics at a time (`rebakeBoardFor`). The cost of the real art is the CPU
+masters (256 KB each) and the paint time, and a floor's nine relics paint in 4-6 ms unthrottled (AB#444 slice 1).
+
+Read against the table above: the cold and warm starts here are about half those recorded for AB#4737 on the same
+machine and method (6.8 s and 6.3 s then). The boot has not changed that much since, so read that as run-to-run and
+machine-state variance, not an improvement; the comparison that holds is within this section, where the Hollow Core
+player's boot is no slower than a floor-1 player's. A real phone is still the measurement that counts (the release
+checklist below).
+
 ## The Play store on a device (AB#4725): TODO
 
 Not yet run: it needs an Android device or emulator with Google Play, RevenueCat's sandbox SDK key and a Play licence
