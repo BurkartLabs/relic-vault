@@ -65,11 +65,11 @@ session, and 81 is not. The grammar (form painters, material finishes, the ornam
 
 ### Slice 1: the form-and-material grammar, and floors 2-4 (lane: relic-vault/all)
 
-- [ ] `art/FloorArt.ts`: one painter per `Form` (`shard, vessel, effigy, mask, creature, instrument, seal, lantern, crown, book, frame, core`), each parameterised by tier (size, detail count) so a tier-2 vessel and a tier-8 vessel read as the same family at different rank
-- [ ] a material finish per floor as a post-pass over the silhouette (palette from `floors.ts` colours plus finish: salt/coral/pearl grain, glass/amber translucency, clay/soot/ember glow) and a per-floor ornament pass (the Drowned Wing's barnacle line, the Orchard's graft seam, the Kilns' crackle)
-- [ ] `paintRelic` routes floor ids to `FloorArt`; the placeholder branch is deleted; a unit test asserts every id 30-119 resolves to a form painter or a capstone painter
-- [ ] hand-painted capstones: the Tide Ledger, the Sap Crown, the Kiln Heart
-- [ ] `art.html` contact sheet grouped by floor at 96 px; screenshots of the Drowned Wing board at both sizes attached
+- [x] `art/FloorArt.ts`: one painter per `Form` (`shard, vessel, effigy, mask, creature, instrument, seal, lantern, crown, book, frame, core`), each parameterised by tier (size, detail count) so a tier-2 vessel and a tier-8 vessel read as the same family at different rank
+- [x] a material finish per floor as a post-pass over the silhouette (palette from `floors.ts` colours plus finish: salt/coral/pearl grain, glass/amber translucency, clay/soot/ember glow) and a per-floor ornament pass (the Drowned Wing's barnacle line, the Orchard's graft seam, the Kilns' crackle)
+- [x] `paintRelic` routes floor ids to `FloorArt`; the placeholder branch is deleted; a unit test asserts every id 30-119 resolves to a form painter or a capstone painter
+- [x] hand-painted capstones: the Tide Ledger, the Sap Crown, the Kiln Heart
+- [x] `art.html` contact sheet grouped by floor at 96 px; screenshots of the Drowned Wing board at both sizes attached
 
 ### Slice 2: floors 5-7 (lane: relic-vault/all)
 
