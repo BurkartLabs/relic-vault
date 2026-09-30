@@ -12,6 +12,7 @@ import { activeChain, currentFloor, capstoneOf, isCleared } from '../systems/Flo
 import { bubble, currentMain, resetFloorStats, refillErrands } from '../systems/Chronicle';
 import { OfferRequest } from '../systems/OfferDirector';
 import { CELL, DAIS_PAD } from '../art/VaultBackground';
+import { keeperSpot } from './keeperSpot'; // Bug #4892
 import { SHEEN_FRAMES, BOARD_FRAME, rebakeBoardFor } from '../art/RelicFactory';
 import { Fx } from '../art/ParticleCatalog';
 import { Hud } from '../ui/Hud';
@@ -519,8 +520,13 @@ export class VaultScene extends Phaser.Scene {
    * Chronicle. He is the advisor the game always had a portrait for and never gave anything to say.
    */
   private buildKeeper() {
-    const x = this.ox + 118, y = this.my + FORGE_Y - 250;
-    const c = this.add.container(x, y).setDepth(22);
+    // Bug #4892: the fixed spot (ox + 118, my + FORGE_Y - 250) sat inside the bottom-left socket on every screen
+    const spot = keeperSpot({
+      boardLeft: this.ox + 90, boardTop: this.my + BOARD_TOP, cell: CELL, rows: BOARD_SIZE / BOARD_COLS, daisPad: DAIS_PAD,
+      hudBottom: this.hud.getBounds().bottom, ordersTop: this.orders.getBounds().top,
+    });
+    const c = this.add.container(spot.x, spot.y).setDepth(22).setScale(spot.scale);
+    (c as any).baseScale = spot.scale;
     const glow = this.add.image(0, 0, 'relicGlow').setDisplaySize(230, 230).setTint(currentFloor(ctx.state).color)
       .setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.28);
     const face = this.add.image(0, 0, 'keeper').setDisplaySize(150, 150);
@@ -1509,7 +1515,8 @@ export class VaultScene extends Phaser.Scene {
     P.seal.setVisible(state !== 'none').setTexture(ready ? 'seal_green' : 'seal_gold');
     P.tick.setVisible(ready);
     if (ready && !this.bubbleWasReady) {
-      this.tweens.add({ targets: this.keeperBtn, scale: { from: 1, to: 1.14 }, duration: 260, yoyo: true, ease: 'Back.Out' });
+      const base = (this.keeperBtn as any).baseScale ?? 1; // Bug #4892: a compact Keeper pulses from its own size
+      this.tweens.add({ targets: this.keeperBtn, scale: { from: base, to: base * 1.14 }, duration: 260, yoyo: true, ease: 'Back.Out' });
       ctx.sfx.play('tick');
     }
     this.bubbleWasReady = ready;

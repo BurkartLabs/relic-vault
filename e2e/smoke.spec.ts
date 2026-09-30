@@ -147,6 +147,20 @@ test('a popup opening mid-drag puts the relic home, not frozen in the air (Bug #
   expect((await state(page)).board).toEqual(before);
 });
 
+test('the Keeper covers no socket: a relic in the bottom-left one can be seen and tapped (Bug #4892)', async ({ page }) => {
+  await boot(page);
+  const r = await page.evaluate(() => {
+    const v = (window as any).__vault, k = v.keeperBtn;
+    const w = 170 * k.scale, h = 210 * k.scale; // its hit box (keeperSpot.ts KEEPER_BOX)
+    const cell = v.cellPos(30); // the bottom-left socket, 150 wide
+    const dx = Math.min(k.x + w / 2, cell.x + 75) - Math.max(k.x - w / 2, cell.x - 75);
+    const dy = Math.min(k.y + h / 2, cell.y + 75) - Math.max(k.y - h / 2, cell.y - 75);
+    return { overlap: dx > 0 && dy > 0 ? Math.min(dx, dy) : 0, top: v.input.hitTestPointer({ x: cell.x, y: cell.y, worldX: cell.x, worldY: cell.y, camera: v.cameras.main } as any).includes(k) };
+  });
+  expect(r.overlap).toBe(0); // on main it covered 113 px of the 150 at this size
+  expect(r.top).toBe(false); // a tap on the socket's middle does not reach the Keeper
+});
+
 test('a full dais says so and fades, and the advice it gives is true', async ({ page }) => {
   // Board, #441: the full-screen Vault Jammed sheet is gone. It offered to sell a way out of a state the player
   // can almost always clear themselves, which is why this test now checks the opposite: nothing opens, the
