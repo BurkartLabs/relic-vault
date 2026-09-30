@@ -5,24 +5,45 @@
 <body>
 <canvas id="c"></canvas>
 <script type="module">
-  // Dev-only art sheet: every relic (by chain) at 256px and at 96px, plus generators and patrons.
+  // Dev-only art sheet: every relic (by chain) at 256px and at 96px, plus generators and patrons; then every floor's
+  // nine relics at 96px, one row per floor (AB#444: "a stranger can name a relic's floor from its material and its
+  // tier from its size and detail without a caption"). ?floors shows only the floor rows.
   import { paintRelic } from './src/game/art/RelicFactory.ts';
   import { paintCryptBrazier, paintStarWell, paintPatron } from './src/game/art/ChainArt.ts';
   import { ITEM_IDS, PATRONS } from './src/game/data/items.ts';
+  import { FLOORS } from './src/game/data/floors.ts';
+  const onlyFloors = new URLSearchParams(location.search).has('floors');
   const rows = [[1,2,3,4,5,6,7,8,9],[11,12,13,14,15,16,17],[21,22,23,24,25,26,27]];
+  const TOP = onlyFloors ? 0 : 256 * 3 + 130 + 300, ROW = 118, LABEL = 250;
   const c = document.getElementById('c');
-  c.width = 256 * 9; c.height = 256 * 3 + 130 + 300;
+  c.width = 256 * 9; c.height = TOP + 40 + FLOORS.length * ROW;
   const ctx = c.getContext('2d');
   ctx.fillStyle = '#1B1424'; ctx.fillRect(0, 0, c.width, c.height);
-  rows.forEach((r, y) => r.forEach((id, x) => {
-    const off = document.createElement('canvas'); off.width = off.height = 256;
-    paintRelic(off.getContext('2d'), id, true);
-    ctx.drawImage(off, x * 256, y * 256);
-    ctx.drawImage(off, 10 + ITEM_IDS.indexOf(id) * 98, 256 * 3 + 20, 96, 96);
-  }));
-  const g = (fn, x) => { const o = document.createElement('canvas'); o.width = o.height = 300; fn(o.getContext('2d'), 300); ctx.drawImage(o, x, 256 * 3 + 130, 280, 280); };
-  g(paintCryptBrazier, 20); g(paintStarWell, 320);
-  PATRONS.forEach((p, i) => { const o = document.createElement('canvas'); o.width = o.height = 160; paintPatron(o.getContext('2d'), 160, p.hue); ctx.drawImage(o, 640 + i * 180, 256 * 3 + 170, 160, 160); });
+  const paint = (id) => { const off = document.createElement('canvas'); off.width = off.height = 256; paintRelic(off.getContext('2d'), id, true); return off; };
+  if (!onlyFloors) {
+    rows.forEach((r, y) => r.forEach((id, x) => {
+      const off = paint(id);
+      ctx.drawImage(off, x * 256, y * 256);
+      ctx.drawImage(off, 10 + ITEM_IDS.indexOf(id) * 98, 256 * 3 + 20, 96, 96);
+    }));
+    const g = (fn, x) => { const o = document.createElement('canvas'); o.width = o.height = 300; fn(o.getContext('2d'), 300); ctx.drawImage(o, x, 256 * 3 + 130, 280, 280); };
+    g(paintCryptBrazier, 20); g(paintStarWell, 320);
+    PATRONS.forEach((p, i) => { const o = document.createElement('canvas'); o.width = o.height = 160; paintPatron(o.getContext('2d'), 160, p.hue); ctx.drawImage(o, 640 + i * 180, 256 * 3 + 170, 160, 160); });
+  }
+  // the floors, tier 1 to 9 left to right, at the 96px the game's icons use
+  ctx.font = '600 24px sans-serif'; ctx.fillStyle = '#FFE9A3'; ctx.textBaseline = 'middle';
+  ctx.fillText('The ten floors, tiers 1-9 at 96 px', 20, TOP + 20);
+  FLOORS.forEach((f, i) => {
+    const y = TOP + 40 + i * ROW;
+    ctx.fillStyle = '#' + f.color.toString(16).padStart(6, '0'); ctx.fillRect(0, y + 8, 8, ROW - 16);
+    ctx.fillStyle = '#FFE9A3'; ctx.font = '600 22px sans-serif'; ctx.fillText(`${i + 1}. ${f.name.replace(/^The /, '')}`, 20, y + ROW / 2 - 12);
+    ctx.fillStyle = '#b9a9c6'; ctx.font = '16px sans-serif'; ctx.fillText(f.gen, 20, y + ROW / 2 + 16);
+    for (let t = 1; t <= 9; t++) {
+      const id = f.chain === 0 ? t : f.chain * 10 + t;
+      ctx.fillStyle = '#231a2e'; ctx.fillRect(LABEL + (t - 1) * 110, y + 6, 104, 104);
+      ctx.drawImage(paint(id), LABEL + (t - 1) * 110 + 4, y + 10, 96, 96);
+    }
+  });
   window.__done = true;
 </script>
 </body>
