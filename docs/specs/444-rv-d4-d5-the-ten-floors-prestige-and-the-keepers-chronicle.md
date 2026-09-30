@@ -86,9 +86,9 @@ session, and 81 is not. The grammar (form painters, material finishes, the ornam
 
 ### Slice 4: the descent (lane: relic-vault/all)
 
-- [ ] `scenes/FloorTransition.ts`: a scene launched over the vault that owns the sequence (recorded relics lift and sink into the Reliquary, the vault darkens and drops, the new floor's colour and background rise, the generator row builds in), 2.5 to 3.5 s, with sfx
-- [ ] `onFloorChanged` restarts the vault *under* the transition; the transition ends only when the new scene reports ready, so the cut is never visible; `persistNow` before, exactly as today
-- [ ] skip after 1.2 s; `prefers-reduced-motion` variant (fade plus the floor name); the restore variant shorter and without the drop
+- [x] `scenes/FloorTransition.ts`: a scene launched over the vault that owns the sequence (recorded relics lift and sink into the Reliquary, the vault darkens and drops, the new floor's colour and background rise, the generator row builds in), 2.5 to 3.5 s, with sfx
+- [x] `onFloorChanged` restarts the vault *under* the transition; the transition ends only when the new scene reports ready, so the cut is never visible; `persistNow` before, exactly as today
+- [x] skip after 1.2 s; `prefers-reduced-motion` variant (fade plus the floor name); the restore variant shorter and without the drop
 - [ ] e2e: ten descend/restore cycles leave state as `floors.test.ts` predicts and the transition never blocks input past 4 s; a recording or three frames attached, and the fps on the DEVICE_QA phone recorded
 
 ### Slice 5: the chapter card (lane: relic-vault/all)
