@@ -65,6 +65,10 @@ every e2e run included, shows the Criers' Guild demo veil and contacts no ad net
   The manifest's app id comes from `RELIC_VAULT_ADMOB_APP_ID` (a Gradle property or the environment); a debug build
   without it gets Google's test app id, and a release build without the live one stops with a message. Set it to the
   `appId` in ads.ts when building the release.
+- **Release builds show real ads (Bug #4894):** `npm run android:bundle` builds the web app with `VITE_ADS_MODE=admob`
+  when the variable is unset, and stops if it is set to anything else. `npm run build` records the mode in
+  `android/version.properties` (`adsMode`), and a release build from anywhere, Android Studio included, stops when it
+  is not `admob`: a release with the demo veil shows players no real ad.
 - **Test ads:** `VITE_ADMOB_TESTING=1` requests test ads on the live units. Use it for every build a person taps
   through (QA, device checks): tapping a live ad on your own app is invalid traffic against the AdMob account.
 - **Consent:** the UMP form runs once the age gate is answered and before any ad is requested, and again from

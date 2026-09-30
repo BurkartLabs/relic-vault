@@ -34,6 +34,17 @@ export function storeTelemetryUrl(env = process.env) {
   return env.VITE_TELEMETRY_URL || STORE_TELEMETRY_URL;
 }
 
+/**
+ * Bug #4894: a release bundle is built for Play, so it shows real AdMob ads. VITE_ADS_MODE unset means admob here (a
+ * build command that forgot it gave the Board the demo veil on a phone); set to anything else it is a mistake worth a
+ * stop, not a silent demo release. Returns the mode to build with, or the problem.
+ */
+export function releaseAdsMode(env = process.env) {
+  const mode = env.VITE_ADS_MODE;
+  if (mode === undefined || mode === '' || mode === 'admob') return { mode: 'admob' };
+  return { problem: `VITE_ADS_MODE=${mode}: a release bundle serves real ads, so it is admob (unset it, or set admob). A demo build is npm run android:apk.` };
+}
+
 /** What stops any Android build: no JDK, or no Android SDK (by variable or android/local.properties). */
 export function toolchainProblems(env = process.env, { javaOnPath = hasJava(), localProperties = readLocalProperties() } = {}) {
   const problems = [];
@@ -80,10 +91,12 @@ function gradle(task) {
 const ACTIONS = {
   sync,
   bundle() {
-    const problems = [...signingProblems(), ...toolchainProblems()];
+    const ads = releaseAdsMode();
+    const problems = [...signingProblems(), ...toolchainProblems(), ...(ads.problem ? [ads.problem] : [])];
     if (problems.length) stop(problems);
     process.env.VITE_TELEMETRY_URL = storeTelemetryUrl();
-    console.log(`android: telemetry to ${process.env.VITE_TELEMETRY_URL}`);
+    process.env.VITE_ADS_MODE = ads.mode; // Bug #4894: the release shows real ads
+    console.log(`android: telemetry to ${process.env.VITE_TELEMETRY_URL}; ads: AdMob${process.env.VITE_ADMOB_TESTING === '1' ? ' (TEST ads: VITE_ADMOB_TESTING=1)' : ''}`);
     sync();
     gradle('bundleRelease');
     const out = resolve(ANDROID, 'app/build/outputs/bundle/release/app-release.aab');

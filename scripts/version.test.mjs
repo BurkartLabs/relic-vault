@@ -34,6 +34,12 @@ describe('versionCode (AB#4732)', () => {
     expect(propertiesText('1.2.3')).toMatch(/^versionName=1\.2\.3$/m);
     expect(propertiesText('1.2.3')).toMatch(/^versionCode=10203$/m);
   });
+
+  it('records the ads mode the web app is built with, which a release must have as admob (Bug #4894)', () => {
+    expect(propertiesText('1.2.3', { VITE_ADS_MODE: 'admob' })).toMatch(/^adsMode=admob$/m);
+    expect(propertiesText('1.2.3', {})).toMatch(/^adsMode=demo$/m); // the default: the demo veil, as buildMode.ts reads it
+    expect(propertiesText('1.2.3', { VITE_ADS_MODE: 'AdMob' })).toMatch(/^adsMode=demo$/m); // buildMode.ts is exact too
+  });
 });
 
 describe('the changelog on release (AB#4732)', () => {
