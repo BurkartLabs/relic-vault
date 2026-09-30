@@ -223,8 +223,19 @@ test('telemetry reaches a real sink: app_open and verb_first arrive at the colle
   await page.evaluate(() => { (window as any).__rv.state.flags.tut = 3; });
   const sid = await page.evaluate(() => (window as any).__rv.telemetry.sessionId);
   await tapForge(page);
-  const pair = await page.evaluate(() => (window as any).__vault.pair);
-  await dragCells(page, pair[0], pair[1]);
+  // Bug AB#4789: one forge does not always leave two of a kind to merge (it depends on what the board already holds), so
+  // __vault.pair was sometimes null here, about 1 in 5 full runs. Seed a known pair, as the board-full test does with
+  // debugFill: the merge below is still the player's first, dragged by hand, which is what verb_first counts.
+  await page.evaluate(() => {
+    const v = (window as any).__vault, s = (window as any).__rv.state;
+    v.debugClear();
+    s.board[0] = 1;
+    s.board[1] = 1;
+    v.syncBoard();
+  });
+  const pair = await page.evaluate(() => (window as any).__vault.pair as [number, number] | null);
+  expect(pair, 'a seeded pair to merge').not.toBeNull();
+  await dragCells(page, pair![0], pair![1]);
   await page.waitForTimeout(1200);
   const lines = await (await request.get('http://127.0.0.1:8788/stats')).json();
   expect(lines.counts.app_open).toBeGreaterThan(0);
