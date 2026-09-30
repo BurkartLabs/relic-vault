@@ -4,7 +4,7 @@ import { parseAmStart, devtoolsSocket, freeEmulatorPort } from './android-qa.mjs
 // AB#4730: the parts of the device-QA script that read adb's output. The run itself needs a device; these do not.
 describe('android-qa reads adb', () => {
   it('reads the launch times out of am start -W', () => {
-    const out = 'Starting: Intent { cmp=com.orchestrata.relicvault/.MainActivity }\nStatus: ok\nLaunchState: COLD\nActivity: com.orchestrata.relicvault/.MainActivity\nTotalTime: 2232\nWaitTime: 2260\nComplete\n';
+    const out = 'Starting: Intent { cmp=com.madgod_games.relic_vault/.MainActivity }\nStatus: ok\nLaunchState: COLD\nActivity: com.madgod_games.relic_vault/.MainActivity\nTotalTime: 2232\nWaitTime: 2260\nComplete\n';
     expect(parseAmStart(out)).toEqual({ totalTime: 2232, waitTime: 2260, status: 'ok' });
     expect(parseAmStart('Error: Activity not started')).toEqual({ totalTime: null, waitTime: null, status: null });
   });

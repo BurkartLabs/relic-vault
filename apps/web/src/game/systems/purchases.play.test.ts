@@ -254,7 +254,7 @@ describe('Play store adapter (AB#4725)', () => {
   it('opens Play’s subscription centre for Vault VIP', async () => {
     const p = new PurchaseService('play', new FakeStore());
     await p.start(createState(), rng());
-    expect(await p.manageUrl()).toBe('https://play.google.com/store/account/subscriptions?sku=rv_vip&package=com.orchestrata.relicvault');
+    expect(await p.manageUrl()).toBe('https://play.google.com/store/account/subscriptions?sku=rv_vip&package=com.madgod_games.relic_vault');
   });
 
   it('demo mode is unchanged: catalog prices in USD, and every purchase succeeds with a demo receipt', async () => {

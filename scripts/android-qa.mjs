@@ -17,7 +17,7 @@ import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-export const PKG = 'com.orchestrata.relicvault';
+export const PKG = 'com.madgod_games.relic_vault';
 const ACTIVITY = `${PKG}/.MainActivity`;
 const APK = resolve(ROOT, 'android/app/build/outputs/apk/debug/app-debug.apk');
 const DEFAULT_AVD = 'rvqa_pixel8_36';

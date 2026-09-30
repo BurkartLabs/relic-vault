@@ -23,7 +23,7 @@ export const PLAY_PRODUCT: Record<SkuId, string> = {
 };
 
 /** The app's Play package name (capacitor.config.ts appId), for the link to Play's subscription centre. */
-export const PLAY_PACKAGE = 'com.orchestrata.relicvault';
+export const PLAY_PACKAGE = 'com.madgod_games.relic_vault';
 
 /** The SKUs that are subscriptions in Play; every other product is a one-time product. */
 export const SUBSCRIPTION_SKUS: readonly SkuId[] = ['vip'];

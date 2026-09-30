@@ -1,4 +1,4 @@
-package com.orchestrata.relicvault;
+package com.madgod_games.relic_vault;
 
 import android.content.ActivityNotFoundException;
 import android.content.Context;
