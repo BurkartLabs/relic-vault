@@ -1,4 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
+import { passChapterCard } from './chapter'; // AB#444 slice 5
 
 /**
  * RV-M8 (AB#383): one pushed offer per session. In the production build: the first merge brings the Keeper's Welcome,
@@ -12,7 +13,7 @@ async function boot(page: Page, errors: string[]) {
   const gate = page.locator('#age-gate button[data-a="adult"]');
   if (await gate.count().catch(() => 0)) await gate.click();
   else await page.waitForTimeout(500).then(async () => { if (await gate.count()) await gate.click(); });
-  await page.waitForFunction(() => (window as any).__vault?.hud, null, { timeout: 30_000 });
+  await page.waitForFunction(() => (window as any).__vault?.hud, null, { timeout: 30_000 }); await passChapterCard(page);
 }
 const modalKind = (page: Page) => page.evaluate(() => (window as any).__vault.modal?.kind ?? null);
 const offersShown = (page: Page) => page.evaluate(() => (window as any).__rv.telemetry.buf.filter((e: any) => e.event === 'offer_shown'));
@@ -63,7 +64,7 @@ test('one pushed offer per session: the Welcome, nothing more that boot, the com
   await page.evaluate(() => (window as any).__rv.persistNow());
   await page.waitForTimeout(400);
   await page.reload();
-  await page.waitForFunction(() => (window as any).__vault?.hud, null, { timeout: 30_000 });
+  await page.waitForFunction(() => (window as any).__vault?.hud, null, { timeout: 30_000 }); await passChapterCard(page);
   await clearScreen(page);
   await mergeTimes(page, 1);
   await page.waitForFunction(() => (window as any).__vault.modal?.kind === 'OfferSheet', null, { timeout: 10_000 });

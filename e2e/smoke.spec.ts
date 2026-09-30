@@ -1,4 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
+import { passChapterCard } from './chapter'; // AB#444 slice 5
 
 /**
  * Default-FAIL smoke checklist (Orchestrata CADENCE: QA smoke on every preview).
@@ -12,7 +13,7 @@ async function boot(page: Page, age: 'adult' | 'minor' = 'adult', errors: string
   const gate = page.locator(`#age-gate button[data-a="${age}"]`);
   if (await gate.count().catch(() => 0)) await gate.click();
   else await page.waitForTimeout(500).then(async () => { if (await gate.count()) await gate.click(); });
-  await page.waitForFunction(() => (window as any).__vault?.hud, null, { timeout: 30_000 });
+  await page.waitForFunction(() => (window as any).__vault?.hud, null, { timeout: 30_000 }); await passChapterCard(page);
   // let the onboarding camera punch settle
   await page.waitForFunction(() => { const c = (window as any).__vault.cameras.main; return Math.abs(c.zoom - 1) < 0.001 && Math.abs(c.scrollX) < 1; }, null, { timeout: 8000 });
   return errors;
@@ -77,7 +78,7 @@ test('first verb by touch: forge + drag-merge, verb_first, welcome pack exactly 
   await page.evaluate(() => (window as any).__rv.persistNow());
   await page.waitForTimeout(400);
   await page.reload();
-  await page.waitForFunction(() => (window as any).__vault?.hud, null, { timeout: 30_000 });
+  await page.waitForFunction(() => (window as any).__vault?.hud, null, { timeout: 30_000 }); await passChapterCard(page);
   await page.evaluate(() => { const s = (window as any).__rv.state; s.board[0] = 1; s.board[1] = 1; (window as any).__vault.syncBoard(); });
   await page.waitForTimeout(300);
   await page.evaluate(() => (window as any).__vault.doMerge(0, 1));
@@ -93,7 +94,7 @@ test('reload restores the exact board', async ({ page }) => {
   await page.evaluate(() => (window as any).__rv.persistNow());
   await page.waitForTimeout(500);
   await page.reload();
-  await page.waitForFunction(() => (window as any).__vault?.hud, null, { timeout: 30_000 });
+  await page.waitForFunction(() => (window as any).__vault?.hud, null, { timeout: 30_000 }); await passChapterCard(page);
   expect((await state(page)).board).toEqual(before);
 });
 
@@ -117,7 +118,7 @@ test('going to the background mid-drag puts the relic home, and the board comes 
   expect((await state(page)).board).toEqual(before);
   await page.waitForTimeout(500); // the save written on the way out, then a cold start, as Android killing the app would be
   await page.reload();
-  await page.waitForFunction(() => (window as any).__vault?.hud, null, { timeout: 30_000 });
+  await page.waitForFunction(() => (window as any).__vault?.hud, null, { timeout: 30_000 }); await passChapterCard(page);
   expect((await state(page)).board).toEqual(before);
 });
 
@@ -136,7 +137,9 @@ test('a popup opening mid-drag puts the relic home, not frozen in the air (Bug #
   await page.evaluate(() => (window as any).__vault.openTab('vault'));
   await page.mouse.up();
   await page.evaluate(() => (window as any).__vault.modal?.close());
-  await page.waitForTimeout(600); // the settle tween
+  // the settle tween: wait for the relic to reach its socket rather than sampling at a fixed time, which under a
+  // loaded machine caught it 2.2 px short (AB#444 s1 and s5 full runs)
+  await page.waitForFunction((i) => { const v = (window as any).__vault, r = v.relics[i], h = v.cellPos(i); return !!r && Math.hypot(r.spr.x - h.x, r.spr.y - h.y) < 2; }, from, { timeout: 2000 }).catch(() => {});
   const after = await page.evaluate((i) => {
     const v = (window as any).__vault;
     const r = v.relics[i], home = v.cellPos(i);
@@ -366,7 +369,7 @@ test('the Keeper points out patron orders once, the first time one can be filled
   await page.evaluate(() => { (window as any).__vault.modal.close(); (window as any).__rv.persistNow(); });
   await page.waitForTimeout(400);
   await page.reload();
-  await page.waitForFunction(() => (window as any).__vault?.hud, null, { timeout: 30_000 });
+  await page.waitForFunction(() => (window as any).__vault?.hud, null, { timeout: 30_000 }); await passChapterCard(page);
   await page.evaluate(() => (window as any).__vault.afterAction());
   await page.waitForTimeout(1200);
   expect(await modalName(page)).not.toBe('KeeperDialog');
@@ -566,7 +569,7 @@ test("the debug panel's offer buttons open what they name (Bug #2025)", async ({
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto('/?debug=1');
   await page.locator('#age-gate button[data-a="adult"]').click({ timeout: 20_000 });
-  await page.waitForFunction(() => (window as any).__vault?.hud, null, { timeout: 30_000 });
+  await page.waitForFunction(() => (window as any).__vault?.hud, null, { timeout: 30_000 }); await passChapterCard(page);
   await page.evaluate(() => { (window as any).__rv.state.flags.tut = 3; (window as any).__vault.modal?.close(); });
   await page.waitForTimeout(400);
   const panel = page.locator('#rv-debug');

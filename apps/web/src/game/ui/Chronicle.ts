@@ -11,6 +11,7 @@ import {
   canDescend, canRestore, currentFloor, descend, isLastFloor, mementoChoices, renownGold, renownGoldAt, restore,
 } from '../systems/Floors';
 import type { VaultScene } from '../scenes/VaultScene';
+import { floorDef } from '../data/floors';
 
 /**
  * The Keeper's Chronicle screen (docs/STORY.md): what he is asking for now, the two errands beside it, and
@@ -33,6 +34,8 @@ export class ChronicleModal extends Modal {
     B.add(txt(vs, -240, top + 132, floor.subtitle, { size: 26, font: 'body', color: '#b9a9c6', origin: [0, 0.5], wrap: 600 }));
     const chapter = mainQuestsOnFloor(s.floor ?? 0).filter((q) => (s.chronicle?.claimed ?? []).includes(q.id)).length;
     B.add(txt(vs, -240, top + 186, `Chapter ${(s.floor ?? 0) + 1} · ${chapter} of 3 beats`, { size: 26, font: 'num', weight: '700', color: '#7EE0FF', origin: [0, 0.5] }));
+    // AB#444 slice 5: the chapter card is where the floor's story begins; it can be read again from here
+    B.add(new Button(vs, 330, top + 186, 200, 76, 'CHAPTER', () => this.readChapter(s.floor ?? 0), { color: 'dark', size: 26 }));
 
     const sc = new Scroller(vs, B, -470, top + 240, 940, this.ph - 320);
     // the scroller's content container is anchored at its own left edge; this puts the rows back on the panel's
@@ -89,7 +92,16 @@ export class ChronicleModal extends Modal {
     const beats = beatsHeard(s);
     if (beats.length) {
       y = this.section(sc, y, 'THE STORY SO FAR');
+      let lastFloor = -1;
       for (const b of beats) {
+        if (b.floor !== lastFloor) {
+          // each chapter's beats open with its card (AB#444 slice 5)
+          lastFloor = b.floor;
+          const f = b.floor;
+          row.add(txt(vs, -410, y + 24, `CHAPTER ${f + 1} · ${floorDef(f).name.replace(/^The /, '').toUpperCase()}`, { size: 24, font: 'num', weight: '700', color: '#FFE9A3', origin: [0, 0.5] }));
+          row.add(new Button(vs, 340, y + 24, 170, 64, 'READ', () => this.readChapter(f), { color: 'dark', size: 24 }));
+          y += 70;
+        }
         row.add(txt(vs, -410, y + 20, `${b.floor + 1}·${(b.id % 3) + 1}`, { size: 24, font: 'num', weight: '700', color: '#7EE0FF', origin: [0, 0.5] }));
         const t = txt(vs, -330, y + 18, b.beat, { size: 27, font: 'body', color: '#e8dcf0', origin: [0, 0], wrap: 800 });
         row.add(t);
@@ -100,6 +112,12 @@ export class ChronicleModal extends Modal {
   }
 
   private row?: Phaser.GameObjects.Container;
+
+  /** AB#444 slice 5: a floor's chapter card, re-read; its Continue comes back here. */
+  private readChapter(floor: number) {
+    const vs = this.vs;
+    vs.openChapter('review', {}, () => vs.openModal(new ChronicleModal(vs)), floor);
+  }
 
   private section(_sc: Scroller, y: number, label: string) {
     this.row?.add(txt(this.vs, -410, y + 10, label, { size: 26, font: 'num', weight: '700', color: '#8a7a98', origin: [0, 0.5] }));
