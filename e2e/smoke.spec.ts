@@ -121,6 +121,46 @@ test('going to the background mid-drag puts the relic home, and the board comes 
   expect((await state(page)).board).toEqual(before);
 });
 
+test('a popup opening mid-drag puts the relic home, not frozen in the air (Bug #4893)', async ({ page }) => {
+  await boot(page);
+  for (let i = 0; i < 6; i++) await tapForge(page);
+  const before = (await state(page)).board;
+  const from = before.findIndex((t: number) => t > 0);
+  const [pa, pb] = await page.evaluate(([a, b]) => [(window as any).__vault.cellPos(a), (window as any).__vault.cellPos(b)], [from, (from + 7) % before.length]);
+  const p = await toCss(page, pa.x, pa.y), q = await toCss(page, pb.x, pb.y);
+  await page.mouse.move(p.x, p.y);
+  await page.mouse.down();
+  for (let i = 1; i <= 4; i++) { await page.mouse.move(p.x + (q.x - p.x) * i / 8, p.y + (q.y - p.y) * i / 8); await page.waitForTimeout(16); }
+  expect(await page.evaluate(() => (window as any).__vault.isDragging)).toBe(true);
+  // a popup opens while the finger is still down, as an offer does a beat after a discovery merge (pumpOffers)
+  await page.evaluate(() => (window as any).__vault.openTab('vault'));
+  await page.mouse.up();
+  await page.evaluate(() => (window as any).__vault.modal?.close());
+  await page.waitForTimeout(600); // the settle tween
+  const after = await page.evaluate((i) => {
+    const v = (window as any).__vault;
+    const r = v.relics[i], home = v.cellPos(i);
+    return { dragging: v.isDragging, lifted: r?.lifted ?? null, off: r ? Math.hypot(r.spr.x - home.x, r.spr.y - home.y) : -1 };
+  }, from);
+  expect(after).toEqual({ dragging: false, lifted: false, off: expect.any(Number) });
+  expect(after.off).toBeLessThan(2); // on its own socket, not where the finger was
+  expect((await state(page)).board).toEqual(before);
+});
+
+test('the Keeper covers no socket: a relic in the bottom-left one can be seen and tapped (Bug #4892)', async ({ page }) => {
+  await boot(page);
+  const r = await page.evaluate(() => {
+    const v = (window as any).__vault, k = v.keeperBtn;
+    const w = 170 * k.scale, h = 210 * k.scale; // its hit box (keeperSpot.ts KEEPER_BOX)
+    const cell = v.cellPos(30); // the bottom-left socket, 150 wide
+    const dx = Math.min(k.x + w / 2, cell.x + 75) - Math.max(k.x - w / 2, cell.x - 75);
+    const dy = Math.min(k.y + h / 2, cell.y + 75) - Math.max(k.y - h / 2, cell.y - 75);
+    return { overlap: dx > 0 && dy > 0 ? Math.min(dx, dy) : 0, top: v.input.hitTestPointer({ x: cell.x, y: cell.y, worldX: cell.x, worldY: cell.y, camera: v.cameras.main } as any).includes(k) };
+  });
+  expect(r.overlap).toBe(0); // on main it covered 113 px of the 150 at this size
+  expect(r.top).toBe(false); // a tap on the socket's middle does not reach the Keeper
+});
+
 test('a full dais says so and fades, and the advice it gives is true', async ({ page }) => {
   // Board, #441: the full-screen Vault Jammed sheet is gone. It offered to sell a way out of a state the player
   // can almost always clear themselves, which is why this test now checks the opposite: nothing opens, the
