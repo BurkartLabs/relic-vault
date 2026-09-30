@@ -7,6 +7,12 @@ those notes as the new version (docs/RELEASE.md). The Google Play release notes 
 
 ## [Unreleased]
 
+## [1.0.3] - 2026-09-30
+
+### Changed
+
+- No notable changes.
+
 ## [1.0.2] - 2026-09-30
 
 ### Added
