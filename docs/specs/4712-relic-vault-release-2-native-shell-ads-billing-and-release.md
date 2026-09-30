@@ -107,7 +107,7 @@ Symptom: e2e/smoke.spec.ts:197 'telemetry reaches a real sink: app_open and verb
 Repro: npx playwright test (the whole suite) on relic-vault main plus branch feat/4739-native-telemetry (whose changes touch telemetry, not forging); intermittent, about 1 in 5 in a full run.
 Proposed fix: Confidence: medium. Wait for __vault.pair to be non-null (page.waitForFunction, a few seconds), or seed the board with two same-tier relics before dragging, as the other smoke tests that merge do; the check that matters (events at the collector) is unchanged. Test: --repeat-each 20 with no failure.
 
-- [ ] Fixed: Relic Vault e2e 'telemetry reaches a real sink' flakes: __vault.pair is null after the first forge
+- [x] Fixed: Relic Vault e2e 'telemetry reaches a real sink' flakes: __vault.pair is null after the first forge
 
 ### Capacitor Android shell: android/ project, target API 36, edge-to-edge, orientation, splash, signed AAB script (Requirement AB#4723, Resolved, not verified)
 
