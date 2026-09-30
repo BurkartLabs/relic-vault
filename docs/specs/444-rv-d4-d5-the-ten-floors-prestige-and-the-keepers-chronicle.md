@@ -93,10 +93,10 @@ session, and 81 is not. The grammar (form painters, material finishes, the ornam
 
 ### Slice 5: the chapter card (lane: relic-vault/all)
 
-- [ ] `ui/FloorIntro.ts`: a modal opened by the transition's end with Chapter N, name, subtitle, material line, generator name and blurb, the veiled capstone, Renown gained and the memento placed, one Keeper line, one Continue; copy in `catalog.ts` COPY like every other string
-- [ ] shown once per arrival (descend and restore), and once for Chapter 1 on a fresh game after the age gate; the post-restart `keeperSays` line removed
-- [ ] the Chronicle links each chapter card to its floor entry (the card is where the floor's story begins)
-- [ ] e2e asserts the card appears exactly once per arrival and never on a plain reload; screenshots at both sizes attached
+- [x] `ui/FloorIntro.ts`: a modal opened by the transition's end with Chapter N, name, subtitle, material line, generator name and blurb, the veiled capstone, Renown gained and the memento placed, one Keeper line, one Continue; copy in `catalog.ts` COPY like every other string
+- [x] shown once per arrival (descend and restore), and once for Chapter 1 on a fresh game after the age gate; the post-restart `keeperSays` line removed
+- [x] the Chronicle links each chapter card to its floor entry (the card is where the floor's story begins)
+- [x] e2e asserts the card appears exactly once per arrival and never on a plain reload; screenshots at both sizes attached
 
 ## Demo script
 

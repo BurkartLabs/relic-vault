@@ -38,6 +38,8 @@ import { tickOrders, refillOrders, deliver, dismissOrder, matchOrder } from '../
 import { AdVeil } from '../ui/AdVeil';
 import { interstitialBlocked, runRewarded } from '../systems/ads/AdService'; // AB#4724
 import { Tutorial } from '../ui/Tutorial';
+import { FloorIntro } from '../ui/FloorIntro'; // AB#444 slice 5
+import { chapterCard, firstChapterDue, markFirstChapter, type ChapterKind } from '../systems/Chapters';
 import { DiscoveryCard } from '../ui/Discovery';
 import { grantGold, enforceChestRules } from '../systems/Economy';
 import { SAFE_AREA_EVENT } from '../../safeArea'; // AB#4723
@@ -122,6 +124,8 @@ export class VaultScene extends Phaser.Scene {
    */
   /** AB#444 slice 4: the floor whose board atlas the next run lays before it builds (set by a floor change's swap). */
   private rebakeOnStart: number | null = null;
+  /** AB#444 slice 5: the Chapter 1 card is on its way (after the age gate); read by the browser tests */
+  chapterPending = false;
 
   init() {
     if (this.rebakeOnStart !== null) { rebakeBoardFor(this, this.rebakeOnStart, [...ctx.state.board, ...ctx.state.satchel]); this.rebakeOnStart = null; }
@@ -215,7 +219,16 @@ export class VaultScene extends Phaser.Scene {
     this.events.once('shutdown', () => { this.scale.off('resize', this.onResize, this); window.removeEventListener(SAFE_AREA_EVENT, this.onSafeArea); document.removeEventListener('visibilitychange', this.onHidden); });
     (window as any).__vault = this;
     // first ever session: tutorial. Returning: VIP crate / satchel nudges.
-    this.time.delayedCall(700, () => this.tut.start());
+    // AB#444 slice 5: a fresh game opens on Chapter 1, once, after the age gate and before the first forge hint
+    if (firstChapterDue(ctx.state)) {
+      markFirstChapter(ctx.state);
+      ctx.persist();
+      this.chapterPending = true;
+      const ready = ((window as any).__ready as Promise<unknown> | undefined) ?? Promise.resolve();
+      void ready.then(() => {
+        if (this.sys.isActive()) this.time.delayedCall(400, () => { this.chapterPending = false; this.openChapter('first', {}, () => this.time.delayedCall(700, () => this.tut.start())); }); // the forge hint a beat after, as on any boot
+      });
+    } else this.time.delayedCall(700, () => this.tut.start());
     /**
      * The Chronicle introduces itself once, in the Keeper's own voice (docs/STORY.md: "the advisor already
      * exists"). Gated on having merged something, so it never lands on top of the first-run tutorial — a player
@@ -1557,9 +1570,6 @@ export class VaultScene extends Phaser.Scene {
       floor: s.floor, renown: s.renown, recorded: r.recorded.length, memento: r.memento ?? 0,
     });
     const floor = currentFloor(s);
-    const line = kind === 'descend'
-      ? `${floor.name}. ${floor.subtitle}`
-      : `${floor.name}, again. Renown ${r.renown} — the vault will remember it even if I do not.`;
     // AB#444 slice 4: the move is shown, not cut. The transition plays over this scene and calls swap under its
     // closed veil; the new vault is handed back only once it reports ready (FloorTransition.ts).
     FloorTransition.play(this, {
@@ -1574,9 +1584,15 @@ export class VaultScene extends Phaser.Scene {
         ctx.persistNow();
         this.scene.restart();
       },
-      // the Keeper's line waits for the new vault (it was scheduled on the old one's clock, which the restart cleared)
-      onArrive: (vault) => vault.time.delayedCall(900, () => vault.keeperSays(line)),
+      // AB#444 slice 5: the chapter card opens the floor, on the new vault, before any input (it replaces the Keeper
+      // line that used to follow the restart)
+      onArrive: (vault) => vault.openChapter(kind, r),
     });
+  }
+
+/** AB#444 slice 5: the chapter card for an arrival, a fresh game's first floor, or a re-read from the Chronicle. */
+  openChapter(kind: ChapterKind, change: { memento?: number; renown?: number } = {}, onDone?: () => void, floor?: number) {
+    this.openModal(new FloorIntro(this, chapterCard(ctx.state, kind, change, floor), onDone));
   }
 
   /** AB#444 slice 4: the generator row builds in on arrival, one after another, from below. */

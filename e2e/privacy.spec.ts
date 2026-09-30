@@ -1,4 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
+import { passChapterCard } from './chapter'; // AB#444 slice 5
 
 /**
  * AB#4726: the privacy policy and terms are public pages that Settings opens, and Delete My Data leaves nothing of the
@@ -16,7 +17,7 @@ async function boot(page: Page, errors: string[]) {
   const gate = page.locator('#age-gate button[data-a="adult"]');
   if (await gate.count().catch(() => 0)) await gate.click();
   else await page.waitForTimeout(500).then(async () => { if (await gate.count()) await gate.click(); });
-  await page.waitForFunction(() => (window as any).__vault?.hud, null, { timeout: 30_000 });
+  await page.waitForFunction(() => (window as any).__vault?.hud, null, { timeout: 30_000 }); await passChapterCard(page);
 }
 
 async function openSettings(page: Page) {
@@ -109,7 +110,7 @@ test('Delete My Data leaves no relic-vault key in IndexedDB or localStorage, the
   await tapRow(page, 'TAP AGAIN TO DELETE ALL YOUR DATA'); // armed by the first tap
   await Promise.race([lookedAt, page.waitForTimeout(20_000)]);
   await page.waitForLoadState('load');
-  await page.waitForFunction(() => (window as any).__vault?.hud, null, { timeout: 30_000 }).catch(() => {});
+  await page.waitForFunction(() => (window as any).__vault?.hud, null, { timeout: 30_000 }).catch(() => {}); // a new player: the card comes after the age gate, below
   await page.waitForTimeout(500);
 
   expect(left, 'storage read back before the reload').toBeTruthy();
@@ -121,7 +122,7 @@ test('Delete My Data leaves no relic-vault key in IndexedDB or localStorage, the
 
   // the new session is a new player: a new device id, and none of the old vault
   const gate = page.locator('#age-gate button[data-a="adult"]');
-  if (await gate.count()) { await gate.click(); await page.waitForFunction(() => (window as any).__vault?.hud, null, { timeout: 30_000 }); }
+  if (await gate.count()) { await gate.click(); await page.waitForFunction(() => (window as any).__vault?.hud, null, { timeout: 30_000 }); await passChapterCard(page); }
   const after = await page.evaluate(() => ({ did: localStorage.getItem('rv_did'), gold: (window as any).__rv.state.gold }));
   expect(after.did).not.toBe(before.did);
   expect(after.gold).not.toBe(987654);
