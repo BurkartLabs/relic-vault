@@ -1,5 +1,6 @@
 import type Phaser from 'phaser';
 import { CHAIN_PAINTERS } from './ChainArt';
+import { paintFloorRelic } from './FloorArt';
 import { ITEM_IDS, ITEMS, chainOf } from '../data/items';
 import { floorDef } from '../data/floors';
 import {
@@ -480,45 +481,18 @@ const PAINTERS: ((ctx: Ctx, full: boolean) => void)[] = [
   () => {}, flint, copperIdol, silverUrn, goldMask, scarab, sapphireHeart, rubyCrown, starArk, livingRelic,
 ];
 
-/** Paint any relic by item id (1–9 Forge, 11–17 Crypt, 21–27 Star Well) into a 256×256 box. */
 /**
- * Recolour a painted relic to a floor's material without flattening it: `color` keeps the hue and chroma of the
- * new material and the luminance of the painting underneath, so the metal still reads as metal. A plain tint
- * would wash the whole silhouette one shade and look like a bug.
+ * Paint any relic by item id into a 256×256 box: 1–9 the Forge, 11–17 the Crypt, 21–27 the Star Well (here and in
+ * ChainArt), 30–119 a floor's ladder (FloorArt: form, material and ornament, or a hand-painted capstone). An id
+ * none of them paints throws, rather than shipping an invisible relic (P-WIRED-NOTHING).
  */
-function recolour(src: HTMLCanvasElement, hex: number): HTMLCanvasElement {
-  const [c, ctx] = makeCanvas(src.width, src.height);
-  ctx.drawImage(src, 0, 0);
-  ctx.save();
-  ctx.globalCompositeOperation = 'color';
-  ctx.fillStyle = '#' + hex.toString(16).padStart(6, '0');
-  ctx.fillRect(0, 0, src.width, src.height);
-  ctx.restore();
-  // keep the shape: the recolour pass must not bleed outside the painted pixels
-  ctx.globalCompositeOperation = 'destination-in';
-  ctx.drawImage(src, 0, 0);
-  return c;
-}
-
 export function paintRelic(ctx: Ctx, id: number, withIris = true) {
   ctx.save();
   // keep everything inside the frame with a small margin
   ctx.translate(128, 128); ctx.scale(0.94, 0.94); ctx.translate(-128, -128);
   if (id <= 9) PAINTERS[id](ctx, withIris);
   else if (CHAIN_PAINTERS[id]) CHAIN_PAINTERS[id](ctx);
-  else {
-    /**
-     * A floor relic (chains 3+, docs/ROOMS.md). Until the form-and-material grammar is painted, these borrow the
-     * silhouette of the same tier on the Antechamber ladder and wear their own floor's material. That is a
-     * deliberate placeholder and it is *visible* — the alternative, which this replaced, was
-     * `CHAIN_PAINTERS[id]?.(ctx)`, which painted nothing at all and would have shipped ninety invisible relics
-     * with no error anywhere (P-WIRED-NOTHING).
-     */
-    const tier = id % 10;
-    const [master, mctx] = makeCanvas(256, 256);
-    PAINTERS[Math.max(1, Math.min(9, tier))](mctx, withIris);
-    ctx.drawImage(recolour(master, ITEMS[id]?.color ?? 0xffffff), 0, 0);
-  }
+  else paintFloorRelic(ctx, id); // AB#444: composed, not the recoloured Antechamber relic it replaced
   ctx.restore();
 }
 
