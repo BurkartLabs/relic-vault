@@ -6,13 +6,14 @@
  *     model, in a ramp made from the relic's own colour. Each is parameterised by tier: a tier-8 vessel is a larger,
  *     more worked version of a tier-2 vessel, so the family reads and so does the rank;
  *  2. the floor's **finish** is a pass over the painted pixels only (salt grain and nacre on the Drowned Wing,
- *     glass and amber translucency in the Orchard, soot and ember in the Kilns);
+ *     glass and amber translucency in the Orchard, soot and ember in the Kilns, silvering on the Mirror Stair, wet
+ *     wood in the Root Cellar, rime on the Frost Ledger);
  *  3. the floor's **ornament** pass is drawn over that (the Drowned Wing's barnacle line, the Orchard's graft seam,
- *     the Kilns' crackle).
+ *     the Kilns' crackle, the Mirror Stair's reflection band, the Cellar's roots and fungus, the Ledger's frozen ink).
  *
- * The capstones (tier 9) are hand-painted, because the capstone is the image the player remembers. Floors 5-10
- * take their finishes and capstones in slices 2 and 3; until then their relics are form-composed in their own
- * colours with no floor pass, never a recoloured Antechamber relic.
+ * The capstones (tier 9) are hand-painted, because the capstone is the image the player remembers. Floors 8-10
+ * take their finishes and capstones in slice 3; until then their relics are form-composed in their own colours with
+ * no floor pass, never a recoloured Antechamber relic.
  *
  * `floorPainterFor` is pure (no canvas), so a unit test can prove every floor id resolves to a painter.
  */
@@ -389,10 +390,140 @@ const KILNS: FloorStyle = {
   },
 };
 
-/** Floors 5-10 until slices 2 and 3 give them their own: their colours only, no floor pass. */
+/** The Mirror Stair: cold silvering, hard-edged glints, and a band of glass across the foot showing the relic upside down. */
+const MIRROR: FloorStyle = {
+  accent: ['#ffffff', '#d8ecff', '#9fc4ea', '#46607e', '#141e2c'],
+  finish(ctx, rnd) {
+    // silvered glass: cold at the top, a blue-black back where the silver has gone thin
+    ctx.fillStyle = lin(ctx, 0, 30, 0, 230, [[0, 'rgba(235,245,255,0.28)'], [0.55, 'rgba(160,190,220,0.08)'], [1, 'rgba(20,30,50,0.32)']]);
+    ctx.fillRect(0, 0, 256, 256);
+    // the glints are hard-edged, not soft light: a mirror, not glass
+    ctx.save(); ctx.translate(128, 128); ctx.rotate(0.62);
+    const x = -40 + rnd() * 30;
+    ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.fillRect(x, -140, 16, 280);
+    ctx.fillStyle = 'rgba(255,255,255,0.28)'; ctx.fillRect(x + 24, -140, 5, 280);
+    ctx.restore();
+    // desilvering: a few dark flecks where the backing let go
+    speckle(ctx, 30, 150, 196, 80, 40, Math.floor(rnd() * 1e6), ['#1e2838', '#3a4658'], [1, 2.6]);
+  },
+  ornament(ctx, rnd, _r, tier) {
+    // the reflection band: the relic's own belly, seen upside down in a strip of mirror across its foot. Deeper with tier.
+    const [copy, cc] = makeCanvas(256, 256);
+    cc.drawImage(ctx.canvas, 0, 0);
+    const top = 182 - tier * 3, h = 22 + tier * 3;
+    ctx.save();
+    ctx.beginPath(); ctx.rect(0, top, 256, h); ctx.clip();
+    ctx.fillStyle = 'rgba(40,56,80,0.55)'; ctx.fillRect(0, top, 256, h);
+    ctx.globalAlpha = 0.85; ctx.translate(0, top * 2); ctx.scale(1, -1); ctx.drawImage(copy, 0, 0);
+    ctx.restore();
+    ctx.save();
+    ctx.fillStyle = lin(ctx, 0, top, 0, top + h, [[0, 'rgba(255,255,255,0.35)'], [0.4, 'rgba(255,255,255,0)'], [1, 'rgba(10,16,28,0.35)']]);
+    ctx.fillRect(0, top, 256, h);
+    ctx.fillStyle = 'rgba(255,255,255,0.95)'; ctx.fillRect(0, top - 1, 256, 2.5);
+    ctx.fillStyle = 'rgba(20,28,44,0.8)'; ctx.fillRect(0, top + h, 256, 2);
+    // a bevel mark per few tiers along the band, where the glass was cut
+    for (let i = 0; i < 1 + Math.floor(tier / 3); i++) { const bx = 50 + rnd() * 156; ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.fillRect(bx, top + 3, 1.5, h - 6); }
+    ctx.restore();
+  },
+};
+
+/** The Root Cellar: wet wood grain, black loam low down, and roots and fungus coming up over everything. */
+const CELLAR: FloorStyle = {
+  accent: ['#f0ffe0', '#b8f090', '#6ac050', '#2a6a22', '#0e2a0c'],
+  finish(ctx, rnd) {
+    // wood grain: long dark wavering lines
+    ctx.save(); ctx.lineWidth = 1.6; ctx.strokeStyle = 'rgba(40,24,10,0.3)';
+    for (let i = 0; i < 16; i++) {
+      const x0 = 30 + i * 13 + rnd() * 6, ph = rnd() * 6;
+      ctx.beginPath(); for (let y = 20; y <= 240; y += 8) { const x = x0 + Math.sin(y / 22 + ph) * 4; if (y === 20) ctx.moveTo(x, y); else ctx.lineTo(x, y); } ctx.stroke();
+    }
+    ctx.restore();
+    // the damp: darker from the floor up, and a wet gloss high on the surface
+    ctx.fillStyle = lin(ctx, 0, 110, 0, 240, [[0, 'rgba(30,20,10,0)'], [1, 'rgba(30,20,10,0.55)']]);
+    ctx.fillRect(0, 0, 256, 256);
+    for (let i = 0; i < 6; i++) { const x = 70 + rnd() * 110, y = 60 + rnd() * 80; ctx.fillStyle = 'rgba(240,255,240,0.55)'; ctx.beginPath(); ctx.ellipse(x, y, 4 + rnd() * 4, 1.6, -0.4, 0, Math.PI * 2); ctx.fill(); }
+    speckle(ctx, 30, 170, 196, 70, 120, Math.floor(rnd() * 1e6), ['#1a120a', '#3a2a18', '#5a4a30'], [0.8, 2.4]);
+  },
+  ornament(ctx, rnd, _r, tier) {
+    // roots coming up from the floor over the relic, more and longer with tier
+    ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    const roots = 2 + Math.floor(tier / 2);
+    const grow = (x: number, y: number, ang: number, len: number, w: number) => {
+      const p = new Path2D(); p.moveTo(x, y);
+      for (let k = 0; k < Math.ceil(len / 10); k++) { ang += (rnd() - 0.5) * 0.7; x += Math.cos(ang) * 10; y += Math.sin(ang) * 10; p.lineTo(x, y); }
+      ctx.lineWidth = w + 2.5; ctx.strokeStyle = 'rgba(24,14,6,0.9)'; ctx.stroke(p);
+      ctx.lineWidth = w; ctx.strokeStyle = '#8a6a44'; ctx.stroke(p);
+      ctx.lineWidth = Math.max(1, w * 0.35); ctx.strokeStyle = 'rgba(230,200,150,0.7)'; ctx.stroke(p);
+      return [x, y, ang] as const;
+    };
+    for (let i = 0; i < roots; i++) {
+      const x = 60 + ((i + 0.5) / roots) * 136 + (rnd() - 0.5) * 16;
+      const [ex, ey, ea] = grow(x, 240, -Math.PI / 2 + (rnd() - 0.5) * 0.8, 40 + tier * 5 + rnd() * 20, 4 + tier * 0.25);
+      if (tier >= 4) grow(ex, ey, ea + (rnd() > 0.5 ? 0.9 : -0.9), 18 + tier * 2, 2);
+    }
+    // fungus: a cluster of pale caps on one side, from tier 3
+    const caps = tier >= 3 ? 1 + Math.floor((tier - 2) / 2) : 0;
+    const cx = rnd() > 0.5 ? 78 : 170;
+    for (let i = 0; i < caps; i++) {
+      const x = cx + (i - (caps - 1) / 2) * 14 + (rnd() - 0.5) * 4, y = 200 - (i % 2) * 10, s = 6 + rnd() * 3 + tier * 0.4;
+      ctx.fillStyle = '#e8dcc8'; ctx.fillRect(x - 1.5, y, 3, s);
+      const capP = new Path2D(); capP.ellipse(x, y, s, s * 0.6, 0, Math.PI, 0); capP.closePath();
+      ctx.fillStyle = rad(ctx, x - s * 0.3, y - s * 0.4, 0.5, s * 1.2, [[0, '#fff4e8'], [0.6, '#d8b8e0'], [1, '#8a6a98']]); ctx.fill(capP);
+      ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(30,16,30,0.85)'; ctx.stroke(capP);
+    }
+    ctx.restore();
+  },
+};
+
+/** The Frost Ledger: rime at the rim, ice light across the face, and the ledger's ruled lines and tallies frozen into it. */
+const FROST: FloorStyle = {
+  accent: ['#ffffff', '#bff0ff', '#5fd8ff', '#1a6a9a', '#06223a'],
+  finish(ctx, rnd) {
+    // ice: cold through the middle, rime whitening towards the edges
+    ctx.fillStyle = rad(ctx, 128, 132, 20, 120, [[0, 'rgba(60,170,255,0.34)'], [0.65, 'rgba(150,220,255,0.3)'], [1, 'rgba(255,255,255,0.7)']]);
+    ctx.fillRect(0, 0, 256, 256);
+    // hard facet planes, the way ice fractures
+    ctx.save(); ctx.fillStyle = 'rgba(255,255,255,0.18)';
+    for (let i = 0; i < 3; i++) { const x = 60 + rnd() * 130, y = 60 + rnd() * 120; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 30 + rnd() * 20, y - 10 - rnd() * 20); ctx.lineTo(x + 20, y + 26 + rnd() * 16); ctx.closePath(); ctx.fill(); }
+    ctx.restore();
+    speckle(ctx, 20, 20, 216, 216, 180, Math.floor(rnd() * 1e6), ['#ffffff', '#e8f8ff'], [0.6, 1.8]);
+  },
+  ornament(ctx, rnd, _r, tier) {
+    // frozen ink: the ledger's ruling across the lower body and a row of tallies, one group per two tiers
+    ctx.save(); ctx.lineCap = 'round';
+    for (let i = 0; i < 3; i++) { ctx.fillStyle = 'rgba(14,30,60,0.45)'; ctx.fillRect(40, 168 + i * 14, 176, 1.8); }
+    ctx.fillStyle = 'rgba(160,30,40,0.5)'; ctx.fillRect(84, 156, 1.8, 58); // the margin rule, in red
+    ctx.strokeStyle = 'rgba(10,20,44,0.85)'; ctx.lineWidth = 2.2;
+    for (let g = 0; g < Math.min(5, 1 + Math.floor(tier / 2)); g++) {
+      const gx = 96 + g * 24, gy = 172 + (g % 2) * 14;
+      ctx.beginPath();
+      for (let k = 0; k < 4; k++) { ctx.moveTo(gx + k * 4, gy); ctx.lineTo(gx + k * 4 - 1, gy + 10); }
+      ctx.moveTo(gx - 3, gy + 8); ctx.lineTo(gx + 16, gy + 1);
+      ctx.stroke();
+    }
+    // an ink blot that froze as it ran
+    const bx = 60 + rnd() * 16, by = 184;
+    ctx.fillStyle = 'rgba(10,20,44,0.75)'; ctx.beginPath(); ctx.ellipse(bx, by, 5, 4, 0, 0, Math.PI * 2); ctx.fill(); ctx.fillRect(bx - 1.5, by, 3, 10 + tier);
+    // rime feathers growing in from the top corner
+    ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 1.4;
+    const fern = (x: number, y: number, ang: number, len: number) => {
+      const ex = x + Math.cos(ang) * len, ey = y + Math.sin(ang) * len;
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(ex, ey);
+      for (let u = 0.2; u < 1; u += 0.16) {
+        const px = x + (ex - x) * u, py = y + (ey - y) * u, l = len * 0.28 * (1 - u);
+        for (const s of [-1, 1]) { ctx.moveTo(px, py); ctx.lineTo(px + Math.cos(ang + s * 0.8) * l, py + Math.sin(ang + s * 0.8) * l); }
+      }
+      ctx.stroke();
+    };
+    for (let i = 0; i < 1 + Math.floor(tier / 3); i++) fern(40 + i * 14, 40 + i * 6, 0.7 + i * 0.25, 40 + tier * 3);
+    ctx.restore();
+  },
+};
+
+/** Floors 8-10 until slice 3 gives them their own: their colours only, no floor pass. */
 const PLAIN: FloorStyle = { accent: ['#ffffff', '#cfe8ff', '#8fb8e0', '#3a5a80', '#101a28'], finish() {}, ornament() {} };
 
-const FLOOR_STYLE: Record<number, FloorStyle> = { 1: DROWNED, 2: ORCHARD, 3: KILNS };
+const FLOOR_STYLE: Record<number, FloorStyle> = { 1: DROWNED, 2: ORCHARD, 3: KILNS, 4: MIRROR, 5: CELLAR, 6: FROST };
 
 // ---------------------------------------------------------------- hand-painted capstones
 
@@ -470,7 +601,112 @@ function kilnHeart(ctx: Ctx) {
   for (let i = 0; i < 7; i++) { const x = 80 + rnd2() * 96, y = 30 + rnd2() * 40; glow(ctx, x, y, 7, 'rgba(255,150,50,0.9)'); ctx.fillStyle = '#fff0c0'; ctx.fillRect(x - 1, y - 1, 2.5, 2.5); }
 }
 
-const CAPSTONE_PAINTERS: Record<number, (ctx: Ctx) => void> = { 39: tideLedger, 49: sapCrown, 59: kilnHeart };
+const MIRROR_RAMP = ['#ffffff', '#e6ecf3', '#aeb9c8', '#5f6b7e', '#262c38'];
+
+/** The Second Keeper: a standing mirror, and in it a hooded keeper who is not you, one eye gold and one eye cold. */
+function secondKeeper(ctx: Ctx) {
+  glow(ctx, 128, 120, 124, 'rgba(200,225,255,0.45)');
+  // the stand and its feet
+  bar(ctx, (c) => { c.moveTo(128, 214); c.lineTo(128, 236); c.moveTo(92, 238); c.lineTo(164, 238); }, 8, metal(ctx, MIRROR_RAMP, 90, 214, 166, 240));
+  const glass = ellipse(128, 118, 66, 92);
+  ctx.save(); ctx.fillStyle = lin(ctx, 60, 30, 196, 210, [[0, '#e8f2ff'], [0.35, '#8aa4c4'], [0.7, '#34465e'], [1, '#141c2a']]); ctx.fill(glass); ctx.restore();
+  ctx.save(); ctx.clip(glass);
+  // the keeper in the glass: a hood, a robe, a face in shadow
+  const robe = smooth([[128, 48], [168, 80], [182, 150], [196, 222], [60, 222], [74, 150], [88, 80]], 0.45);
+  ctx.fillStyle = lin(ctx, 60, 48, 196, 222, [[0, '#c8d8ee'], [0.4, '#5a6e8a'], [1, '#1a2232']]); ctx.fill(robe);
+  ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(10,14,24,0.8)'; ctx.stroke(robe);
+  ctx.strokeStyle = 'rgba(220,235,255,0.35)'; ctx.lineWidth = 2;
+  for (const x of [104, 128, 152]) { ctx.beginPath(); ctx.moveTo(x, 140); ctx.lineTo(x + (x - 128) * 0.3, 222); ctx.stroke(); }
+  ctx.fillStyle = rad(ctx, 128, 104, 4, 34, [[0, '#0a0e18'], [0.8, '#1a2436'], [1, 'rgba(26,36,54,0)']]); ctx.fill(ellipse(128, 104, 26, 30));
+  eyes(ctx, [[116, 102]], 5.5, '#ffd05a');
+  eyes(ctx, [[140, 102]], 5.5, '#8fe0ff');
+  // mirror light: hard diagonal glints, and a crack across the glass
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  ctx.save(); ctx.translate(128, 118); ctx.rotate(0.6); ctx.fillRect(-62, -120, 14, 240); ctx.fillRect(-40, -120, 5, 240); ctx.restore();
+  ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 1.6;
+  ctx.beginPath(); ctx.moveTo(190, 70); ctx.lineTo(162, 96); ctx.lineTo(170, 112); ctx.lineTo(140, 146); ctx.moveTo(162, 96); ctx.lineTo(186, 104); ctx.stroke();
+  ctx.restore();
+  // the frame: heavy silver, beaded, with a crest
+  bar(ctx, (c) => { c.ellipse(128, 118, 70, 96, 0, 0, Math.PI * 2); }, 11, chrome(ctx, MIRROR_RAMP, 50, 0, 206, 0));
+  for (let i = 0; i < 14; i++) { const a = (i / 14) * Math.PI * 2; shade(ctx, circle(128 + Math.cos(a) * 70, 118 + Math.sin(a) * 96, 4), rad(ctx, 127 + Math.cos(a) * 70, 117 + Math.sin(a) * 96, 0.5, 5, [[0, '#ffffff'], [1, '#6a7a90']]), [120 + Math.cos(a) * 70, 110 + Math.sin(a) * 96, 16, 16], { lw: 2, drop: false }); }
+  shade(ctx, star(128, 20, 5, 9, 22), metal(ctx, MIRROR_RAMP, 106, 0, 150, 42), [106, 0, 44, 42], { lw: 4 });
+  gem(ctx, 128, 20, 7, ['#fff8d0', '#ffd05a', '#e8a020', '#8a5a08', '#3a2404']);
+  sparkle(ctx, 92, 60, 14, '#ffffff');
+}
+
+/** The Taproot Reliquary: a cage of living root around a green heart, a taproot running down out of it, drinking. */
+function taprootReliquary(ctx: Ctx) {
+  glow(ctx, 128, 108, 118, 'rgba(143,216,112,0.5)');
+  const bark = ['#e8d0a8', '#a8845a', '#7a5a30', '#4a3218', '#1e1208'];
+  // the taproot, tapering to a point, with rootlets off it
+  const tap = new Path2D(); tap.moveTo(108, 150); tap.bezierCurveTo(112, 190, 122, 214, 130, 246); tap.bezierCurveTo(138, 212, 146, 186, 150, 150); tap.closePath();
+  shade(ctx, tap, metal(ctx, bark, 108, 150, 150, 246), [108, 150, 42, 96], { lw: 5 });
+  for (const [x, y, dx, dy] of [[118, 190, -34, 16], [140, 184, 32, 20], [126, 218, -24, 18], [136, 206, 22, 22]]) bar(ctx, (c) => { c.moveTo(x, y); c.quadraticCurveTo(x + dx * 0.6, y + dy * 0.2, x + dx, y + dy); }, 3, bark[2]);
+  // the heart inside the cage
+  shade(ctx, circle(128, 108, 50), rad(ctx, 120, 98, 4, 56, [[0, '#ffffff'], [0.25, '#e0ffc8'], [0.6, '#8fd870'], [1, '#2a6a22']]), [78, 58, 100, 100], { lw: 4, rim: 'rgba(230,255,210,0.9)' });
+  glow(ctx, 128, 108, 34, 'rgba(240,255,210,0.8)');
+  ctx.save(); ctx.strokeStyle = 'rgba(30,90,30,0.55)'; ctx.lineWidth = 2;
+  for (let i = 0; i < 5; i++) { const a = (i / 5) * Math.PI * 2; ctx.beginPath(); ctx.moveTo(128, 108); ctx.quadraticCurveTo(128 + Math.cos(a + 0.5) * 20, 108 + Math.sin(a + 0.5) * 20, 128 + Math.cos(a) * 40, 108 + Math.sin(a) * 40); ctx.stroke(); }
+  ctx.restore();
+  // the cage: roots woven round it, crossing
+  const woven: [number, number, number, number, number, number, number, number][] = [
+    [74, 150, 60, 80, 110, 40, 150, 52], [182, 150, 196, 80, 146, 40, 106, 52], [78, 124, 92, 60, 164, 60, 178, 124], [84, 148, 110, 168, 146, 168, 172, 148],
+  ];
+  for (const [x0, y0, c1x, c1y, c2x, c2y, x1, y1] of woven) bar(ctx, (c) => { c.moveTo(x0, y0); c.bezierCurveTo(c1x, c1y, c2x, c2y, x1, y1); }, 8, metal(ctx, bark, 60, 40, 196, 170));
+  // it is still growing: two leaves up top
+  for (const [x, ang] of [[118, -0.5], [140, 0.55]]) {
+    ctx.save(); ctx.translate(x, 50); ctx.rotate(ang);
+    const leaf = new Path2D(); leaf.moveTo(0, 0); leaf.bezierCurveTo(-14, -18, -8, -40, 0, -48); leaf.bezierCurveTo(8, -40, 14, -18, 0, 0); leaf.closePath();
+    shade(ctx, leaf, lin(ctx, -14, -48, 14, 0, [[0, '#e0ffc8'], [0.5, '#6ad050'], [1, '#1f6a20']]), [-14, -48, 28, 48], { lw: 3.5, drop: false });
+    ctx.restore();
+  }
+  sparkle(ctx, 112, 92, 14, '#f0ffe0');
+}
+
+/** The Debt in Ice: the ledger itself, open, frozen in a block of ice with its ink caught rising off the page. */
+function debtInIce(ctx: Ctx) {
+  glow(ctx, 128, 128, 122, 'rgba(95,216,255,0.45)');
+  // the ledger, open
+  for (const s of [-1, 1]) {
+    const page = poly([[128, 118], [128 + s * 78, 104], [128 + s * 76, 184], [128, 196]]);
+    shade(ctx, page, lin(ctx, 128, 110, 128 + s * 78, 184, [[0, '#f4f8fc'], [1, '#b8c8d8']]), [s < 0 ? 50 : 128, 104, 78, 92], { lw: 4, drop: false });
+    ctx.save(); ctx.clip(page);
+    ctx.fillStyle = 'rgba(14,30,60,0.6)';
+    for (let i = 0; i < 6; i++) { const y = 130 + i * 10; for (let k = 0; k < 4; k++) ctx.fillRect(128 + s * (16 + k * 14) - (s < 0 ? 10 : 0), y - k * 1.2,10 - (k % 2) * 3, 2.5); }
+    ctx.fillStyle = 'rgba(170,30,40,0.6)'; ctx.fillRect(128 + s * 12 - 1, 110, 2, 80);
+    ctx.restore();
+  }
+  bar(ctx, (c) => { c.moveTo(128, 118); c.lineTo(128, 196); }, 4, '#2a3a50');
+  // the signature at the head of the page, in the hand from the hints
+  ctx.save(); ctx.strokeStyle = '#c8962a'; ctx.lineWidth = 2.4; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(142, 118); ctx.bezierCurveTo(150, 106, 156, 122, 162, 112); ctx.bezierCurveTo(168, 104, 170, 120, 180, 110); ctx.stroke(); ctx.restore();
+  // the ink, caught rising off the page as it froze
+  const plume = new Path2D();
+  plume.moveTo(100, 150); plume.bezierCurveTo(84, 120, 118, 104, 100, 80); plume.bezierCurveTo(90, 64, 108, 50, 118, 62);
+  plume.bezierCurveTo(108, 72, 124, 88, 118, 112); plume.bezierCurveTo(114, 130, 116, 140, 110, 150); plume.closePath();
+  shade(ctx, plume, lin(ctx, 84, 50, 124, 150, [[0, '#3a5a8a'], [0.5, '#0e1a36'], [1, '#050a18']]), [84, 50, 40, 100], { lw: 3, drop: false, rim: 'rgba(143,224,255,0.9)' });
+  // the block of ice over all of it
+  const block = poly([[56, 52], [108, 30], [176, 34], [214, 70], [212, 184], [170, 216], [84, 214], [44, 176], [42, 92]]);
+  ctx.save(); ctx.fillStyle = lin(ctx, 42, 30, 214, 216, [[0, 'rgba(230,248,255,0.5)'], [0.45, 'rgba(120,210,255,0.28)'], [1, 'rgba(20,90,150,0.5)']]); ctx.fill(block);
+  ctx.clip(block);
+  ctx.fillStyle = 'rgba(255,255,255,0.22)';
+  for (const tri of [[[56, 52], [108, 30], [96, 96]], [[176, 34], [214, 70], [170, 90]], [[44, 176], [84, 214], [80, 170]]]) { ctx.beginPath(); ctx.moveTo(tri[0][0], tri[0][1]); ctx.lineTo(tri[1][0], tri[1][1]); ctx.lineTo(tri[2][0], tri[2][1]); ctx.closePath(); ctx.fill(); }
+  speckle(ctx, 40, 28, 176, 190, 220, 891, ['#ffffff', '#e0f6ff'], [0.6, 2]);
+  ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.save(); ctx.translate(128, 120); ctx.rotate(-0.8); ctx.fillRect(-120, -60, 240, 8); ctx.restore();
+  ctx.restore();
+  ctx.save(); ctx.lineJoin = 'round'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(240,252,255,0.95)'; ctx.stroke(block); ctx.restore();
+  outline(ctx, block, 4);
+  // icicles off the underside
+  for (const [x, len] of [[96, 22], [120, 30], [150, 18], [174, 26]]) {
+    const y = x < 128 ? 214 : 214 - (x - 128) * 0.02;
+    const ic = poly([[x - 6, y - 2], [x + 6, y - 2], [x, y + len]]);
+    shade(ctx, ic, lin(ctx, x - 6, y, x + 6, y + len, [[0, '#ffffff'], [1, '#6ac8f0']]), [x - 6, y - 2, 12, len + 2], { lw: 2.5, drop: false });
+  }
+  sparkle(ctx, 70, 64, 14, '#e8fbff');
+  sparkle(ctx, 190, 150, 9, '#e8fbff');
+}
+
+const CAPSTONE_PAINTERS: Record<number, (ctx: Ctx) => void> = { 39: tideLedger, 49: sapCrown, 59: kilnHeart, 69: secondKeeper, 79: taprootReliquary, 89: debtInIce };
 
 // ---------------------------------------------------------------- routing
 
