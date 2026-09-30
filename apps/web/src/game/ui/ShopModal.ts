@@ -12,14 +12,14 @@ import { empties } from '../systems/BoardSystem';
 import type { VaultScene } from '../scenes/VaultScene';
 import { OddsModal } from './Sheets';
 import { autoMergeCost, standInCost, buyAutoMerge, buyStandIn, standInsHeld } from '../systems/PowerUps';
-import { liveChains } from '../systems/Floors';
-import { BINDINGS, CHAINS, ITEMS } from '../data/items';
+import { bindingFor, liveChains } from '../systems/Floors';
+import { CHAINS, ITEMS } from '../data/items';
 
 /** AB#381: the Stand-ins this floor can use: the bindings the top tiers of its live chains need. */
 function standInsForFloor(s: Parameters<typeof liveChains>[0]): number[] {
   const out = new Set<number>();
   for (const ch of liveChains(s)) {
-    for (let t = 1; t <= CHAINS[ch].maxTier; t++) { const b = BINDINGS[ch === 0 ? t : ch * 10 + t]; if (b) out.add(b); }
+    for (let t = 1; t <= CHAINS[ch].maxTier; t++) { const b = bindingFor(s, ch === 0 ? t : ch * 10 + t); if (b) out.add(b); } // AB#4712
   }
   return [...out].sort((a, b) => a - b);
 }

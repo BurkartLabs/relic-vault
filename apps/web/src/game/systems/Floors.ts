@@ -1,5 +1,5 @@
 import { FLOORS, FLOOR_COUNT, CAPSTONE_TIER, floorDef, type FloorDef } from '../data/floors';
-import { chainOf, tierOf, itemId, itemWork } from '../data/items';
+import { BINDINGS, chainOf, tierOf, itemId, itemWork } from '../data/items';
 import { BOARD_SIZE } from '../data/catalog';
 import type { GameState } from './State';
 
@@ -20,6 +20,33 @@ export const DEPTH_CHAINS = [1, 2];
 
 /** Chains that can be forged on this floor: the floor's own ladder, plus the two that run the whole depth. */
 export const liveChains = (s: GameState) => [activeChain(s), ...DEPTH_CHAINS];
+
+/**
+ * The binding making `id` needs on this floor (AB#4712, the Board, 2026-09-30: on the Drowned Wing merging two
+ * Canopic Jars still asked for a Gold Mask). items.ts binds the Crypt's and the Star Well's top tiers with Forge relics,
+ * and the Forge is the Antechamber's ladder, gone from every deeper floor: there the same tier of the floor's own
+ * ladder takes its place (a Gold Mask becomes a Coral Diadem). Undefined when `id` needs no binding.
+ */
+export function bindingFor(s: GameState, id: number): number | undefined {
+  const need = BINDINGS[id];
+  if (!need) return undefined;
+  const floorChain = activeChain(s);
+  return chainOf(need) === 0 && floorChain !== 0 ? itemId(floorChain, tierOf(need)) : need;
+}
+
+/** Whether `item` binds the making of `id` on this floor: the floor's binding, or the Forge relic it stands for. */
+export function bindsFor(s: GameState, id: number, item: number): boolean {
+  const need = bindingFor(s, id);
+  return !!need && (item === need || item === BINDINGS[id]);
+}
+
+/** The Binding Stand-in (AB#381) held for making `id` here: the floor's binding first, then the Forge relic's. */
+export function standInFor(s: GameState, id: number): number | undefined {
+  const need = bindingFor(s, id);
+  if (!need) return undefined;
+  for (const b of [need, BINDINGS[id]]) if ((s.powerUps?.standIn?.[b] ?? 0) > 0) return b;
+  return undefined;
+}
 
 /** How many times this floor's capstone has been ascended. Restoring keeps the count; it is a history, not a score. */
 export const clearsOf = (s: GameState, floor = s.floor ?? 0) => s.clears?.[floor] ?? 0;

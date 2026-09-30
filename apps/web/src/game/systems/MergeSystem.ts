@@ -1,9 +1,9 @@
 import { ECON } from '../data/catalog';
-import { BINDINGS, CHAINS, chainOf, tierOf, isTop, tierValue } from '../data/items';
+import { CHAINS, chainOf, tierOf, isTop, tierValue } from '../data/items';
 import type { GameState } from './State';
 import type { Rng } from './Rng';
 import { grantGold, feedPiggy, addXp, grantCard, cardDropChance, CardResult } from './Economy';
-import { noteAscension } from './Floors';
+import { bindingFor, bindsFor, noteAscension, standInFor } from './Floors';
 import { noteFloorAction } from './Chronicle';
 
 export interface MergeResult {
@@ -38,9 +38,8 @@ export function canMerge(s: GameState, a: number, b: number): boolean {
 
 /** Where the binding for creating `next` sits on the board (never one of the two merging sockets). */
 export function findBinding(s: GameState, next: number, a: number, b: number): number {
-  const need = BINDINGS[next];
-  if (!need) return -1;
-  for (let i = 0; i < s.board.length; i++) if (i !== a && i !== b && s.board[i] === need) return i;
+  if (!bindingFor(s, next)) return -1;
+  for (let i = 0; i < s.board.length; i++) if (i !== a && i !== b && bindsFor(s, next, s.board[i])) return i;
   return -1;
 }
 
@@ -59,13 +58,13 @@ export function merge(s: GameState, a: number, b: number, rng: Rng, now = Date.n
   const chain = chainOf(ia);
   const ascended = isTop(ia);
   const next = ascended ? 0 : ia + 1;
-  const need = ascended ? undefined : BINDINGS[next];
+  const need = ascended ? undefined : bindingFor(s, next); // AB#4712: the binding on this floor
   let bindingIndex = -1;
   let standIn: number | undefined;
   if (need) {
     bindingIndex = findBinding(s, next, a, b);
     // AB#381: a relic on the board is used first; a Stand-in only stands in for one that is not there
-    if (bindingIndex < 0 && (s.powerUps?.standIn?.[need] ?? 0) > 0) standIn = need;
+    if (bindingIndex < 0) standIn = standInFor(s, next);
     if (bindingIndex < 0 && standIn === undefined) return { ...base, chain, item: next, tier: tierOf(next), reason: 'binding', binding: need };
   }
 
@@ -125,11 +124,11 @@ export function autoMergePairs(s: GameState): [number, number][] {
   s.board.forEach((t, i) => { if (t) byItem.set(t, [...(byItem.get(t) ?? []), i]); });
   for (const [item, cells] of [...byItem].sort((x, y) => x[0] - y[0])) {
     if (isTop(item)) continue;
-    const need = BINDINGS[item + 1];
+    const need = bindingFor(s, item + 1);
     for (let k = 0; k + 1 < cells.length; k += 2) {
       const a = cells[k], b = cells[k + 1];
       if (need) {
-        const bi = s.board.findIndex((t, i) => t === need && i !== a && i !== b && !taken.has(i));
+        const bi = s.board.findIndex((t, i) => bindsFor(s, item + 1, t) && i !== a && i !== b && !taken.has(i));
         if (bi < 0) break;
         taken.add(bi);
       }
@@ -150,7 +149,7 @@ export function autoMerge(s: GameState, rng: Rng, now = Date.now()): MergeResult
   for (const [a, b] of pairs) {
     // an earlier merge in this use may have taken the binding it was counting on: skip it rather than spend a Stand-in
     const next = s.board[a] + 1;
-    if (s.board[a] !== s.board[b] || !s.board[a] || (BINDINGS[next] && findBinding(s, next, a, b) < 0)) continue;
+    if (s.board[a] !== s.board[b] || !s.board[a] || (bindingFor(s, next) && findBinding(s, next, a, b) < 0)) continue;
     const r = merge(s, a, b, rng, now);
     if (r.ok) results.push(r);
   }

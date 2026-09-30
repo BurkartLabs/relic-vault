@@ -1,5 +1,6 @@
 import { BOARD_COLS, BOARD_SIZE, ECON } from '../data/catalog';
-import { chainOf, tierOf, itemWork, tierValue, BINDINGS, isTop } from '../data/items';
+import { chainOf, tierOf, itemWork, tierValue, isTop } from '../data/items';
+import { bindingFor, bindsFor, standInFor } from './Floors'; // AB#4712: the binding on this floor
 import type { GameState } from './State';
 import type { Rng } from './Rng';
 
@@ -93,10 +94,9 @@ export function lowest(s: GameState, n: number): number[] {
 /** Is a merge of item `id` possible right now (its binding, if any, is on the board)? */
 export function bindingReady(s: GameState, id: number, a: number, b: number) {
   if (isTop(id)) return true;
-  const need = BINDINGS[id + 1];
-  if (!need) return true;
+  if (!bindingFor(s, id + 1)) return true;
   // AB#381: a Binding Stand-in held for it counts (read directly: importing PowerUps here would be a module cycle)
-  return s.board.some((t, i) => t === need && i !== a && i !== b) || (s.powerUps?.standIn?.[need] ?? 0) > 0;
+  return s.board.some((t, i) => bindsFor(s, id + 1, t) && i !== a && i !== b) || standInFor(s, id + 1) !== undefined;
 }
 
 /** Any pair on the board that could merge right now (bindings respected). */

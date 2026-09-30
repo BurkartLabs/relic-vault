@@ -16,7 +16,10 @@ describe('power-up prices come from the exact-relic ladder (T-003)', () => {
   it('a Stand-in costs its binding at the ladder price, and the ladder is the exact-relic price', () => {
     for (const b of STAND_IN_ITEMS) expect(standInCost(b)).toBe(ladderGems(b));
     for (let t = 1; t <= 9; t++) expect(exactRelicCost(t)).toBe(ladderGems(t));
-    expect(STAND_IN_ITEMS).toEqual([...new Set(Object.values(BINDINGS))].sort((a, b) => a - b));
+    // every binding, and (AB#4712) each Forge binding's tier on every deeper floor, which binds in its place there
+    for (const b of Object.values(BINDINGS)) expect(STAND_IN_ITEMS).toContain(b);
+    expect(STAND_IN_ITEMS).toContain(34); // the Drowned Wing's tier 4 (the Coral Diadem), for the Gold Mask
+    expect(STAND_IN_ITEMS).toContain(36); // and its tier 6, for the Sapphire Heart
   });
 
   it('Auto-Merge costs the ladder rate per action for a board of pairs, and never less than one gem', () => {

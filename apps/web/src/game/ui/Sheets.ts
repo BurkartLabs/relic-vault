@@ -5,6 +5,7 @@ import { priceLabel } from '../systems/Prices'; // AB#4725: the store's price in
 import { storeCopy } from '../buildMode';
 import { keeperLayout } from './keeperLayout';
 import { ctx } from '../GameCtx';
+import { bindingFor } from '../systems/Floors'; // AB#4712
 import { NO_AD_TEXT } from '../systems/ads/AdService'; // AB#4724
 import { RELICS, ECON, COPY, SKUS, GEM_CHEST_ODDS, EARNED_CHEST_ODDS, CHEST_PITY_TIER, MAX_TIER } from '../data/catalog';
 import { lowest, sell, sellValue, findPair } from '../systems/BoardSystem';
@@ -12,7 +13,7 @@ import { gemClear, QUESTS, questProgress, claimQuest, questPowerUpDue, xpToNext,
 import { computeLuck } from '../systems/LuckSystem';
 import { DAY } from '../systems/State';
 import type { VaultScene } from '../scenes/VaultScene';
-import { CHAINS, ITEMS, BINDINGS, itemId, chainOf, tierOf, isTop } from '../data/items';
+import { CHAINS, ITEMS, itemId, chainOf, tierOf, isTop } from '../data/items';
 import { genUpgradeCost, upgradeGenerator } from '../systems/Economy';
 import { GEN_MAX_LEVEL } from '../data/items';
 
@@ -40,7 +41,7 @@ export class InspectCard extends Modal {
     B.add(txt(vs, 0, top + 660, `${CHAINS[chainOf(tier)].name.toUpperCase()} · TIER ${tierOf(tier)} · ${def.material.toUpperCase()}`, { size: 34, font: 'num', weight: '700', color: '#b9a9c6' }));
     B.add(txt(vs, 0, top + 760, `“${def.lore}”`, { size: 32, font: 'title', weight: '700', color: '#FFE9A3', wrap: 760 }));
     if (!isTop(tier)) {
-      const bind = BINDINGS[tier + 1];
+      const bind = bindingFor(ctx.state, tier + 1); // AB#4712: the binding on this floor
       B.add(txt(vs, bind ? -170 : -80, top + 880, 'Merge two to make', { size: 28, font: 'body', color: '#b9a9c6' }));
       B.add(vs.add.image(bind ? 40 : 140, top + 880, 'relic96', `i${tier + 1}`).setDisplaySize(96, 96));
       if (bind) {
@@ -314,7 +315,7 @@ export class GeneratorSheet extends Modal {
       const ic = vs.add.image(x, y, 'relic96', `i${id}`).setDisplaySize(gap - 12, gap - 12);
       if (!seen) ic.setTint(0x000000).setAlpha(0.55);
       B.add(ic);
-      const bind = BINDINGS[id];
+      const bind = bindingFor(ctx.state, id);
       if (bind) {
         B.add(vs.add.image(x, y + 80, 'ic_link').setDisplaySize(40, 40));
         B.add(vs.add.image(x, y + 132, 'relic96', `i${bind}`).setDisplaySize(64, 64));
