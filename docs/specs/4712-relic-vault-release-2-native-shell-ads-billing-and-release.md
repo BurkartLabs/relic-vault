@@ -11,7 +11,48 @@ Order: shell first (everything else runs inside it), then ads and billing in par
 
 ## Acceptance
 
-_To be written: the Feature had no acceptance criteria in Azure DevOps._
+The Feature is done when a stranger with the internal-testing link, a license-tester account and the checklist below
+can confirm every numbered line on a phone, not in a desktop browser (CLAUDE.md, "Before you say something works").
+The two post-launch headings (AB#4734 age signal, AB#4740 Play Games saves) and the Board-only CI grant (Bug AB#4761)
+are **not** required for Done; they stay in the checklist so they are not forgotten.
+
+1. **It installs and boots.** A signed `.aab` built from `main` (`npm run android:bundle`, or the CI stage once
+   the Board's keystore and agent exist) installs from Google Play internal testing on an Android 16 phone and boots to
+   the age gate in portrait, HUD below the status bar and Dock above the gesture bar; on an Android 10 device it shows
+   the designed "update Android System WebView" screen instead of a blank view. Screenshots of both attached to the PR.
+2. **Ads show when they are supposed to, and only then.** On a device with the test ad unit IDs: FREE SPIN and
+   Double-It play a real rewarded ad and grant only after the SDK's reward callback (closing early grants nothing and
+   says so); an interstitial appears after a chest and after an event claim, never inside the 45 s gap, never during a
+   drag or a streak, and never gates play; a VIP or no-ads profile sees no interstitial; the UMP consent form appears
+   once on first launch in an EEA locale and again from Settings, Privacy options. The web build and e2e still use the
+   demo veil.
+3. **The store is real and honest.** With a license-tester account: every Play product (`rv_welcome`, `rv_gems_200`,
+   `rv_gems_500`, `rv_gems_1200`, `rv_piggy`, `rv_pass`, `rv_noads`, `rv_comeback`, subscription `rv_vip`)
+   grants exactly what the catalog blurb advertises; `rv_noads` stops interstitials; restore on a second device returns
+   the entitlements and no consumable; a refund from Play Console revokes the entitlement on next boot; every price a
+   player sees is the store's localised price and the value ribbons recompute from it; no "DEMO STORE MODE" text is
+   visible in a play-mode build.
+4. **Keeper's Pass is seasonal** (Decision AB#4788): `passPremium` resets in `rollover()` at a season change,
+   `rv_pass` is re-grantable once per season, and the Settings and shop copy say "this season".
+5. **The legal pages are public.** `/privacy.html` and `/terms.html` load on the live Static Web App without
+   signing in (the game root still requires the playtester role); Settings opens both; "Delete my data" leaves no
+   relic-vault key in IndexedDB or localStorage; `docs/DATA_SAFETY.md` names every field `Telemetry.ts` and
+   `Analytics.ts` send.
+6. **Android behaves like an app.** Back closes the topmost open surface (shop, settings, offer sheet, odds sheet, ad
+   veil) one at a time; from the bare vault one press shows the "press back again" toast and a second exits;
+   backgrounding mid-drag and returning restores the exact board.
+7. **The store listing can be filled from the repo.** `screenshots/store/` holds the 512 icon, the 1024x500 feature
+   graphic, 8 phone and 4 tablet shots at Play's exact sizes, and `docs/STORE_LISTING.md` has every Main store
+   listing field inside its character limit (a test asserts the limits).
+8. **It was looked at on a phone, with numbers.** `docs/DEVICE_QA.md`'s checklist has been run once on a real
+   mid-range phone with cold-start and steady-fps figures recorded, and `node scripts/android-qa.mjs` produces
+   `screenshots/android/*.png` on an emulator from a clean checkout.
+9. **Nothing flakes on the way.** `npm run typecheck && npm test && npx playwright test` pass on the web build, and
+   the "telemetry reaches a real sink" e2e is green ten runs in a row (Bug AB#4789).
+10. **CI can ship it, once the Board can.** The `android` stage on `main` publishes `relic-vault.aab` as an
+    artifact when the keystore Secure file and the three secret variables exist, and fails with a message naming what
+    is missing when they do not; the `validate` stage is unchanged. This line is checked only after Board steps
+    AB#4762 (agent) and AB#4716 (keystore) are done.
 
 ## Checklist
 
