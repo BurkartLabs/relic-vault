@@ -283,13 +283,27 @@ async function main() {
     });
 
     // 8. background and resume: Home, wait, back in; the same page and the same state
+    // AB#4712 (the Board: "the audio stays playing even when the screen is off … also when the app is minimized"): out
+    // of sight the game loop sleeps and the audio is suspended, and both come back with the app
+    const power = () => vs(() => ({ loop: window.__game.loop.running ? 'running' : 'asleep', audio: window.__rv.sfx.ac?.state ?? 'none' })).catch(() => null);
+    const quiet = (p) => (p && p.loop === 'asleep' && p.audio !== 'running' ? `loop asleep, audio ${p.audio}` : `FAILED: ${JSON.stringify(p)}`);
+    const awake = (p) => (p && p.loop === 'running' && p.audio !== 'suspended' ? `loop running, audio ${p.audio}` : `FAILED: ${JSON.stringify(p)}`);
     await step('background/resume', async () => {
       const before = await vs(() => ({ origin: performance.timeOrigin, board: window.__rv.state.board.join(',') }));
       sh('input keyevent KEYCODE_HOME'); await wait(3000);
+      summary.checks['minimised: silent'] = quiet(await power());
       summary.timings.resumeAm = startActivity(); await wait(1200);
       const after = await vs(() => ({ origin: performance.timeOrigin, board: window.__rv.state.board.join(',') })).catch(() => null);
       summary.checks['background/resume'] = !after ? 'PAGE GONE' : after.origin !== before.origin ? 'page reloaded' : after.board === before.board ? 'resumed, board kept' : 'BOARD CHANGED';
+      summary.checks['minimised: back'] = awake(await power());
       await screencap('resumed');
+    });
+    await step('screen off/on', async () => {
+      sh('input keyevent KEYCODE_SLEEP'); await wait(3000);
+      summary.checks['screen off: silent'] = quiet(await power());
+      sh('input keyevent KEYCODE_WAKEUP'); sh('wm dismiss-keyguard'); await wait(2000);
+      summary.checks['screen on: back'] = awake(await power());
+      await screencap('screen-on');
     });
 
     // 9. start-up time: cold (process killed) to the game being interactive, and warm (process alive, activity recreated)

@@ -56,7 +56,7 @@ are **not** required for Done; they stay in the checklist so they are not forgot
 
 ## Checklist
 
-Each heading replaces a Requirement or Bug, which Azure DevOps keeps (Closed, tagged folded, linked here); its lines are its Acceptance. A checked line was Resolved and has not been verified. 5 open, 12 resolved.
+Each heading replaces a Requirement or Bug, which Azure DevOps keeps (Closed, tagged folded, linked here); its lines are its Acceptance. A checked line was Resolved and has not been verified. 6 open, 12 resolved.
 
 ### CI: build and sign the Android App Bundle on main, publish it as an artifact, optional upload to the internal track (Requirement AB#4731, Proposed)
 
@@ -109,6 +109,13 @@ Proposed fix: Confidence: medium. Wait for __vault.pair to be non-null (page.wai
 
 - [x] Fixed: Relic Vault e2e 'telemetry reaches a real sink' flakes: __vault.pair is null after the first forge
 
+### Relic Vault keeps playing its audio with the screen off or the app minimised, and the phone runs hot (the Board, 2026-09-30)
+
+What: the Board, on the Android build: "the audio stays playing even when the screen is off. Also when the app is minimized. Also, my phone is getting real hot playing it." Root cause: nothing suspended the Web Audio context (the drone never stops) or the game loop on the Android lifecycle, and the loop drew 60 frames a second whether or not anyone was touching the game. Fix: systems/Power.ts sleeps the loop and suspends the audio when the app is backgrounded or the page hidden, and draws at 30 fps after 2.5 s without a touch (60 while touching).
+
+- [x] Fixed: with the screen off or the app minimised the game loop sleeps and the audio is suspended; both come back with the app (unit tests; the hidden page in a browser; scripts/android-qa.mjs now checks both on a device).
+- [x] Idle work roughly halved: 74 to 44 ms of main-thread work a second on the idle vault (desktop Edge at phone size), 60 fps kept while touching.
+- [ ] Checked on the Board's phone: no sound with the screen off or minimised, and cooler in play.
 ### Capacitor Android shell: android/ project, target API 36, edge-to-edge, orientation, splash, signed AAB script (Requirement AB#4723, Resolved, not verified)
 
 What: Where it sits: Release 2, story 1: everything else runs inside this. Opens once the Decision picks Capacitor (recommended) over a TWA. / What: Add Capacitor (@capacitor/core, @capacitor/cli, @capacitor/android) with appId from the Decision (chosen: com.madgod_games.relic_vault), appName "Relic Vault", webDir dist. Android project: compileSdk/targetSdk 36, minSdk 26 (WebView 90+ check on boot with a plain "update Android System WebView" screen), portrait-only activity, edge-to-edge (mandatory on… (the rest: AB#4723)
