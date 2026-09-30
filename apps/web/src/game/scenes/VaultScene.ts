@@ -1239,7 +1239,11 @@ export class VaultScene extends Phaser.Scene {
     if (this.modal && this.modal !== m) { const old = this.modal; old.onClosed = undefined; old.destroy(); }
     this.modal = m;
     this.deselect();
-    if (this.press) { this.press.timer?.remove(); this.press = null; }
+    // Bug #4893: a popup can open while a relic is in the air (an offer a beat after a discovery merge). Dropping the
+    // press left the relic drawn where the finger was, lifted, with the scene still dragging, and the finger's
+    // pointerup found no press to finish: frozen mid-air. It goes home as a drag the app interrupted does (AB#4728):
+    // only a drop changes the board, and a popup the player did not ask for is not a drop.
+    this.cancelDrag();
   }
   onModalClosed(m: Modal) {
     if (this.modal === m) this.modal = null;
