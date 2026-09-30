@@ -7,6 +7,8 @@ those notes as the new version (docs/RELEASE.md). The Google Play release notes 
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-09-30
+
 ### Added
 
 - Release versioning: versionCode from package.json's version, the `npm version` hook, this changelog and
