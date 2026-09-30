@@ -1,7 +1,7 @@
 ﻿import { BOARD_SIZE, ECON, CARDS, ALBUM_PAGES, type SkuId } from '../data/catalog';
 import { defaultProfile, type Profile } from './Profile';
-import { FLOOR_COUNT } from '../data/floors';
-import { BINDINGS } from '../data/items';
+import { FLOORS, FLOOR_COUNT } from '../data/floors';
+import { BINDINGS, chainOf, itemId, tierOf } from '../data/items';
 
 export const SAVE_VERSION = 6;
 
@@ -93,8 +93,13 @@ export interface GameState {
 /** How many of each power-up the player holds: Auto-Merge charges, and Binding Stand-ins by the binding they replace. */
 export interface PowerUps { autoMerge: number; standIn: Record<number, number> }
 
-/** Every relic that is some merge's binding: the only things a Stand-in can stand in for. */
-export const STAND_IN_ITEMS: readonly number[] = [...new Set(Object.values(BINDINGS))].sort((a, b) => a - b);
+/**
+ * Every relic that is some merge's binding: the only things a Stand-in can stand in for. A Forge binding is also the
+ * same tier of every deeper floor's ladder, which binds in its place there (Floors.bindingFor, AB#4712).
+ */
+const DEEP_CHAINS = FLOORS.map((f) => f.chain).filter((c) => c > 2);
+export const STAND_IN_ITEMS: readonly number[] = [...new Set(Object.values(BINDINGS).flatMap((b) =>
+  chainOf(b) === 0 ? [b, ...DEEP_CHAINS.map((c) => itemId(c, tierOf(b)))] : [b]))].sort((a, b) => a - b);
 
 /**
  * AB#381: power-ups read from a save, failing closed. Anything missing, malformed, negative, fractional or naming a

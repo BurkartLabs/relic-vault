@@ -56,7 +56,7 @@ are **not** required for Done; they stay in the checklist so they are not forgot
 
 ## Checklist
 
-Each heading replaces a Requirement or Bug, which Azure DevOps keeps (Closed, tagged folded, linked here); its lines are its Acceptance. A checked line was Resolved and has not been verified. 6 open, 12 resolved.
+Each heading replaces a Requirement or Bug, which Azure DevOps keeps (Closed, tagged folded, linked here); its lines are its Acceptance. A checked line was Resolved and has not been verified. 6 open, 13 resolved.
 
 ### CI: build and sign the Android App Bundle on main, publish it as an artifact, optional upload to the internal track (Requirement AB#4731, Proposed)
 
@@ -116,6 +116,11 @@ What: the Board, on the Android build: "the audio stays playing even when the sc
 - [x] Fixed: with the screen off or the app minimised the game loop sleeps and the audio is suspended; both come back with the app (unit tests; the hidden page in a browser; scripts/android-qa.mjs now checks both on a device).
 - [x] Idle work roughly halved: 74 to 44 ms of main-thread work a second on the idle vault (desktop Edge at phone size), 60 fps kept while touching.
 - [ ] Checked on the Board's phone: no sound with the screen off or minimised, and cooler in play.
+### Below the Antechamber the Crypt and Star Well merges still ask for Forge relics (the Board, 2026-09-30)
+
+What: the Board: "when you go down a level, the requirements for upgrades across the tiers remains the same. So even though we have a coral mask now … it still wants a gold mask to upgrade those two blue cannister thingy majiggers." Root cause: items.ts binds the Crypt's and the Star Well's top tiers with Forge relics (the Gold Mask, the Sapphire Heart), and the Forge is the Antechamber's ladder, gone from every deeper floor, so those merges could not be made there. Fix: Floors.bindingFor maps a Forge binding to the same tier of the floor's own ladder (a Gold Mask becomes the Drowned Wing's Coral Diadem); merges, auto-merge, patron orders, the relic cards and the shop's Stand-ins all read it, and a Forge relic brought down still counts.
+
+- [x] Fixed: on every deeper floor a Crypt or Star Well merge asks for that floor's relic of the Forge binding's tier, and the card and the shop say so (floorBindings.test.ts; looked at on the Drowned Wing).
 ### Capacitor Android shell: android/ project, target API 36, edge-to-edge, orientation, splash, signed AAB script (Requirement AB#4723, Resolved, not verified)
 
 What: Where it sits: Release 2, story 1: everything else runs inside this. Opens once the Decision picks Capacitor (recommended) over a TWA. / What: Add Capacitor (@capacitor/core, @capacitor/cli, @capacitor/android) with appId from the Decision (chosen: com.madgod_games.relic_vault), appName "Relic Vault", webDir dist. Android project: compileSdk/targetSdk 36, minSdk 26 (WebView 90+ check on boot with a plain "update Android System WebView" screen), portrait-only activity, edge-to-edge (mandatory on… (the rest: AB#4723)

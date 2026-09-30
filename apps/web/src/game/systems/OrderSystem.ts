@@ -1,8 +1,8 @@
 import { ECON } from '../data/catalog';
-import { CHAINS, PATRONS, BINDINGS, itemId, itemWork, buildGold, chainOf, tierOf, isTop } from '../data/items';
+import { CHAINS, PATRONS, itemId, itemWork, buildGold, chainOf, tierOf, isTop } from '../data/items';
 import type { GameState, Order } from './State';
 import { noteFloorAction } from './Chronicle';
-import { liveChains } from './Floors';
+import { bindingFor, liveChains } from './Floors';
 import type { Rng } from './Rng';
 import { grantGold, addXp, grantCard, CardResult } from './Economy';
 
@@ -35,7 +35,7 @@ function askCap(s: GameState, chain: number, rng: Rng) {
   const best = Math.max(1, s.best[chain] ?? 1);
   let cap = Math.min(CHAINS[chain].maxTier, best + (rng() < 0.2 ? 1 : 0));
   while (cap > 2) {
-    const b = BINDINGS[itemId(chain, cap)];
+    const b = bindingFor(s, itemId(chain, cap)); // AB#4712: what this floor asks for
     if (!b || (s.gens[chainOf(b)] ?? 0) > 0) break;
     cap--;
   }

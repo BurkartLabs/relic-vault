@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { ctx } from '../GameCtx';
-import { PATRONS, ITEMS, BINDINGS } from '../data/items';
+import { bindingFor } from '../systems/Floors'; // AB#4712
+import { PATRONS, ITEMS } from '../data/items';
 import { orderProgress, matchOrder } from '../systems/OrderSystem';
 import { txt, fmt } from './kit';
 import type { VaultScene } from '../scenes/VaultScene';
@@ -96,7 +97,7 @@ export class OrdersPanel extends Phaser.GameObjects.Container {
       const ic = vs.add.image(ix, iy, 'relic96', `i${id}`).setDisplaySize(76, 76).setAlpha(have[k] ? 1 : 0.45);
       c.add([slot, ic]);
       if (have[k]) c.add(txt(vs, ix + 30, iy + 28, '✓', { size: 30, font: 'num', weight: '700', color: '#8CF08A' }));
-      if (BINDINGS[id] && !have[k]) c.add(vs.add.image(ix - 30, iy - 28, 'ic_link').setDisplaySize(34, 34));
+      if (bindingFor(ctx.state, id) && !have[k]) c.add(vs.add.image(ix - 30, iy - 28, 'ic_link').setDisplaySize(34, 34));
     });
     // reward row
     const ry = H / 2 - 30;
