@@ -91,6 +91,12 @@ gradle.taskGraph.whenReady { graph ->
     if (!file(signingValues.storeFile).isFile()) {
         throw new GradleException("RELIC_VAULT_KEYSTORE_PATH does not name a keystore file that exists (docs/ANDROID.md, 'Signing').")
     }
+    // AB#4712: ads.ts holds the live ad units, which serve nothing under Google's test app id (the default above)
+    def releaseAdmobAppId = project.findProperty('RELIC_VAULT_ADMOB_APP_ID') ?: System.getenv('RELIC_VAULT_ADMOB_APP_ID')
+    if (!releaseAdmobAppId || releaseAdmobAppId.startsWith('ca-app-pub-3940256099942544')) {
+        throw new GradleException("A release build needs the live AdMob app id: set RELIC_VAULT_ADMOB_APP_ID to the app id in " +
+            "apps/web/src/game/config/ads.ts (docs/ANDROID.md, 'Ads'). With Google's test app id the live ad units serve nothing.")
+    }
 }
 
 try {
