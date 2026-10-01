@@ -73,30 +73,30 @@ session, and 81 is not. The grammar (form painters, material finishes, the ornam
 
 ### Slice 2: floors 5-7 (lane: relic-vault/all)
 
-- [ ] material finishes and ornament passes for the Mirror Stair (mirror, silvered glass, a reflection band), the Root Cellar (root, fungus, wet wood), the Frost Ledger (ice, rime, frozen ink)
-- [ ] any form painter these floors need that slice 1 did not exercise, with the same tier parameterisation
-- [ ] hand-painted capstones: the Second Keeper, the Taproot Reliquary, the Debt in Ice
-- [ ] contact sheet updated; screenshots of the Mirror Stair board at both sizes attached
+- [x] material finishes and ornament passes for the Mirror Stair (mirror, silvered glass, a reflection band), the Root Cellar (root, fungus, wet wood), the Frost Ledger (ice, rime, frozen ink)
+- [x] any form painter these floors need that slice 1 did not exercise, with the same tier parameterisation (none: every form floors 5-7 compose, shard to crown, was already exercised by floors 2-4; the one form slice 1 composed nowhere, book, is the Debt in Ice, hand-painted)
+- [x] hand-painted capstones: the Second Keeper, the Taproot Reliquary, the Debt in Ice
+- [x] contact sheet updated; screenshots of the Mirror Stair board at both sizes attached
 
 ### Slice 3: floors 8-10 (lane: relic-vault/all)
 
-- [ ] material finishes and ornament passes for the Clockworks (brass, spring, escapement), the Ink Vaults (ink, vellum, seal-wax), the Hollow Core (absence: silhouettes drawn as their own negative space, per ROOMS.md "un-things")
-- [ ] hand-painted capstones: the Hour Unspent, the Name of the Vault, the Empty Setting
-- [ ] the AB#4737 numbers re-measured with every floor painted (cold start, texture memory) and recorded in docs/DEVICE_QA.md; contact sheet complete; screenshots of the Hollow Core board at both sizes attached
+- [x] material finishes and ornament passes for the Clockworks (brass, spring, escapement), the Ink Vaults (ink, vellum, seal-wax), the Hollow Core (absence: silhouettes drawn as their own negative space, per ROOMS.md "un-things")
+- [x] hand-painted capstones: the Hour Unspent, the Name of the Vault, the Empty Setting
+- [x] the AB#4737 numbers re-measured with every floor painted (cold start, texture memory) and recorded in docs/DEVICE_QA.md; contact sheet complete; screenshots of the Hollow Core board at both sizes attached
 
 ### Slice 4: the descent (lane: relic-vault/all)
 
-- [ ] `scenes/FloorTransition.ts`: a scene launched over the vault that owns the sequence (recorded relics lift and sink into the Reliquary, the vault darkens and drops, the new floor's colour and background rise, the generator row builds in), 2.5 to 3.5 s, with sfx
-- [ ] `onFloorChanged` restarts the vault *under* the transition; the transition ends only when the new scene reports ready, so the cut is never visible; `persistNow` before, exactly as today
-- [ ] skip after 1.2 s; `prefers-reduced-motion` variant (fade plus the floor name); the restore variant shorter and without the drop
+- [x] `scenes/FloorTransition.ts`: a scene launched over the vault that owns the sequence (recorded relics lift and sink into the Reliquary, the vault darkens and drops, the new floor's colour and background rise, the generator row builds in), 2.5 to 3.5 s, with sfx
+- [x] `onFloorChanged` restarts the vault *under* the transition; the transition ends only when the new scene reports ready, so the cut is never visible; `persistNow` before, exactly as today
+- [x] skip after 1.2 s; `prefers-reduced-motion` variant (fade plus the floor name); the restore variant shorter and without the drop
 - [ ] e2e: ten descend/restore cycles leave state as `floors.test.ts` predicts and the transition never blocks input past 4 s; a recording or three frames attached, and the fps on the DEVICE_QA phone recorded
 
 ### Slice 5: the chapter card (lane: relic-vault/all)
 
-- [ ] `ui/FloorIntro.ts`: a modal opened by the transition's end with Chapter N, name, subtitle, material line, generator name and blurb, the veiled capstone, Renown gained and the memento placed, one Keeper line, one Continue; copy in `catalog.ts` COPY like every other string
-- [ ] shown once per arrival (descend and restore), and once for Chapter 1 on a fresh game after the age gate; the post-restart `keeperSays` line removed
-- [ ] the Chronicle links each chapter card to its floor entry (the card is where the floor's story begins)
-- [ ] e2e asserts the card appears exactly once per arrival and never on a plain reload; screenshots at both sizes attached
+- [x] `ui/FloorIntro.ts`: a modal opened by the transition's end with Chapter N, name, subtitle, material line, generator name and blurb, the veiled capstone, Renown gained and the memento placed, one Keeper line, one Continue; copy in `catalog.ts` COPY like every other string
+- [x] shown once per arrival (descend and restore), and once for Chapter 1 on a fresh game after the age gate; the post-restart `keeperSays` line removed
+- [x] the Chronicle links each chapter card to its floor entry (the card is where the floor's story begins)
+- [x] e2e asserts the card appears exactly once per arrival and never on a plain reload; screenshots at both sizes attached
 
 ## Demo script
 

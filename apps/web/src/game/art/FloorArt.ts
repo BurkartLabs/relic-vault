@@ -6,13 +6,14 @@
  *     model, in a ramp made from the relic's own colour. Each is parameterised by tier: a tier-8 vessel is a larger,
  *     more worked version of a tier-2 vessel, so the family reads and so does the rank;
  *  2. the floor's **finish** is a pass over the painted pixels only (salt grain and nacre on the Drowned Wing,
- *     glass and amber translucency in the Orchard, soot and ember in the Kilns);
+ *     glass and amber translucency in the Orchard, soot and ember in the Kilns, silvering on the Mirror Stair, wet
+ *     wood in the Root Cellar, rime on the Frost Ledger);
  *  3. the floor's **ornament** pass is drawn over that (the Drowned Wing's barnacle line, the Orchard's graft seam,
- *     the Kilns' crackle).
+ *     the Kilns' crackle, the Mirror Stair's reflection band, the Cellar's roots and fungus, the Ledger's frozen ink).
  *
- * The capstones (tier 9) are hand-painted, because the capstone is the image the player remembers. Floors 5-10
- * take their finishes and capstones in slices 2 and 3; until then their relics are form-composed in their own
- * colours with no floor pass, never a recoloured Antechamber relic.
+ * The capstones (tier 9) are hand-painted, because the capstone is the image the player remembers. Floors 8-10
+ * take their finishes and capstones in slice 3; until then their relics are form-composed in their own colours with
+ * no floor pass, never a recoloured Antechamber relic.
  *
  * `floorPainterFor` is pure (no canvas), so a unit test can prove every floor id resolves to a painter.
  */
@@ -389,10 +390,242 @@ const KILNS: FloorStyle = {
   },
 };
 
-/** Floors 5-10 until slices 2 and 3 give them their own: their colours only, no floor pass. */
+/** The Mirror Stair: cold silvering, hard-edged glints, and a band of glass across the foot showing the relic upside down. */
+const MIRROR: FloorStyle = {
+  accent: ['#ffffff', '#d8ecff', '#9fc4ea', '#46607e', '#141e2c'],
+  finish(ctx, rnd) {
+    // silvered glass: cold at the top, a blue-black back where the silver has gone thin
+    ctx.fillStyle = lin(ctx, 0, 30, 0, 230, [[0, 'rgba(235,245,255,0.28)'], [0.55, 'rgba(160,190,220,0.08)'], [1, 'rgba(20,30,50,0.32)']]);
+    ctx.fillRect(0, 0, 256, 256);
+    // the glints are hard-edged, not soft light: a mirror, not glass
+    ctx.save(); ctx.translate(128, 128); ctx.rotate(0.62);
+    const x = -40 + rnd() * 30;
+    ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.fillRect(x, -140, 16, 280);
+    ctx.fillStyle = 'rgba(255,255,255,0.28)'; ctx.fillRect(x + 24, -140, 5, 280);
+    ctx.restore();
+    // desilvering: a few dark flecks where the backing let go
+    speckle(ctx, 30, 150, 196, 80, 40, Math.floor(rnd() * 1e6), ['#1e2838', '#3a4658'], [1, 2.6]);
+  },
+  ornament(ctx, rnd, _r, tier) {
+    // the reflection band: the relic's own belly, seen upside down in a strip of mirror across its foot. Deeper with tier.
+    const [copy, cc] = makeCanvas(256, 256);
+    cc.drawImage(ctx.canvas, 0, 0);
+    const top = 182 - tier * 3, h = 22 + tier * 3;
+    ctx.save();
+    ctx.beginPath(); ctx.rect(0, top, 256, h); ctx.clip();
+    ctx.fillStyle = 'rgba(40,56,80,0.55)'; ctx.fillRect(0, top, 256, h);
+    ctx.globalAlpha = 0.85; ctx.translate(0, top * 2); ctx.scale(1, -1); ctx.drawImage(copy, 0, 0);
+    ctx.restore();
+    ctx.save();
+    ctx.fillStyle = lin(ctx, 0, top, 0, top + h, [[0, 'rgba(255,255,255,0.35)'], [0.4, 'rgba(255,255,255,0)'], [1, 'rgba(10,16,28,0.35)']]);
+    ctx.fillRect(0, top, 256, h);
+    ctx.fillStyle = 'rgba(255,255,255,0.95)'; ctx.fillRect(0, top - 1, 256, 2.5);
+    ctx.fillStyle = 'rgba(20,28,44,0.8)'; ctx.fillRect(0, top + h, 256, 2);
+    // a bevel mark per few tiers along the band, where the glass was cut
+    for (let i = 0; i < 1 + Math.floor(tier / 3); i++) { const bx = 50 + rnd() * 156; ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.fillRect(bx, top + 3, 1.5, h - 6); }
+    ctx.restore();
+  },
+};
+
+/** The Root Cellar: wet wood grain, black loam low down, and roots and fungus coming up over everything. */
+const CELLAR: FloorStyle = {
+  accent: ['#f0ffe0', '#b8f090', '#6ac050', '#2a6a22', '#0e2a0c'],
+  finish(ctx, rnd) {
+    // wood grain: long dark wavering lines
+    ctx.save(); ctx.lineWidth = 1.6; ctx.strokeStyle = 'rgba(40,24,10,0.3)';
+    for (let i = 0; i < 16; i++) {
+      const x0 = 30 + i * 13 + rnd() * 6, ph = rnd() * 6;
+      ctx.beginPath(); for (let y = 20; y <= 240; y += 8) { const x = x0 + Math.sin(y / 22 + ph) * 4; if (y === 20) ctx.moveTo(x, y); else ctx.lineTo(x, y); } ctx.stroke();
+    }
+    ctx.restore();
+    // the damp: darker from the floor up, and a wet gloss high on the surface
+    ctx.fillStyle = lin(ctx, 0, 110, 0, 240, [[0, 'rgba(30,20,10,0)'], [1, 'rgba(30,20,10,0.55)']]);
+    ctx.fillRect(0, 0, 256, 256);
+    for (let i = 0; i < 6; i++) { const x = 70 + rnd() * 110, y = 60 + rnd() * 80; ctx.fillStyle = 'rgba(240,255,240,0.55)'; ctx.beginPath(); ctx.ellipse(x, y, 4 + rnd() * 4, 1.6, -0.4, 0, Math.PI * 2); ctx.fill(); }
+    speckle(ctx, 30, 170, 196, 70, 120, Math.floor(rnd() * 1e6), ['#1a120a', '#3a2a18', '#5a4a30'], [0.8, 2.4]);
+  },
+  ornament(ctx, rnd, _r, tier) {
+    // roots coming up from the floor over the relic, more and longer with tier
+    ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    const roots = 2 + Math.floor(tier / 2);
+    const grow = (x: number, y: number, ang: number, len: number, w: number) => {
+      const p = new Path2D(); p.moveTo(x, y);
+      for (let k = 0; k < Math.ceil(len / 10); k++) { ang += (rnd() - 0.5) * 0.7; x += Math.cos(ang) * 10; y += Math.sin(ang) * 10; p.lineTo(x, y); }
+      ctx.lineWidth = w + 2.5; ctx.strokeStyle = 'rgba(24,14,6,0.9)'; ctx.stroke(p);
+      ctx.lineWidth = w; ctx.strokeStyle = '#8a6a44'; ctx.stroke(p);
+      ctx.lineWidth = Math.max(1, w * 0.35); ctx.strokeStyle = 'rgba(230,200,150,0.7)'; ctx.stroke(p);
+      return [x, y, ang] as const;
+    };
+    for (let i = 0; i < roots; i++) {
+      const x = 60 + ((i + 0.5) / roots) * 136 + (rnd() - 0.5) * 16;
+      const [ex, ey, ea] = grow(x, 240, -Math.PI / 2 + (rnd() - 0.5) * 0.8, 40 + tier * 5 + rnd() * 20, 4 + tier * 0.25);
+      if (tier >= 4) grow(ex, ey, ea + (rnd() > 0.5 ? 0.9 : -0.9), 18 + tier * 2, 2);
+    }
+    // fungus: a cluster of pale caps on one side, from tier 3
+    const caps = tier >= 3 ? 1 + Math.floor((tier - 2) / 2) : 0;
+    const cx = rnd() > 0.5 ? 78 : 170;
+    for (let i = 0; i < caps; i++) {
+      const x = cx + (i - (caps - 1) / 2) * 14 + (rnd() - 0.5) * 4, y = 200 - (i % 2) * 10, s = 6 + rnd() * 3 + tier * 0.4;
+      ctx.fillStyle = '#e8dcc8'; ctx.fillRect(x - 1.5, y, 3, s);
+      const capP = new Path2D(); capP.ellipse(x, y, s, s * 0.6, 0, Math.PI, 0); capP.closePath();
+      ctx.fillStyle = rad(ctx, x - s * 0.3, y - s * 0.4, 0.5, s * 1.2, [[0, '#fff4e8'], [0.6, '#d8b8e0'], [1, '#8a6a98']]); ctx.fill(capP);
+      ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(30,16,30,0.85)'; ctx.stroke(capP);
+    }
+    ctx.restore();
+  },
+};
+
+/** The Frost Ledger: rime at the rim, ice light across the face, and the ledger's ruled lines and tallies frozen into it. */
+const FROST: FloorStyle = {
+  accent: ['#ffffff', '#bff0ff', '#5fd8ff', '#1a6a9a', '#06223a'],
+  finish(ctx, rnd) {
+    // ice: cold through the middle, rime whitening towards the edges
+    ctx.fillStyle = rad(ctx, 128, 132, 20, 120, [[0, 'rgba(60,170,255,0.34)'], [0.65, 'rgba(150,220,255,0.3)'], [1, 'rgba(255,255,255,0.7)']]);
+    ctx.fillRect(0, 0, 256, 256);
+    // hard facet planes, the way ice fractures
+    ctx.save(); ctx.fillStyle = 'rgba(255,255,255,0.18)';
+    for (let i = 0; i < 3; i++) { const x = 60 + rnd() * 130, y = 60 + rnd() * 120; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 30 + rnd() * 20, y - 10 - rnd() * 20); ctx.lineTo(x + 20, y + 26 + rnd() * 16); ctx.closePath(); ctx.fill(); }
+    ctx.restore();
+    speckle(ctx, 20, 20, 216, 216, 180, Math.floor(rnd() * 1e6), ['#ffffff', '#e8f8ff'], [0.6, 1.8]);
+  },
+  ornament(ctx, rnd, _r, tier) {
+    // frozen ink: the ledger's ruling across the lower body and a row of tallies, one group per two tiers
+    ctx.save(); ctx.lineCap = 'round';
+    for (let i = 0; i < 3; i++) { ctx.fillStyle = 'rgba(14,30,60,0.45)'; ctx.fillRect(40, 168 + i * 14, 176, 1.8); }
+    ctx.fillStyle = 'rgba(160,30,40,0.5)'; ctx.fillRect(84, 156, 1.8, 58); // the margin rule, in red
+    ctx.strokeStyle = 'rgba(10,20,44,0.85)'; ctx.lineWidth = 2.2;
+    for (let g = 0; g < Math.min(5, 1 + Math.floor(tier / 2)); g++) {
+      const gx = 96 + g * 24, gy = 172 + (g % 2) * 14;
+      ctx.beginPath();
+      for (let k = 0; k < 4; k++) { ctx.moveTo(gx + k * 4, gy); ctx.lineTo(gx + k * 4 - 1, gy + 10); }
+      ctx.moveTo(gx - 3, gy + 8); ctx.lineTo(gx + 16, gy + 1);
+      ctx.stroke();
+    }
+    // an ink blot that froze as it ran
+    const bx = 60 + rnd() * 16, by = 184;
+    ctx.fillStyle = 'rgba(10,20,44,0.75)'; ctx.beginPath(); ctx.ellipse(bx, by, 5, 4, 0, 0, Math.PI * 2); ctx.fill(); ctx.fillRect(bx - 1.5, by, 3, 10 + tier);
+    // rime feathers growing in from the top corner
+    ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 1.4;
+    const fern = (x: number, y: number, ang: number, len: number) => {
+      const ex = x + Math.cos(ang) * len, ey = y + Math.sin(ang) * len;
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(ex, ey);
+      for (let u = 0.2; u < 1; u += 0.16) {
+        const px = x + (ex - x) * u, py = y + (ey - y) * u, l = len * 0.28 * (1 - u);
+        for (const s of [-1, 1]) { ctx.moveTo(px, py); ctx.lineTo(px + Math.cos(ang + s * 0.8) * l, py + Math.sin(ang + s * 0.8) * l); }
+      }
+      ctx.stroke();
+    };
+    for (let i = 0; i < 1 + Math.floor(tier / 3); i++) fern(40 + i * 14, 40 + i * 6, 0.7 + i * 0.25, 40 + tier * 3);
+    ctx.restore();
+  },
+};
+
+/** Floors 8-10 until slice 3 gives them their own: their colours only, no floor pass. */
+/** The Clockworks: polished brass with the lathe's lines in it, and a cog and a mainspring worked into the metal. */
+const CLOCKWORKS: FloorStyle = {
+  accent: ['#fff6d8', '#ffd060', '#d09a28', '#6a4a10', '#2a1c06'],
+  finish(ctx, rnd) {
+    // polished brass: a warm horizon band, then the brushed lines the lathe left, curving with the piece
+    ctx.fillStyle = lin(ctx, 0, 40, 0, 230, [[0, 'rgba(255,240,190,0.18)'], [0.42, 'rgba(255,250,220,0.4)'], [0.5, 'rgba(120,80,20,0.22)'], [1, 'rgba(60,36,6,0.3)']]);
+    ctx.fillRect(0, 0, 256, 256);
+    ctx.strokeStyle = 'rgba(255,240,200,0.14)'; ctx.lineWidth = 1;
+    const cx = 128 + (rnd() - 0.5) * 20;
+    for (let r = 20; r < 180; r += 5) { ctx.beginPath(); ctx.arc(cx, 150, r, Math.PI * 1.05, Math.PI * 1.95); ctx.stroke(); }
+  },
+  ornament(ctx, rnd, _r, tier) {
+    // the escapement: a cog low on one side, teeth and hub, and a coiled mainspring beside it; bigger with tier
+    const side = rnd() > 0.5 ? 1 : -1, cx = 128 + side * (46 + rnd() * 10), cy = 186 - tier, R = 12 + tier * 1.2, teeth = 8 + tier;
+    const cog = new Path2D();
+    for (let i = 0; i < teeth * 2; i++) { const a = (i / (teeth * 2)) * Math.PI * 2, rr = i % 2 ? R : R + 4; i ? cog.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr) : cog.moveTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr); }
+    cog.closePath();
+    ctx.save();
+    ctx.fillStyle = 'rgba(90,60,14,0.55)'; ctx.fill(cog);
+    ctx.lineWidth = 1.6; ctx.strokeStyle = 'rgba(255,236,170,0.85)'; ctx.stroke(cog);
+    ctx.fillStyle = 'rgba(40,26,6,0.8)'; ctx.beginPath(); ctx.arc(cx, cy, R * 0.32, 0, Math.PI * 2); ctx.fill();
+    // the mainspring: an Archimedean coil opposite the cog
+    ctx.strokeStyle = 'rgba(60,40,10,0.75)'; ctx.lineWidth = 2; ctx.beginPath();
+    const sx = 256 - cx, sy = cy - 6;
+    for (let t = 0; t <= Math.PI * 6; t += 0.2) { const rr = 1.2 * t; const x = sx + Math.cos(t) * rr, y = sy + Math.sin(t) * rr; t ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+    ctx.stroke(); ctx.strokeStyle = 'rgba(255,230,160,0.6)'; ctx.lineWidth = 0.8; ctx.stroke();
+    ctx.restore();
+  },
+};
+
+/** The Ink Vaults: vellum grain, ink pooled low and wicking up, and a red wax seal set on the piece with a line of script. */
+const INK: FloorStyle = {
+  accent: ['#fff4e0', '#e05050', '#a82828', '#4a0e0e', '#1a0404'],
+  finish(ctx, rnd) {
+    speckle(ctx, 30, 30, 196, 200, 160, Math.floor(rnd() * 1e6), ['#f4ead0', '#c8b890', '#8a7a58'], [0.6, 1.8]);
+    // the ink wash: pooled at the foot, feathering upward
+    ctx.fillStyle = lin(ctx, 0, 130, 0, 236, [[0, 'rgba(20,20,48,0)'], [0.6, 'rgba(20,20,48,0.28)'], [1, 'rgba(10,10,30,0.55)']]);
+    ctx.fillRect(0, 0, 256, 256);
+    for (let i = 0; i < 4; i++) glow(ctx, 60 + rnd() * 136, 190 + rnd() * 30, 12 + rnd() * 10, 'rgba(18,18,50,0.45)');
+  },
+  ornament(ctx, rnd, _r, tier) {
+    ctx.save(); ctx.lineCap = 'round';
+    // a line of script, too small to read, where a clerk wrote on it
+    ctx.strokeStyle = 'rgba(24,20,50,0.75)'; ctx.lineWidth = 1.4;
+    const y0 = 150 + (rnd() - 0.5) * 16;
+    for (let row = 0; row < 1 + Math.floor(tier / 4); row++) {
+      ctx.beginPath(); let x = 70;
+      ctx.moveTo(x, y0 + row * 9);
+      while (x < 176) { const w = 4 + rnd() * 6; ctx.quadraticCurveTo(x + w / 2, y0 + row * 9 - 3 - rnd() * 3, x + w, y0 + row * 9); x += w + (rnd() < 0.25 ? 5 : 0); if (rnd() < 0.25) ctx.moveTo(x, y0 + row * 9); }
+      ctx.stroke();
+    }
+    // the seal: a wax blob, its drips, and the impression of a device
+    const side = rnd() > 0.5 ? 1 : -1, sx = 128 + side * (52 + rnd() * 10), sy = 204 - tier, sr = 7 + tier * 0.5; // a small seal at the foot, off to one side
+    const blob = new Path2D();
+    for (let i = 0; i <= 14; i++) { const a = (i / 14) * Math.PI * 2, rr = sr * (0.9 + rnd() * 0.2); i ? blob.lineTo(sx + Math.cos(a) * rr, sy + Math.sin(a) * rr) : blob.moveTo(sx + Math.cos(a) * rr, sy + Math.sin(a) * rr); }
+    blob.closePath();
+    ctx.fillStyle = rad(ctx, sx - sr * 0.3, sy - sr * 0.3, 1, sr * 1.2, [[0, '#ff8a7a'], [0.5, '#c02828'], [1, '#5a0808']]); ctx.fill(blob);
+    ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(40,4,4,0.9)'; ctx.stroke(blob);
+    ctx.strokeStyle = 'rgba(70,6,6,0.9)'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(sx, sy, sr * 0.55, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = 'rgba(70,6,6,0.9)'; ctx.fill(star(sx, sy, 5, sr * 0.14, sr * 0.36));
+    ctx.fillStyle = 'rgba(255,200,190,0.7)'; ctx.beginPath(); ctx.ellipse(sx - sr * 0.4, sy - sr * 0.45, sr * 0.25, sr * 0.12, -0.5, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  },
+};
+
+/**
+ * The Hollow Core: un-things (ROOMS.md). The relic is drawn as its own negative space: the silhouette is emptied to a
+ * void with a little starlight in it, and only its inner edge is left, as a thin pale rim. A ghost of its detail
+ * shows at the lowest alpha, so a tier still reads by what it once had.
+ */
+/** The Hollow Core finish leaves its rim here for the ornament pass that follows it (same relic, same paint). */
+let hollowEdge: HTMLCanvasElement | null = null;
+const HOLLOW: FloorStyle = {
+  accent: ['#f0f0ff', '#b8b8ff', '#7070c0', '#2a2a50', '#0a0a18'],
+  finish(ctx, rnd) {
+    const [ghost, g] = makeCanvas(256, 256);
+    g.drawImage(ctx.canvas, 0, 0);
+    // the inner edge: the silhouette less itself eroded by 3 px (drawn shifted, kept only where all four agree)
+    const [er, e] = makeCanvas(256, 256);
+    e.drawImage(ghost, 0, 0);
+    e.globalCompositeOperation = 'destination-in';
+    for (const [dx, dy] of [[3, 0], [-3, 0], [0, 3], [0, -3]]) e.drawImage(ghost, dx, dy);
+    const [ring, rg] = makeCanvas(256, 256);
+    rg.drawImage(ghost, 0, 0);
+    rg.globalCompositeOperation = 'destination-out'; rg.drawImage(er, 0, 0);
+    rg.globalCompositeOperation = 'source-in'; rg.fillStyle = '#d8d8ff'; rg.fillRect(0, 0, 256, 256);
+    // empty it
+    ctx.fillStyle = rad(ctx, 128, 128, 4, 150, [[0, '#15152c'], [1, '#040410']]);
+    ctx.fillRect(0, 0, 256, 256);
+    speckle(ctx, 20, 20, 216, 216, 70, Math.floor(rnd() * 1e6), ['#ffffff', '#b8b8ff'], [0.6, 1.6]);
+    ctx.globalAlpha = 0.12; ctx.drawImage(ghost, 0, 0); ctx.globalAlpha = 1;
+    ctx.drawImage(ring, 0, 0);
+    hollowEdge = ring;
+  },
+  ornament(ctx) {
+    // the rim glows a little outward, as an absence does against a lit room
+    if (!hollowEdge) return;
+    ctx.save(); ctx.globalCompositeOperation = 'source-over'; ctx.shadowColor = '#9a9aff'; ctx.shadowBlur = 8; ctx.globalAlpha = 0.6; ctx.drawImage(hollowEdge, 0, 0); ctx.restore();
+    hollowEdge = null;
+  },
+};
+
 const PLAIN: FloorStyle = { accent: ['#ffffff', '#cfe8ff', '#8fb8e0', '#3a5a80', '#101a28'], finish() {}, ornament() {} };
 
-const FLOOR_STYLE: Record<number, FloorStyle> = { 1: DROWNED, 2: ORCHARD, 3: KILNS };
+const FLOOR_STYLE: Record<number, FloorStyle> = { 1: DROWNED, 2: ORCHARD, 3: KILNS, 4: MIRROR, 5: CELLAR, 6: FROST, 7: CLOCKWORKS, 8: INK, 9: HOLLOW };
 
 // ---------------------------------------------------------------- hand-painted capstones
 
@@ -470,7 +703,199 @@ function kilnHeart(ctx: Ctx) {
   for (let i = 0; i < 7; i++) { const x = 80 + rnd2() * 96, y = 30 + rnd2() * 40; glow(ctx, x, y, 7, 'rgba(255,150,50,0.9)'); ctx.fillStyle = '#fff0c0'; ctx.fillRect(x - 1, y - 1, 2.5, 2.5); }
 }
 
-const CAPSTONE_PAINTERS: Record<number, (ctx: Ctx) => void> = { 39: tideLedger, 49: sapCrown, 59: kilnHeart };
+const MIRROR_RAMP = ['#ffffff', '#e6ecf3', '#aeb9c8', '#5f6b7e', '#262c38'];
+
+/** The Second Keeper: a standing mirror, and in it a hooded keeper who is not you, one eye gold and one eye cold. */
+function secondKeeper(ctx: Ctx) {
+  glow(ctx, 128, 120, 124, 'rgba(200,225,255,0.45)');
+  // the stand and its feet
+  bar(ctx, (c) => { c.moveTo(128, 214); c.lineTo(128, 236); c.moveTo(92, 238); c.lineTo(164, 238); }, 8, metal(ctx, MIRROR_RAMP, 90, 214, 166, 240));
+  const glass = ellipse(128, 118, 66, 92);
+  ctx.save(); ctx.fillStyle = lin(ctx, 60, 30, 196, 210, [[0, '#e8f2ff'], [0.35, '#8aa4c4'], [0.7, '#34465e'], [1, '#141c2a']]); ctx.fill(glass); ctx.restore();
+  ctx.save(); ctx.clip(glass);
+  // the keeper in the glass: a hood, a robe, a face in shadow
+  const robe = smooth([[128, 48], [168, 80], [182, 150], [196, 222], [60, 222], [74, 150], [88, 80]], 0.45);
+  ctx.fillStyle = lin(ctx, 60, 48, 196, 222, [[0, '#c8d8ee'], [0.4, '#5a6e8a'], [1, '#1a2232']]); ctx.fill(robe);
+  ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(10,14,24,0.8)'; ctx.stroke(robe);
+  ctx.strokeStyle = 'rgba(220,235,255,0.35)'; ctx.lineWidth = 2;
+  for (const x of [104, 128, 152]) { ctx.beginPath(); ctx.moveTo(x, 140); ctx.lineTo(x + (x - 128) * 0.3, 222); ctx.stroke(); }
+  ctx.fillStyle = rad(ctx, 128, 104, 4, 34, [[0, '#0a0e18'], [0.8, '#1a2436'], [1, 'rgba(26,36,54,0)']]); ctx.fill(ellipse(128, 104, 26, 30));
+  eyes(ctx, [[116, 102]], 5.5, '#ffd05a');
+  eyes(ctx, [[140, 102]], 5.5, '#8fe0ff');
+  // mirror light: hard diagonal glints, and a crack across the glass
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  ctx.save(); ctx.translate(128, 118); ctx.rotate(0.6); ctx.fillRect(-62, -120, 14, 240); ctx.fillRect(-40, -120, 5, 240); ctx.restore();
+  ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 1.6;
+  ctx.beginPath(); ctx.moveTo(190, 70); ctx.lineTo(162, 96); ctx.lineTo(170, 112); ctx.lineTo(140, 146); ctx.moveTo(162, 96); ctx.lineTo(186, 104); ctx.stroke();
+  ctx.restore();
+  // the frame: heavy silver, beaded, with a crest
+  bar(ctx, (c) => { c.ellipse(128, 118, 70, 96, 0, 0, Math.PI * 2); }, 11, chrome(ctx, MIRROR_RAMP, 50, 0, 206, 0));
+  for (let i = 0; i < 14; i++) { const a = (i / 14) * Math.PI * 2; shade(ctx, circle(128 + Math.cos(a) * 70, 118 + Math.sin(a) * 96, 4), rad(ctx, 127 + Math.cos(a) * 70, 117 + Math.sin(a) * 96, 0.5, 5, [[0, '#ffffff'], [1, '#6a7a90']]), [120 + Math.cos(a) * 70, 110 + Math.sin(a) * 96, 16, 16], { lw: 2, drop: false }); }
+  shade(ctx, star(128, 20, 5, 9, 22), metal(ctx, MIRROR_RAMP, 106, 0, 150, 42), [106, 0, 44, 42], { lw: 4 });
+  gem(ctx, 128, 20, 7, ['#fff8d0', '#ffd05a', '#e8a020', '#8a5a08', '#3a2404']);
+  sparkle(ctx, 92, 60, 14, '#ffffff');
+}
+
+/** The Taproot Reliquary: a cage of living root around a green heart, a taproot running down out of it, drinking. */
+function taprootReliquary(ctx: Ctx) {
+  glow(ctx, 128, 108, 118, 'rgba(143,216,112,0.5)');
+  const bark = ['#e8d0a8', '#a8845a', '#7a5a30', '#4a3218', '#1e1208'];
+  // the taproot, tapering to a point, with rootlets off it
+  const tap = new Path2D(); tap.moveTo(108, 150); tap.bezierCurveTo(112, 190, 122, 214, 130, 246); tap.bezierCurveTo(138, 212, 146, 186, 150, 150); tap.closePath();
+  shade(ctx, tap, metal(ctx, bark, 108, 150, 150, 246), [108, 150, 42, 96], { lw: 5 });
+  for (const [x, y, dx, dy] of [[118, 190, -34, 16], [140, 184, 32, 20], [126, 218, -24, 18], [136, 206, 22, 22]]) bar(ctx, (c) => { c.moveTo(x, y); c.quadraticCurveTo(x + dx * 0.6, y + dy * 0.2, x + dx, y + dy); }, 3, bark[2]);
+  // the heart inside the cage
+  shade(ctx, circle(128, 108, 50), rad(ctx, 120, 98, 4, 56, [[0, '#ffffff'], [0.25, '#e0ffc8'], [0.6, '#8fd870'], [1, '#2a6a22']]), [78, 58, 100, 100], { lw: 4, rim: 'rgba(230,255,210,0.9)' });
+  glow(ctx, 128, 108, 34, 'rgba(240,255,210,0.8)');
+  ctx.save(); ctx.strokeStyle = 'rgba(30,90,30,0.55)'; ctx.lineWidth = 2;
+  for (let i = 0; i < 5; i++) { const a = (i / 5) * Math.PI * 2; ctx.beginPath(); ctx.moveTo(128, 108); ctx.quadraticCurveTo(128 + Math.cos(a + 0.5) * 20, 108 + Math.sin(a + 0.5) * 20, 128 + Math.cos(a) * 40, 108 + Math.sin(a) * 40); ctx.stroke(); }
+  ctx.restore();
+  // the cage: roots woven round it, crossing
+  const woven: [number, number, number, number, number, number, number, number][] = [
+    [74, 150, 60, 80, 110, 40, 150, 52], [182, 150, 196, 80, 146, 40, 106, 52], [78, 124, 92, 60, 164, 60, 178, 124], [84, 148, 110, 168, 146, 168, 172, 148],
+  ];
+  for (const [x0, y0, c1x, c1y, c2x, c2y, x1, y1] of woven) bar(ctx, (c) => { c.moveTo(x0, y0); c.bezierCurveTo(c1x, c1y, c2x, c2y, x1, y1); }, 8, metal(ctx, bark, 60, 40, 196, 170));
+  // it is still growing: two leaves up top
+  for (const [x, ang] of [[118, -0.5], [140, 0.55]]) {
+    ctx.save(); ctx.translate(x, 50); ctx.rotate(ang);
+    const leaf = new Path2D(); leaf.moveTo(0, 0); leaf.bezierCurveTo(-14, -18, -8, -40, 0, -48); leaf.bezierCurveTo(8, -40, 14, -18, 0, 0); leaf.closePath();
+    shade(ctx, leaf, lin(ctx, -14, -48, 14, 0, [[0, '#e0ffc8'], [0.5, '#6ad050'], [1, '#1f6a20']]), [-14, -48, 28, 48], { lw: 3.5, drop: false });
+    ctx.restore();
+  }
+  sparkle(ctx, 112, 92, 14, '#f0ffe0');
+}
+
+/** The Debt in Ice: the ledger itself, open, frozen in a block of ice with its ink caught rising off the page. */
+function debtInIce(ctx: Ctx) {
+  glow(ctx, 128, 128, 122, 'rgba(95,216,255,0.45)');
+  // the ledger, open
+  for (const s of [-1, 1]) {
+    const page = poly([[128, 118], [128 + s * 78, 104], [128 + s * 76, 184], [128, 196]]);
+    shade(ctx, page, lin(ctx, 128, 110, 128 + s * 78, 184, [[0, '#f4f8fc'], [1, '#b8c8d8']]), [s < 0 ? 50 : 128, 104, 78, 92], { lw: 4, drop: false });
+    ctx.save(); ctx.clip(page);
+    ctx.fillStyle = 'rgba(14,30,60,0.6)';
+    for (let i = 0; i < 6; i++) { const y = 130 + i * 10; for (let k = 0; k < 4; k++) ctx.fillRect(128 + s * (16 + k * 14) - (s < 0 ? 10 : 0), y - k * 1.2,10 - (k % 2) * 3, 2.5); }
+    ctx.fillStyle = 'rgba(170,30,40,0.6)'; ctx.fillRect(128 + s * 12 - 1, 110, 2, 80);
+    ctx.restore();
+  }
+  bar(ctx, (c) => { c.moveTo(128, 118); c.lineTo(128, 196); }, 4, '#2a3a50');
+  // the signature at the head of the page, in the hand from the hints
+  ctx.save(); ctx.strokeStyle = '#c8962a'; ctx.lineWidth = 2.4; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(142, 118); ctx.bezierCurveTo(150, 106, 156, 122, 162, 112); ctx.bezierCurveTo(168, 104, 170, 120, 180, 110); ctx.stroke(); ctx.restore();
+  // the ink, caught rising off the page as it froze
+  const plume = new Path2D();
+  plume.moveTo(100, 150); plume.bezierCurveTo(84, 120, 118, 104, 100, 80); plume.bezierCurveTo(90, 64, 108, 50, 118, 62);
+  plume.bezierCurveTo(108, 72, 124, 88, 118, 112); plume.bezierCurveTo(114, 130, 116, 140, 110, 150); plume.closePath();
+  shade(ctx, plume, lin(ctx, 84, 50, 124, 150, [[0, '#3a5a8a'], [0.5, '#0e1a36'], [1, '#050a18']]), [84, 50, 40, 100], { lw: 3, drop: false, rim: 'rgba(143,224,255,0.9)' });
+  // the block of ice over all of it
+  const block = poly([[56, 52], [108, 30], [176, 34], [214, 70], [212, 184], [170, 216], [84, 214], [44, 176], [42, 92]]);
+  ctx.save(); ctx.fillStyle = lin(ctx, 42, 30, 214, 216, [[0, 'rgba(230,248,255,0.5)'], [0.45, 'rgba(120,210,255,0.28)'], [1, 'rgba(20,90,150,0.5)']]); ctx.fill(block);
+  ctx.clip(block);
+  ctx.fillStyle = 'rgba(255,255,255,0.22)';
+  for (const tri of [[[56, 52], [108, 30], [96, 96]], [[176, 34], [214, 70], [170, 90]], [[44, 176], [84, 214], [80, 170]]]) { ctx.beginPath(); ctx.moveTo(tri[0][0], tri[0][1]); ctx.lineTo(tri[1][0], tri[1][1]); ctx.lineTo(tri[2][0], tri[2][1]); ctx.closePath(); ctx.fill(); }
+  speckle(ctx, 40, 28, 176, 190, 220, 891, ['#ffffff', '#e0f6ff'], [0.6, 2]);
+  ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.save(); ctx.translate(128, 120); ctx.rotate(-0.8); ctx.fillRect(-120, -60, 240, 8); ctx.restore();
+  ctx.restore();
+  ctx.save(); ctx.lineJoin = 'round'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(240,252,255,0.95)'; ctx.stroke(block); ctx.restore();
+  outline(ctx, block, 4);
+  // icicles off the underside
+  for (const [x, len] of [[96, 22], [120, 30], [150, 18], [174, 26]]) {
+    const y = x < 128 ? 214 : 214 - (x - 128) * 0.02;
+    const ic = poly([[x - 6, y - 2], [x + 6, y - 2], [x, y + len]]);
+    shade(ctx, ic, lin(ctx, x - 6, y, x + 6, y + len, [[0, '#ffffff'], [1, '#6ac8f0']]), [x - 6, y - 2, 12, len + 2], { lw: 2.5, drop: false });
+  }
+  sparkle(ctx, 70, 64, 14, '#e8fbff');
+  sparkle(ctx, 190, 150, 9, '#e8fbff');
+}
+
+/** The Hour Unspent: a stopped watch in brass, its glass cracked across, one hour on the dial still lit. */
+function hourUnspent(ctx: Ctx) {
+  glow(ctx, 128, 136, 124, 'rgba(255,220,120,0.45)');
+  bar(ctx, (c) => { c.arc(128, 30, 14, 0, Math.PI * 2); }, 6, chrome(ctx, MAT_BRASS, 110, 14, 146, 46));
+  shade(ctx, rrPath(116, 40, 24, 22, 5), metal(ctx, MAT_BRASS, 116, 40, 140, 62), [116, 40, 24, 22], { lw: 4, drop: false });
+  const caseP = circle(128, 138, 86);
+  shade(ctx, caseP, chrome(ctx, MAT_BRASS, 42, 0, 214, 0), [42, 52, 172, 172], { lw: 5, hi: 0.4 });
+  const face = circle(128, 138, 70);
+  shade(ctx, face, rad(ctx, 116, 124, 4, 76, [[0, '#fffaf0'], [0.7, '#efe2c0'], [1, '#bfa870']]), [58, 68, 140, 140], { lw: 4, drop: false });
+  ctx.save(); ctx.clip(face);
+  // the one hour left: its twelfth of the dial lit
+  ctx.fillStyle = 'rgba(255,200,80,0.55)'; ctx.beginPath(); ctx.moveTo(128, 138); ctx.arc(128, 138, 70, -Math.PI / 2, -Math.PI / 2 + Math.PI / 6); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = '#3a2a10'; ctx.lineCap = 'round';
+  for (let i = 0; i < 12; i++) { const a = (i / 12) * Math.PI * 2 - Math.PI / 2; ctx.lineWidth = i % 3 ? 2 : 4; ctx.beginPath(); ctx.moveTo(128 + Math.cos(a) * 58, 138 + Math.sin(a) * 58); ctx.lineTo(128 + Math.cos(a) * (i % 3 ? 64 : 66), 138 + Math.sin(a) * (i % 3 ? 64 : 66)); ctx.stroke(); }
+  // the hands, stopped at the top of the unspent hour
+  ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(128, 138); ctx.lineTo(128, 88); ctx.stroke();
+  ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(128, 138); ctx.lineTo(158, 128); ctx.stroke();
+  ctx.fillStyle = '#3a2a10'; ctx.beginPath(); ctx.arc(128, 138, 6, 0, Math.PI * 2); ctx.fill();
+  // the glass, cracked from a strike at the rim
+  ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(186, 104); ctx.lineTo(160, 124); ctx.lineTo(150, 152); ctx.moveTo(160, 124); ctx.lineTo(132, 118); ctx.lineTo(108, 128); ctx.moveTo(186, 104); ctx.lineTo(170, 90); ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,0.18)'; ctx.save(); ctx.translate(128, 138); ctx.rotate(-0.7); ctx.fillRect(-80, -48, 160, 12); ctx.restore();
+  ctx.restore();
+  sparkle(ctx, 186, 104, 12, '#fff8d8');
+}
+
+/** The Name of the Vault: a tome in gold leaf, its true name rising off the page as letters of light, a wax seal on a ribbon. */
+function nameOfTheVault(ctx: Ctx) {
+  glow(ctx, 128, 110, 122, 'rgba(255,232,154,0.45)');
+  for (const s of [-1, 1]) {
+    const page = poly([[128, 150], [128 + s * 100, 136], [128 + s * 96, 214], [128, 228]]);
+    shade(ctx, page, lin(ctx, 128, 140, 128 + s * 96, 214, [[0, '#fbf2dc'], [1, '#d0bc8c']]), [s < 0 ? 28 : 128, 136, 100, 92], { lw: 5 });
+    ctx.save(); ctx.clip(page); ctx.fillStyle = 'rgba(30,24,50,0.55)';
+    for (let i = 0; i < 5; i++) { const y = 166 + i * 11; for (let k = 0; k < 5; k++) ctx.fillRect(128 + s * (14 + k * 15) - (s < 0 ? 11 : 0), y - k * 1.3, 11 - (k % 2) * 4, 2.2); }
+    ctx.restore();
+  }
+  bar(ctx, (c) => { c.moveTo(128, 150); c.lineTo(128, 228); }, 5, '#6a4a18');
+  // the name, in gold, lifting off the page as it is read
+  const glyphs = [[128, 118, 22], [104, 90, 15], [152, 86, 16], [124, 60, 12], [146, 44, 9], [108, 40, 8]];
+  for (const [x, y, r] of glyphs) {
+    glow(ctx, x, y, r * 1.8, 'rgba(255,220,120,0.6)');
+    ctx.save(); ctx.translate(x, y);
+    // a letter of a script nobody taught you: each glyph its own strokes
+    const g = new Path2D(), k = glyphs.findIndex((q) => q[0] === x && q[1] === y);
+    const strokes = [[[-0.5, 0.6], [0, -0.7], [0.5, 0.6]], [[-0.4, -0.6], [0.4, -0.6], [-0.4, 0.6], [0.4, 0.6]], [[0, -0.7], [0, 0.7], [0.5, 0.2]], [[-0.5, 0], [0.5, -0.6], [0.2, 0.7]], [[-0.4, -0.5], [0.4, 0], [-0.4, 0.5]], [[0.4, -0.6], [-0.4, -0.1], [0.4, 0.6]]][k % 6];
+    strokes.forEach(([px, py], i) => (i ? g.lineTo(px * r, py * r) : g.moveTo(px * r, py * r)));
+    g.moveTo(-r * 0.3, r * 0.15); g.lineTo(r * 0.1, r * 0.15);
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(2, r * 0.22); ctx.strokeStyle = '#7a4a08'; ctx.stroke(g);
+    ctx.lineWidth = Math.max(1, r * 0.12); ctx.strokeStyle = '#fff2b0'; ctx.stroke(g);
+    ctx.restore();
+  }
+  // the ribbon and its seal
+  bar(ctx, (c) => { c.moveTo(160, 212); c.quadraticCurveTo(174, 232, 196, 238); }, 7, '#a82020');
+  const seal = circle(196, 236, 14);
+  shade(ctx, seal, rad(ctx, 192, 232, 1, 15, [[0, '#ff8a7a'], [0.5, '#c02828'], [1, '#5a0808']]), [182, 222, 28, 28], { lw: 3, drop: false });
+  ctx.save(); ctx.fillStyle = 'rgba(70,6,6,0.9)'; ctx.fill(star(196, 236, 5, 3, 7)); ctx.restore();
+  sparkle(ctx, 146, 44, 12, '#fff8d0');
+}
+
+/** The Empty Setting: a mount of vault-iron, claws and all, around a socket in the shape of a relic, and nothing in it. */
+function emptySetting(ctx: Ctx) {
+  glow(ctx, 128, 128, 118, 'rgba(184,184,255,0.35)');
+  // the mount: an iron plate with four claws reaching in
+  const plate = circle(128, 128, 92);
+  shade(ctx, plate, rad(ctx, 110, 104, 10, 100, [[0, '#8a8aa0'], [0.5, '#4a4a60'], [1, '#1a1a28']]), [36, 36, 184, 184], { lw: 5, hi: 0.3 });
+  ctx.save(); ctx.clip(plate); ctx.strokeStyle = 'rgba(210,210,255,0.25)'; ctx.lineWidth = 2;
+  for (const r of [80, 72]) { ctx.beginPath(); ctx.arc(128, 128, r, 0, Math.PI * 2); ctx.stroke(); }
+  speckle(ctx, 36, 36, 184, 184, 90, 1191, ['#b8b8d0', '#2a2a3a'], [0.8, 2]);
+  ctx.restore();
+  // the socket: a relic's shape, cut out of the plate, with the void behind it
+  const socket = new Path2D();
+  socket.moveTo(128, 186); socket.bezierCurveTo(72, 150, 70, 104, 92, 86); socket.bezierCurveTo(110, 72, 124, 82, 128, 96);
+  socket.bezierCurveTo(132, 82, 146, 72, 164, 86); socket.bezierCurveTo(186, 104, 184, 150, 128, 186); socket.closePath();
+  ctx.save(); ctx.fillStyle = rad(ctx, 128, 128, 4, 70, [[0, '#1c1c3a'], [1, '#02020a']]); ctx.fill(socket); ctx.clip(socket);
+  speckle(ctx, 70, 72, 116, 116, 40, 1192, ['#ffffff', '#b8b8ff'], [0.6, 1.6]);
+  ctx.restore();
+  ctx.save(); ctx.shadowColor = '#b8b8ff'; ctx.shadowBlur = 12; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(216,216,255,0.95)'; ctx.stroke(socket); ctx.restore();
+  outline(ctx, socket, 3);
+  for (const a of [-0.75, -0.25, 0.25, 0.75].map((k) => k * Math.PI + Math.PI / 2)) {
+    const x0 = 128 + Math.cos(a) * 96, y0 = 128 + Math.sin(a) * 96, x1 = 128 + Math.cos(a) * 58, y1 = 128 + Math.sin(a) * 58;
+    bar(ctx, (c) => { c.moveTo(x0, y0); c.quadraticCurveTo((x0 + x1) / 2 + Math.cos(a + 1.2) * 10, (y0 + y1) / 2 + Math.sin(a + 1.2) * 10, x1, y1); }, 8, metal(ctx, MAT_IRON, x0, y0, x1, y1));
+  }
+}
+
+const MAT_BRASS = ['#fff6d0', '#ffd878', '#d8a838', '#7a5410', '#2a1c04'];
+const MAT_IRON = ['#b8b8d0', '#7a7a92', '#4a4a60', '#22222e', '#0c0c14'];
+
+const CAPSTONE_PAINTERS: Record<number, (ctx: Ctx) => void> = { 39: tideLedger, 49: sapCrown, 59: kilnHeart, 69: secondKeeper, 79: taprootReliquary, 89: debtInIce, 99: hourUnspent, 109: nameOfTheVault, 119: emptySetting };
 
 // ---------------------------------------------------------------- routing
 
@@ -489,6 +914,8 @@ export function floorPainterFor(id: number): FloorPainter | null {
 /** Every form has a painter (the unit test holds this against data/floors.ts's Form type). */
 export const PAINTED_FORMS: readonly Form[] = FORMS.filter((f) => !!FORM_PAINTERS[f]);
 export const CAPSTONE_IDS: readonly number[] = Object.keys(CAPSTONE_PAINTERS).map(Number);
+/** The floors (by index) with their own finish and ornament; the unit test holds that every floor 2-10 has one. */
+export const STYLED_FLOORS: readonly number[] = Object.keys(FLOOR_STYLE).map(Number);
 
 /** Paint floor relic `id` into a 256 canvas context: capstone, or form + finish + ornament. Throws for a non-floor id. */
 export function paintFloorRelic(ctx: Ctx, id: number) {

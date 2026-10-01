@@ -8,7 +8,8 @@ import { applyEntitlements, grantOnce, skuAvailable } from '../systems/PurchaseS
 import { priceAmount, currencyUnit } from '../systems/Prices'; // AB#4725
 import { chestsAllowed, dropFromSatchel, claimVipCrate, CardResult, Granted } from '../systems/Economy';
 import { eventEndsAt, rollover } from '../systems/State';
-import { activeChain, currentFloor, capstoneOf, isCleared } from '../systems/Floors';
+import { activeChain, currentFloor, capstoneOf, isCleared, descend, restore } from '../systems/Floors';
+import { FloorTransition } from './FloorTransition'; // AB#444 slice 4
 import { bubble, currentMain, resetFloorStats, refillErrands } from '../systems/Chronicle';
 import { OfferRequest } from '../systems/OfferDirector';
 import { CELL, DAIS_PAD } from '../art/VaultBackground';
@@ -37,7 +38,10 @@ import { tickOrders, refillOrders, deliver, dismissOrder, matchOrder } from '../
 import { AdVeil } from '../ui/AdVeil';
 import { interstitialBlocked, runRewarded } from '../systems/ads/AdService'; // AB#4724
 import { Tutorial } from '../ui/Tutorial';
+import { FloorIntro } from '../ui/FloorIntro'; // AB#444 slice 5
+import { chapterCard, firstChapterDue, markFirstChapter, type ChapterKind } from '../systems/Chapters';
 import { DiscoveryCard } from '../ui/Discovery';
+import { FORGE_X, fitScale } from '../ui/forgeLabels'; // Bug #4897
 import { grantGold, enforceChestRules } from '../systems/Economy';
 import { SAFE_AREA_EVENT } from '../../safeArea'; // AB#4723
 
@@ -119,7 +123,13 @@ export class VaultScene extends Phaser.Scene {
    * So every field that belongs to one run starts empty here. What belongs to the session stays: lastInterstitial
    * (ad pacing), lastActionAt, and discoveries (item ids still owed a card, which pumpOffers shows).
    */
+  /** AB#444 slice 4: the floor whose board atlas the next run lays before it builds (set by a floor change's swap). */
+  private rebakeOnStart: number | null = null;
+  /** AB#444 slice 5: the Chapter 1 card is on its way (after the age gate); read by the browser tests */
+  chapterPending = false;
+
   init() {
+    if (this.rebakeOnStart !== null) { rebakeBoardFor(this, this.rebakeOnStart, [...ctx.state.board, ...ctx.state.satchel]); this.rebakeOnStart = null; }
     this.relics = [];
     this.modal = null;
     this.selected = -1;
@@ -210,7 +220,16 @@ export class VaultScene extends Phaser.Scene {
     this.events.once('shutdown', () => { this.scale.off('resize', this.onResize, this); window.removeEventListener(SAFE_AREA_EVENT, this.onSafeArea); document.removeEventListener('visibilitychange', this.onHidden); });
     (window as any).__vault = this;
     // first ever session: tutorial. Returning: VIP crate / satchel nudges.
-    this.time.delayedCall(700, () => this.tut.start());
+    // AB#444 slice 5: a fresh game opens on Chapter 1, once, after the age gate and before the first forge hint
+    if (firstChapterDue(ctx.state)) {
+      markFirstChapter(ctx.state);
+      ctx.persist();
+      this.chapterPending = true;
+      const ready = ((window as any).__ready as Promise<unknown> | undefined) ?? Promise.resolve();
+      void ready.then(() => {
+        if (this.sys.isActive()) this.time.delayedCall(400, () => { this.chapterPending = false; this.openChapter('first', {}, () => this.time.delayedCall(700, () => this.tut.start())); }); // the forge hint a beat after, as on any boot
+      });
+    } else this.time.delayedCall(700, () => this.tut.start());
     /**
      * The Chronicle introduces itself once, in the Keeper's own voice (docs/STORY.md: "the advisor already
      * exists"). Gated on having merged something, so it never lands on top of the first-run tutorial — a player
@@ -232,6 +251,9 @@ export class VaultScene extends Phaser.Scene {
       ));
     }
     performance.measure('rv:vault-create', { start: t0, end: performance.now() });
+    // AB#444 slice 4: a floor transition over the vault waits for this before it opens its veil, so the restart is
+    // never seen
+    this.game.events.emit('vault-ready', this);
   }
 
   private resizeTimer?: number;
@@ -429,7 +451,7 @@ export class VaultScene extends Phaser.Scene {
     const { ox, my } = this;
     const y = my + FORGE_Y;
     // three generators (RV-D3): the floor's own, then the Crypt Brazier and the Star Well, which run every floor
-    const X = [540, 322, 758], SIZE = [220, 168, 168], KEY = ['forge', 'gen1', 'gen2'];
+    const X = FORGE_X, SIZE = [220, 168, 168], KEY = ['forge', 'gen1', 'gen2'];
     const AURA = [0xff8a2a, 0x7dffb0, 0x9ab8ff];
     const LABEL = [currentFloor(ctx.state).gen.toUpperCase(), 'CRYPT', 'STARS'];
     AURA[0] = currentFloor(ctx.state).color;
@@ -441,6 +463,7 @@ export class VaultScene extends Phaser.Scene {
       const aura = this.add.image(0, 0, 'relicGlow').setDisplaySize(SIZE[slot] * 1.7, SIZE[slot] * 1.7).setTint(AURA[slot]).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.5);
       const f = this.add.image(0, 0, KEY[slot]).setDisplaySize(SIZE[slot], SIZE[slot]);
       const lbl = txt(this, 0, SIZE[slot] / 2 - 6, LABEL[slot], { size: slot ? 28 : 30, gold: true, weight: '900', strokeW: 6 });
+      if (slot === 0) lbl.setScale(fitScale(lbl.width)); // a long floor name no longer runs into its neighbours (Bug #4897)
       const lvl = this.add.container(SIZE[slot] / 2 - 18, -SIZE[slot] / 2 + 18);
       const lvlBg = this.add.image(0, 0, 'seal_gold').setDisplaySize(62, 62);
       const lvlT = txt(this, 0, 0, '1', { size: 26, font: 'num', weight: '700', color: '#3a1c02', strokeW: 0, shadow: false });
@@ -1548,17 +1571,50 @@ export class VaultScene extends Phaser.Scene {
     ctx.telemetry.track(kind === 'descend' ? 'floor_descend' : 'floor_restore', {
       floor: s.floor, renown: s.renown, recorded: r.recorded.length, memento: r.memento ?? 0,
     });
-    // the board atlas only ever holds the relics this floor can show, so it is re-laid before the scene comes
-    // back up (ten floors of sheen frames in one atlas is past the maximum texture size on a phone)
-    rebakeBoardFor(this, s.floor ?? 0);
-    // the scene is rebuilt because the forge row, the background mood and the board all belong to the floor
-    ctx.persistNow();
-    this.scene.restart();
     const floor = currentFloor(s);
-    const line = kind === 'descend'
-      ? `${floor.name}. ${floor.subtitle}`
-      : `${floor.name}, again. Renown ${r.renown} — the vault will remember it even if I do not.`;
-    this.time.delayedCall(900, () => this.keeperSays(line));
+    // AB#444 slice 4: the move is shown, not cut. The transition plays over this scene and calls swap under its
+    // closed veil; the new vault is handed back only once it reports ready (FloorTransition.ts).
+    FloorTransition.play(this, {
+      kind, recorded: r.recorded, floor,
+      swap: () => {
+        // the board atlas only ever holds the relics this floor can show, so it is re-laid before the scene comes
+        // back up (ten floors of sheen frames in one atlas is past the maximum texture size on a phone). It is laid
+        // in init(), after this run is gone: the old relics ask the atlas for their frames every frame until then,
+        // and a frame the new floor's atlas does not have stops the render.
+        this.rebakeOnStart = s.floor ?? 0;
+        // the scene is rebuilt because the forge row, the background mood and the board all belong to the floor
+        ctx.persistNow();
+        this.scene.restart();
+      },
+      // AB#444 slice 5: the chapter card opens the floor, on the new vault, before any input (it replaces the Keeper
+      // line that used to follow the restart)
+      onArrive: (vault) => vault.openChapter(kind, r),
+    });
+  }
+
+/** AB#444 slice 5: the chapter card for an arrival, a fresh game's first floor, or a re-read from the Chronicle. */
+  openChapter(kind: ChapterKind, change: { memento?: number; renown?: number } = {}, onDone?: () => void, floor?: number) {
+    this.openModal(new FloorIntro(this, chapterCard(ctx.state, kind, change, floor), onDone));
+  }
+
+  /** AB#444 slice 4: the generator row builds in on arrival, one after another, from below. */
+  buildInGenerators(ms: number) {
+    this.gens.forEach((g, i) => {
+      const y = g.y;
+      g.setY(y + 70).setAlpha(0);
+      this.tweens.add({ targets: g, y, alpha: 1, delay: i * Math.min(90, ms / 4), duration: ms * 0.6, ease: 'Back.Out' });
+    });
+  }
+
+  /**
+   * AB#444 slice 4, a browser-test handle: what descend() or restore() would leave, run on a copy of the state with the
+   * memento the open doors sheet has chosen, so the e2e can hold the transition to exactly that board.
+   */
+  predictFloorChange(kind: 'descend' | 'restore') {
+    const copy = structuredClone(ctx.state);
+    const memento = (this.modal as any)?.memento || undefined;
+    const r = kind === 'descend' ? descend(copy, memento) : restore(copy, memento);
+    return { ok: r.ok, floor: copy.floor, renown: copy.renown, board: [...copy.board], reliquary: [...(copy.reliquary ?? [])], satchel: structuredClone((copy as any).satchel ?? null) };
   }
 
   /** debug helpers, and the handles the browser tests drive the real UI through */

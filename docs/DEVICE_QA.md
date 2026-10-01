@@ -85,6 +85,37 @@ shot: every difference was within main's own difference from itself on a second 
 and the lazily painted screens (shop, wheel, album) were looked at. The unit tests and the e2e suite, with its
 boot-console-errors check, pass.
 
+## All ten floors painted (AB#444)
+
+With the last floors' art in (slice 3), every relic in the game is real, composed art (art/FloorArt.ts) for the first
+time. Same method as above (production preview, CPU throttled 4x, WebGL on the GPU, 412x915), 2026-09-30, on the
+same machine. The first two rows are `apps/web/tools/perf.mjs` (3 runs, a fresh player on floor 1); the others are
+`apps/web/tools/perf-deep.mjs` (3 runs): the worst case, a player on the Hollow Core, whose boot paints every floor's
+relics (`bootChains` paints each floor down to the player's own), then every relic in the game asked for once, as a
+session that opened every album page would.
+
+| | Measured | Budget |
+|---|---|---|
+| Fresh player: cold, vault ready | 3.5 s | 5 s: met |
+| Fresh player: warm, vault ready | 3.4 s | 3 s: **not met** (by 0.4 s) |
+| Frame rate, 36 relics + ~194 live particles | 60.1 fps, p95 frame 16.7 ms | met |
+| Texture memory, fresh player (GPU) | 81.3 MB, 112 textures | met |
+| Hollow Core player: warm, vault ready (median) | 3.1 s (2.7 to 3.6 s) | 3 s: **not met** (by 0.1 s) |
+| Hollow Core player: painting every floor's relics at boot (`rv:bake:Waking the relics`) | 0.59 s (a floor-1 player's boot: 0.53 s) | |
+| Every relic painted: texture memory (GPU) | 82.1 MB, 108 textures | 256 MB: met |
+| Every relic painted: the 256 px masters kept in the WebView's heap | 26.3 MB (105 canvases) | |
+
+Why painting everything costs so little memory: the `relic256` and `relic96` atlases are allocated for every relic at
+boot (AB#4737) and only filled in as relics are painted, so a fully painted game has the same GPU textures as a new one.
+The board's sheen atlas holds one floor's relics at a time (`rebakeBoardFor`). The cost of the real art is the CPU
+masters (256 KB each) and the paint time, and a floor's nine relics paint in 4-6 ms unthrottled (AB#444 slice 1).
+
+Read against the table above: the cold and warm starts here are about half those recorded for AB#4737 on the same
+machine and method (6.8 s and 6.3 s then). The boot has not changed that much since, so read that as run-to-run and
+machine-state variance, not an improvement; the comparison that holds is within this section, where the Hollow Core
+player's boot is no slower than a floor-1 player's. A real phone is still the measurement that counts (the release
+checklist below).
+
 ## The Play store on a device (AB#4725): TODO
 
 Not yet run: it needs an Android device or emulator with Google Play, RevenueCat's sandbox SDK key and a Play licence
@@ -165,6 +196,7 @@ a pass/fail for every row. A fail blocks the release unless the Board waives it 
 | 15 | Airplane mode | Turn on airplane mode, then cold-start. Play a few merges, open the shop, try to watch an ad and to buy. Turn the network back on. | It starts and plays offline. The shop and the ads say they need a connection, with no spinner forever and no crash. Progress is kept when the network comes back. |
 | 16 | The WebView-version screen | The rv_api29 emulator (or any phone) with Android System WebView disabled or rolled back below version 90 (Settings > Apps > Android System WebView > uninstall updates), then open the app. | A plain native screen: "Update Android System WebView", the version found and the one needed, and an Update button that opens the WebView's Play listing. No white screen, no crash. With the WebView updated, the game starts. |
 | 17 | Accessibility (Pre-launch report) | Play Console > Testing > Pre-launch report for the build > Accessibility. Then on the phone: TalkBack on (the age gate, the shop's close), font size at the largest, display size at the largest. | No new warnings since the last release, or each one written down with a reason: the canvas is one view to TalkBack, so it is expected to be flagged. The age gate's buttons are read out and work with TalkBack. At the largest font and display size the HUD, the dock and the shop's buttons are not clipped or overlapping. Touch targets are 48 dp or more. |
+| 18 | The descent (AB#444 slice 4) | Clear a floor (make its capstone) and choose Go down; then Begin again on a cleared floor; then, with Settings > Accessibility > Remove animations on, Go down again. Profile HWUI rendering on as bars through each. | The descent plays about 3 s: relics sink into the Floor seal, the vault falls, the new floor rises and its generators build in, with no flash of the old or new vault being rebuilt; Begin again is shorter and does not fall; with animations removed it is a fade with the floor name. Skip appears at about 1.2 s and Back skips from then. Bars under the 16 ms line apart from the swap frame; record the fps here. Measured so far only in headless Chromium on the build machine (e2e/descent.spec.ts): 57 to 58 fps, 2.84 s. |
 
 Checks 8, 9 and 11 are waiting on AB#4724 (AdMob) and AB#4728 (the back button). Until those merge, their rows are
 run for what exists and marked "not yet in the build".

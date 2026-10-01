@@ -1,4 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
+import { passChapterCard } from './chapter'; // AB#444 slice 5
 
 /**
  * Bug #1814: the Keeper's Welcome is a $1.99 offer. Its modal drew two Gold Masks and a Silver Urn and said so in its
@@ -12,7 +13,7 @@ async function boot(page: Page, errors: string[]) {
   const gate = page.locator('#age-gate button[data-a="adult"]');
   if (await gate.count().catch(() => 0)) await gate.click();
   else await page.waitForTimeout(500).then(async () => { if (await gate.count()) await gate.click(); });
-  await page.waitForFunction(() => (window as any).__vault?.hud, null, { timeout: 30_000 });
+  await page.waitForFunction(() => (window as any).__vault?.hud, null, { timeout: 30_000 }); await passChapterCard(page);
 }
 
 test('the Welcome modal draws and names the Ruby Crown the pack grants (Bug #1814)', async ({ page }) => {

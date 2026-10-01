@@ -8,6 +8,7 @@ import { ctx } from './game/GameCtx';
 import { BootScene } from './game/scenes/BootScene';
 import { BootLoadScene } from './game/scenes/BootLoadScene';
 import { VaultScene } from './game/scenes/VaultScene';
+import { FloorTransition } from './game/scenes/FloorTransition';
 import { mountDebug } from './debug';
 import type { AgeBand } from './game/systems/State';
 import { measureSafe, watchSafeArea } from './safeArea';
@@ -83,7 +84,7 @@ async function start() {
     render: { antialias: true, powerPreference: 'high-performance', roundPixels: false },
     input: { activePointers: 2 },
     fps: { target: 60 },
-    scene: [BootScene, BootLoadScene, VaultScene],
+    scene: [BootScene, BootLoadScene, VaultScene, FloorTransition], // AB#444 slice 4: the descent, over the vault
   });
   (window as any).__game = game;
   wirePower(game.loop as unknown as FrameLoop, ctx.sfx); // AB#4712: asleep out of sight, 30 fps when idle

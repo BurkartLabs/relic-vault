@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { floorPainterFor, PAINTED_FORMS, CAPSTONE_IDS } from './FloorArt';
+import { floorPainterFor, PAINTED_FORMS, CAPSTONE_IDS, STYLED_FLOORS } from './FloorArt';
 import { FLOORS } from '../data/floors';
 import { ITEM_IDS } from '../data/items';
 
@@ -30,9 +30,14 @@ describe('floor relic art routing (AB#444)', () => {
     expect(PAINTED_FORMS).toHaveLength(12);
   });
 
-  it('the Drowned Wing, the Glass Orchard and the Ash Kilns capstones are hand-painted', () => {
-    expect([...CAPSTONE_IDS].sort()).toEqual([39, 49, 59]);
-    for (const id of [39, 49, 59]) expect(floorPainterFor(id)).toEqual({ kind: 'capstone', id });
+  it('every floor 2-10 has a hand-painted capstone, the Tide Ledger to the Empty Setting (AB#444 slices 1-3)', () => {
+    const ids = [39, 49, 59, 69, 79, 89, 99, 109, 119];
+    expect([...CAPSTONE_IDS].sort((x, y) => x - y)).toEqual(ids);
+    for (const id of ids) expect(floorPainterFor(id)).toEqual({ kind: 'capstone', id });
+  });
+
+  it('every floor 2-10 has its own finish and ornament: none is drawn in its colours alone', () => {
+    expect([...STYLED_FLOORS].sort((x, y) => x - y)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
   });
 
   it('nothing outside the floor ladders routes here', () => {

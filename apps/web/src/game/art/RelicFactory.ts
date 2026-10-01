@@ -522,9 +522,12 @@ export const BOARD_FRAME = 160;
  * depth. With ten floors the board atlas would otherwise be 104 items tall (over 16,000px, past the maximum
  * texture size on every phone we care about), for 81 relics that cannot be on the board.
  */
-export function boardIds(floor: number): number[] {
+export function boardIds(floor: number, held: readonly number[] = []): number[] {
   const chains = [floorDef(floor).chain, 1, 2];
-  return ITEM_IDS.filter((id) => chains.includes(Math.floor(id / 10)));
+  // AB#444 slice 4: and every relic the player holds from another floor (a memento carried down, a satchel relic
+  // dropped back on the board): without its frames the board cannot draw it ("Texture relics has no frame r9_0")
+  const keep = new Set(held.filter((id) => ITEM_IDS.includes(id)));
+  return ITEM_IDS.filter((id) => chains.includes(Math.floor(id / 10)) || keep.has(id));
 }
 
 /** The sheen-sweep atlas for one floor's relics. Rebaked when the floor changes, so it never grows. */
@@ -607,13 +610,13 @@ function paintOnLookup(tex: Phaser.Textures.Texture, prefix: string) {
 }
 
 /** A floor change re-lays the board atlas, painting that floor's relics first if no screen has asked for them yet. */
-export function rebakeBoardFor(scene: Phaser.Scene, floor: number) {
-  const ids = boardIds(floor);
+export function rebakeBoardFor(scene: Phaser.Scene, floor: number, held: readonly number[] = []) {
+  const ids = boardIds(floor, held);
   paintIds(ids);
   if (ids.length) bakeBoardAtlas(scene, ids, mastersNoIris);
 }
 
-export function bakeRelics(scene: Phaser.Scene, floor = 0) {
+export function bakeRelics(scene: Phaser.Scene, floor = 0, held: readonly number[] = []) {
   // grid atlases keep every texture under 4096px for older phones; every frame is defined now, painted when needed
   const ids = ITEM_IDS;
   const rows = Math.ceil(ids.length / ATLAS_COLS);
@@ -631,7 +634,7 @@ export function bakeRelics(scene: Phaser.Scene, floor = 0) {
   paintOnLookup(tex96, 'i');
 
   // board atlas with sheen frames: one row per item, for this floor's relics only
-  rebakeBoardFor(scene, floor);
+  rebakeBoardFor(scene, floor, held);
 
   // live iris for the Living Relic
   const [ic, ictx] = makeCanvas(64, 64);
